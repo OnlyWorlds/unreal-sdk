@@ -89,7 +89,7 @@ OW_TEST(archive_the_set_is_the_pinned_one) {
         if (ends(".owworld") || ends(".zip")) ++on_disk;
     }
     t.Eq(on_disk, generated, "every generated fixture is on disk, and nothing else");
-    t.Eq(generated, size_t(96), "the set's 96 generated fixtures (dist.60)");
+    t.Eq(generated, size_t(96), "the set's 96 generated fixtures (dist.61)");
     std::printf("       the set: %zu fixtures in verdicts.json, %zu generated, %zu on disk\n", fixtures->Size(), generated, on_disk);
 }
 
