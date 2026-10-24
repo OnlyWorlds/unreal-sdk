@@ -141,7 +141,7 @@ private:
     }
 
     bool Value(OWJsonValue& v, int depth) {
-        if (depth > 512) return Err("nested deeper than 512");
+        if (depth >= 512) return Err("nested deeper than 512");
         if (at_ >= s_.size()) return Err("the input ends where a value should be");
         char c = s_[at_];
         switch (c) {

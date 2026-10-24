@@ -267,8 +267,15 @@ OWFileMap OWWorld::ToFiles(bool only_edited) {
 }
 
 bool OWWorld::WriteFolder(const std::string& path, bool only_edited, std::string* error) {
+    std::unordered_set<std::string> made;  // each folder made once, not once per file
     for (const auto& kv : ToFiles(only_edited)) {
-        if (!OWFiles::Write(path + "/" + kv.first, kv.second)) {
+        std::string full = path + "/" + kv.first;
+        std::string dir = full.substr(0, full.rfind('/'));
+        if (made.insert(dir).second && !OWFiles::MakeDirs(dir)) {
+            if (error) *error = "cannot make " + dir;
+            return false;
+        }
+        if (!OWFiles::Write(full, kv.second, false)) {
             if (error) *error = "cannot write " + path + "/" + kv.first;
             return false;
         }

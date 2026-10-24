@@ -2,3 +2,4 @@
 *.cmd text eol=crlf
 *.owworld binary
 *.zip binary
+Core/Private/OWUnicodeData.generated.cpp linguist-generated=true

@@ -44,10 +44,16 @@ bool Read(const std::string& path, OWBytes& out) {
     return ok;
 }
 
-bool Write(const std::string& path, const OWBytes& data) {
+bool MakeDirs(const std::string& dir) {
+    std::error_code ec;
+    fs::create_directories(P(dir), ec);
+    return fs::is_directory(P(dir), ec);
+}
+
+bool Write(const std::string& path, const OWBytes& data, bool make_dirs) {
     fs::path p = P(path);
     std::error_code ec;
-    if (p.has_parent_path()) fs::create_directories(p.parent_path(), ec);
+    if (make_dirs && p.has_parent_path()) fs::create_directories(p.parent_path(), ec);
 #ifdef _WIN32
     FILE* f = nullptr;
     if (_wfopen_s(&f, p.c_str(), L"wb") != 0) f = nullptr;

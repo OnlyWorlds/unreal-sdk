@@ -13,8 +13,10 @@ using OWBytes = std::vector<uint8_t>;
 namespace OWFiles {
 
 bool Read(const std::string& path, OWBytes& out);
-// Write the bytes, making the parent folders first.
-bool Write(const std::string& path, const OWBytes& data);
+// Write the bytes, making the parent folders first (unless make_dirs is false: the caller made them).
+bool Write(const std::string& path, const OWBytes& data, bool make_dirs = true);
+// Make a folder and its parents; true when it exists after.
+bool MakeDirs(const std::string& dir);
 bool IsFile(const std::string& path);
 bool IsDir(const std::string& path);
 // The names of the files (dirs false) or folders (dirs true) in a folder, sorted by their UTF-8 bytes. Dot-names are
