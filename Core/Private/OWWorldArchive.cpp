@@ -324,15 +324,11 @@ void CollectProducer(const std::string& dir, const std::string& rel, OWFileMap& 
     for (const std::string& name : OWFiles::List(dir, true)) CollectProducer(dir + "/" + name, rel + "/" + name, into);
 }
 
-// The producers records/RECORDS.json marks "private": true, each by OW-18's fold. "" or why it cannot be told.
-std::string PrivateProducers(const std::string& records, std::set<std::string>& into) {
-    std::string path = records + "/RECORDS.json";
-    if (!OWFiles::IsFile(path)) return "";
-    OWBytes bytes;
-    OWFiles::Read(path, bytes);
-    OWJsonParseResult m = OWJson::Parse(bytes);
-    auto why = [&](const std::string& what) {
-        return "records/RECORDS.json in " + records + " " + what +
+// The producers a RECORDS.json marks "private": true, each by OW-18's fold. "" or why it cannot be told.
+std::string PrivateProducers(const OWBytes& manifest, std::set<std::string>& into) {
+    OWJsonParseResult m = OWJson::Parse(manifest);
+    auto why = [](const std::string& what) {
+        return "records/RECORDS.json " + what +
                ", so which records are private cannot be told; fix it, or pack with include_private";
     };
     if (!m.ok) return why("does not parse");
@@ -361,25 +357,55 @@ void CollectContent(const std::string& dir, const std::string& rel, OWFileMap& i
         if (name[0] != '.') CollectContent(dir + "/" + name, rel + "/" + name, into);
 }
 
-std::string CollectRecords(const std::string& folder, bool include_private, OWFileMap& into,
-                           std::vector<std::string>* left_out) {
+void CollectRecords(const std::string& folder, OWFileMap& into) {
     std::string records = folder + "/records";
-    if (!OWFiles::IsDir(records)) return "";
-    std::set<std::string> excluded;
-    if (!include_private) {
-        std::string err = PrivateProducers(records, excluded);
-        if (!err.empty()) return err;
-    }
+    if (!OWFiles::IsDir(records)) return;
     for (const std::string& name : OWFiles::List(records, false))
         if (!IsUnityMeta(records, name)) OWFiles::Read(records + "/" + name, into["records/" + name]);
-    for (const std::string& name : OWFiles::List(records, true)) {
-        if (excluded.count(OWUnicode::Fold(name))) {
-            if (left_out) left_out->push_back(name);
-            continue;
-        }
+    for (const std::string& name : OWFiles::List(records, true))
         CollectProducer(records + "/" + name, "records/" + name, into);
+}
+
+OWPacked PackWorld(const OWFileMap& files_in, const std::string& top, bool keep_api, bool include_private) {
+    OWPacked out;
+    auto world = files_in.find(World);
+    if (world == files_in.end()) {
+        out.message = "no world.json";
+        return out;
     }
-    return "";
+    OWJsonParseResult info = OWJson::Parse(world->second);
+    const OWJsonValue* id = info.ok && info.value.IsObject() ? info.value.Find("id") : nullptr;
+    if (!id || !id->IsString() || OWUnicode::StripWhite(id->Text()).empty()) {
+        out.message = "world.json is not an object with an id (a non-empty string)";
+        return out;
+    }
+    OWFileMap files = files_in;
+    if (!keep_api && info.value.Erase("api")) files[World] = OWJson::ToBytes(info.value);  // OW-10
+    std::vector<std::string> left_out;
+    auto manifest = files.find("records/RECORDS.json");
+    if (!include_private && manifest != files.end()) {
+        // Section 4.5 rule 11: a producer marked private is left out whole; RECORDS.json travels byte-exact.
+        std::set<std::string> excluded;
+        std::string err = PrivateProducers(manifest->second, excluded);
+        if (!err.empty()) {
+            out.message = err;
+            return out;
+        }
+        for (auto it = files.begin(); it != files.end();) {
+            const std::string& rel = it->first;
+            size_t slash = rel.compare(0, 8, "records/") == 0 ? rel.find('/', 8) : std::string::npos;
+            std::string producer = slash == std::string::npos ? "" : rel.substr(8, slash - 8);
+            if (!producer.empty() && excluded.count(OWUnicode::Fold(producer))) {
+                if (std::find(left_out.begin(), left_out.end(), producer) == left_out.end()) left_out.push_back(producer);
+                it = files.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+    out = PackFiles(files, top);
+    out.left_out = left_out;
+    return out;
 }
 
 OWPacked PackFolder(const std::string& folder_in, bool keep_api, bool include_private) {
@@ -390,32 +416,18 @@ OWPacked PackFolder(const std::string& folder_in, bool keep_api, bool include_pr
         out.message = "no world folder at " + folder;
         return out;
     }
-    OWBytes world_bytes;
-    if (!OWFiles::Read(folder + "/" + World, world_bytes)) {
+    OWFileMap files;
+    if (!OWFiles::Read(folder + "/" + World, files[World])) {
         out.message = "no world.json in " + folder;
         return out;
     }
-    OWJsonParseResult world = OWJson::Parse(world_bytes);
-    const OWJsonValue* id = world.ok && world.value.IsObject() ? world.value.Find("id") : nullptr;
-    if (!id || !id->IsString() || OWUnicode::StripWhite(id->Text()).empty()) {
-        out.message = "world.json in " + folder + " is not an object with an id (a non-empty string)";
-        return out;
-    }
-    if (!keep_api && world.value.Erase("api")) world_bytes = OWJson::ToBytes(world.value);
-    OWFileMap files;
-    files[World] = std::move(world_bytes);
     for (const char* part : {"elements", "spatial", "media"})
         if (OWFiles::IsDir(folder + "/" + part)) CollectContent(folder + "/" + part, part, files);
-    std::string err = CollectRecords(folder, include_private, files, &out.left_out);
-    if (!err.empty()) {
-        out.message = err;
-        return out;
-    }
+    CollectRecords(folder, files);
     std::string top = OWFiles::LastSegment(OWFiles::Absolute(folder));
     if (top.empty() || top.find(':') != std::string::npos) top = "world";
-    std::vector<std::string> left = out.left_out;
-    out = PackFiles(files, top);
-    out.left_out = left;
+    out = PackWorld(files, top, keep_api, include_private);
+    if (!out.ok) out.message += " (" + folder + ")";
     return out;
 }
 

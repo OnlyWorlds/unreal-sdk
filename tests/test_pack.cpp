@@ -141,6 +141,10 @@ OW_TEST(pack_private_records_left_out_unless_asked) {
     t.Ok(OWWorldArchive::Read(when_asked.bytes).files == asked.files, "the asked side: records/fold/ whole");
     std::vector<std::string> faults = WriterFaults(when_asked.bytes, *doc.Find("sources")->Find("private"));
     t.Ok(faults.empty(), "writer faults, asked: " + Join(faults));
+    // The same from a world in memory (OWWorld::Pack goes through PackWorld too).
+    std::unique_ptr<OWWorld> w = OWWorld::FromFiles(asked.files);
+    t.Ok(OWWorldArchive::Read(w->Pack("abbey").bytes).files == left.files, "a world's pack: private left out by default");
+    t.Ok(OWWorldArchive::Read(w->Pack("abbey", false, true).bytes).files == asked.files, "and kept when asked");
     OWFiles::Write(P().out + "/private-asked.owworld", when_asked.bytes);
     OWFiles::Write(P().out + "/private-left-out.owworld", by_default.bytes);
     OWFiles::RemoveTree(root);

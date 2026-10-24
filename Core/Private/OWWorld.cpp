@@ -94,8 +94,7 @@ std::unique_ptr<OWWorld> OWWorld::ReadFolder(const std::string& path_in, bool ot
         // The rest of the world's parts as Pack selects them (records/ whole, private producers included: a folder
         // written from this world is the same world, not a share).
         if (OWFiles::IsDir(path + "/media")) OWWorldArchive::CollectContent(path + "/media", "media", w->other_files);
-        std::string err = OWWorldArchive::CollectRecords(path, true, w->other_files);
-        if (!err.empty()) w->errors.push_back(err);
+        OWWorldArchive::CollectRecords(path, w->other_files);
     }
     return w;
 }
@@ -283,6 +282,8 @@ bool OWWorld::WriteFolder(const std::string& path, bool only_edited, std::string
     return true;
 }
 
-OWPacked OWWorld::Pack(const std::string& top) { return OWWorldArchive::PackFiles(ToFiles(), top); }
+OWPacked OWWorld::Pack(const std::string& top, bool keep_api, bool include_private) {
+    return OWWorldArchive::PackWorld(ToFiles(), top, keep_api, include_private);
+}
 
 }  // namespace OnlyWorlds

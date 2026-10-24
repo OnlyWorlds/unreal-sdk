@@ -78,7 +78,8 @@ public:
     // just the files an edit changed (to write back into the folder read).
     OWFileMap ToFiles(bool only_edited = false);
     bool WriteFolder(const std::string& path, bool only_edited = false, std::string* error = nullptr);
-    OWPacked Pack(const std::string& top);
+    // The world as a portable .owworld (OWWorldArchive::PackWorld: api stripped, private records left out, unless asked).
+    OWPacked Pack(const std::string& top, bool keep_api = false, bool include_private = false);
 
     // Section 3.2's filename for an element: <slug>--<id tail>.json, or <full id>.json when the name gives no slug;
     // with `full_id`, the collision fallback <slug>--<full id>.json.

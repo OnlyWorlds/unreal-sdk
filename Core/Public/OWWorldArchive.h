@@ -75,15 +75,19 @@ std::string NameFault(const std::string& name);
 
 // What PackFolder selects from a folder, part by part. CollectContent: every file of a content folder (elements/,
 // spatial/, media/) but dot-names and .meta files, recursively, keyed `rel/...`. CollectRecords: records/ whole but for
-// Unity's own .meta files and, unless include_private, the producers RECORDS.json marks private (named in left_out);
-// "" or why the manifest cannot say which are private.
+// Unity's own .meta files (private producers included: PackWorld decides what travels).
 void CollectContent(const std::string& dir, const std::string& rel, OWFileMap& into);
-std::string CollectRecords(const std::string& folder, bool include_private, OWFileMap& into,
-                           std::vector<std::string>* left_out = nullptr);
+void CollectRecords(const std::string& folder, OWFileMap& into);
 
 // Pack exactly the files given under the top folder `top`: the marker first, then every file in UTF-8 byte order,
 // deflated (an empty one stored). Nothing is filtered: what a caller hands in is what it asked for.
 OWPacked PackFiles(const OWFileMap& files, const std::string& top);
+
+// Pack a world's files as a portable .owworld under `top`: world.json's api block stripped unless keep_api (then the
+// file is a private copy, OW-10), and, unless include_private, every producer directory records/RECORDS.json marks
+// private left out whole (section 4.5 rule 11; named in left_out). Refused when world.json is not an object with an
+// id, or when the manifest cannot say which producers are private.
+OWPacked PackWorld(const OWFileMap& files, const std::string& top, bool keep_api = false, bool include_private = false);
 
 // Pack a world folder as a portable .owworld: world.json (its api block stripped unless keep_api: a private copy),
 // elements/, spatial/ and media/ without dot-names and .meta files, and records/ whole but for Unity's own .meta
