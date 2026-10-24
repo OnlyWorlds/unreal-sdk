@@ -124,6 +124,7 @@ OW_TEST(pack_folder_on_disk_packs_the_parts_only) {
     t.Ok(!OWWorldArchive::Pack(root, root + "/self.owworld").ok, "refuses to write inside the folder it packs");
     OWFiles::Write(P().out + "/abbey-from-folder.owworld", packed.bytes);
     OWFiles::RemoveTree(root);
+    OWFiles::RemoveTree(out);
 }
 
 OW_TEST(pack_private_records_left_out_unless_asked) {
