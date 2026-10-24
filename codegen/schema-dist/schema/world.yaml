@@ -1,0 +1,73 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "World"
+type: "object"
+description: "Represents the overarching world container, settings, and metadata"
+
+properties:
+  id:
+    type: "string"
+    format: "uuid"
+    description: "Unique identifier for the world, uuidv7 format"
+    readOnly: true
+  name:
+    type: "string"
+    description: "Name of the world"
+  description:
+    type: "string"
+    description: "Detailed description of the world"
+  image_url:
+    type: "string"
+    format: "url"
+    description: "URL to an image representing the world"
+
+  created_at:
+    type: "string"
+    format: "date-time"
+    description: "When the world was created, as the tool holding it recorded it"
+    readOnly: true
+  updated_at:
+    type: "string"
+    format: "date-time"
+    description: "When the world's own settings last changed (its name, description, image, time and units)"
+    readOnly: true
+  public_read:
+    type: "boolean"
+    description: "Whether the world can be read by anyone, without a credential"
+    default: false
+  time_format_equivalents:
+    type: "array"
+    description: "List of integers representing the equivalent number of basic units for each time format step (e.g., [1, 7, 30, 365] for Day, Week, Month, Year if basic unit is Day)"
+    items:
+      type: "integer"
+    default: []
+  time_format_names:
+    type: "array"
+    description: "List of strings for the names of time format steps (e.g., ['Day', 'Week', 'Month', 'Year'])"
+    items:
+      type: "string"
+    default: []
+  time_basic_unit:
+    type: "string"
+    description: "The fundamental unit of time measurement (e.g., 'Year', 'Day')"
+    default: "Year"
+  time_range_min:
+    type: "integer"
+    description: "The earliest point in time representable or tracked in the world's timeline"
+    default: 0
+  time_range_max:
+    type: "integer"
+    description: "The latest point in time representable or tracked in the world's timeline"
+    default: 100
+  time_current:
+    type: "integer"
+    description: "The current point in time within the world's timeline"
+    default: 0
+  length_unit:
+    type: "string"
+    description: "The unit the world's lengths are counted in (Character and Creature height), as free text. Recommended: 'mm', 'cm', 'm', 'in', 'ft'; a world's own unit ('hands') is shown as written"
+  mass_unit:
+    type: "string"
+    description: "The unit the world's masses are counted in (Character, Creature, Object and Species weight), as free text. Recommended: 'g', 'kg', 't', 'lb'; a world's own unit ('stone') is shown as written"
+  distance_unit:
+    type: "string"
+    description: "The unit the world's distances are counted in (Ability range, Creature speed, Location elevation), as free text. Recommended: 'm', 'km', 'ft', 'mi'; a world's own unit ('leagues') is shown as written"
