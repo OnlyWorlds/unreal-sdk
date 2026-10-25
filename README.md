@@ -1,8 +1,18 @@
-# OnlyWorlds for Unreal: the core
+# OnlyWorlds for Unreal
 
-The engine-independent core of an Unreal plugin for [OnlyWorlds](https://onlyworlds.com) world folders and `.owworld`
-world files. Plain C++17, the standard library and zlib only; no Unreal header in `Core/`. It will sit under a UE
-Runtime module, with UObject only at the edges.
+An Unreal Engine 5.8 code plugin for [OnlyWorlds](https://onlyworlds.com) world folders and `.owworld` world files:
+open a world, read its elements as Blueprint structs, write it back with every untouched file byte-equal. The
+repository's root is the plugin: clone it into a project's `Plugins/OnlyWorlds`.
+
+It is two layers:
+
+- **`Core/`, the engine-independent core**: plain C++, the standard library and zlib only, no Unreal header. It does
+  all the work, and builds and tests on its own with `build.cmd` (no Unreal process).
+- **`Source/OnlyWorlds/`, the Runtime module**: compiles the core in place (its `Build.cs` adds `Core/` as a module
+  directory, with no precompiled header and no unity build, so no Unreal header enters the core's files) and puts
+  UObject at the edges.
+
+## The core
 
 | | |
 |---|---|
@@ -12,23 +22,64 @@ Runtime module, with UObject only at the edges.
 | `OWWorldArchive` | reads an `.owworld` by every reader rule of section 4.7 (OW-1 to OW-22), refusing with one cause; packs a folder |
 | `OWWorld` | a world folder read and written back: an unedited file keeps its bytes, an edited one is written in section 5's form, a new element takes section 3.2's filename |
 
-## Build and test (Windows, MSVC)
+## The plugin
+
+| | |
+|---|---|
+| `UOWLibrary` | `OpenWorldFolder`, `OpenWorldFile` (with the reader's verdict: accepted, reason, message), `CheckWorldFile`, `PackWorldFolder`. A relative path is taken from the project's folder |
+| `UOWWorld` | one world: its id and name, element ids by type, an element's type, name and JSON, `SetStringField` and `SetIntField`, `WriteFolder`, `PackToFile`; `Native()` hands C++ the core's `OnlyWorlds::OWWorld` |
+| `FOW<Type>`, `UOWElements` | one `USTRUCT(BlueprintType)` per element type (`FOWCharacter`, `FOWPin`, ...), and the library that reads them out of a world: `GetAll<Types>(World)`, `Find<Type>(World, Id, Out)`. Generated from schema-dist's `schema.json` |
+
+Members are PascalCase (`birth_date` -> `BirthDate`, `STR` -> `Str`). A string field is an `FString` (`""` for unset),
+an integer a `TOptional<int64>` (unset for null), a link the linked element's id (an `FString`, or a `TArray<FString>`
+for a list), and the Pin's generic link two strings, `ElementType` and `ElementId`. The JSON key and the schema's
+description are each member's tooltip.
+
+## Build and test
+
+The core alone (Windows, MSVC; no Unreal process):
 
 ```
 build.cmd                  # build\ow_tests.exe, linking the engine's zlib 1.3 (UE_ROOT, default UE_5.8), /MD
 build\ow_tests.exe         # every test; exits 0 only when none failed (--filter=<text>, --require-all)
 python codegen/generate.py --check                    # the generated Unicode tables match the vendored files
+python codegen/generate_models.py --check             # the generated structs match schema.json
 python tests/check_writer.py build/out/pass-good-repacked.owworld   # the reference checker on what pack wrote
 ```
 
-The tests read the `.owworld` conformance set from the vendored schema-dist (`codegen/schema-dist/fixtures/owworld`,
-pinned in `codegen/PIN`): every reader verdict and its reason. Two real worlds are read from this machine when present
-(`OW_SIKELIA`, `OW_MOPPETOPIA`); a missing world is a skip, named, never a pass.
+The plugin, through the host project in `Host/` (Unreal 5.8, Visual Studio 2022 with the C++ workload and the .NET
+Framework SDK 4.6.2 or later):
+
+```
+Host\link-plugin.cmd       # once after a clone: links the root in as Host\Plugins\OnlyWorlds (a junction)
+"%UE_ROOT%\Engine\Build\BatchFiles\Build.bat" OWHostEditor Win64 Development -Project="%CD%\Host\OWHost.uproject"
+"%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "%CD%\Host\OWHost.uproject" ^
+    -ExecCmds="Automation RunTests OnlyWorlds; Quit" -TestExit="Automation Test Queue Empty" ^
+    -nullrhi -unattended -nosplash -nop4          # exit 0 when every test passed, 255 when one failed
+```
+
+The automation tests (`OnlyWorlds.*`):
+
+- `OnlyWorlds.Archive.Conformance.<fixture>`: each of the `.owworld` conformance set's generated fixtures, read
+  through `UOWLibrary`, its reader verdict and reason asserted (`codegen/schema-dist/fixtures/owworld/verdicts.json`,
+  found beside the plugin). `OnlyWorlds.Archive.Set` checks the set itself.
+- `OnlyWorlds.World.WriteBack.<world>`: a real world folder opened, written unedited to `Host/Saved/OWTests/`, and
+  compared file by file with the folder read. `OnlyWorlds.World.Models`: the structs against their files, and one edit.
+- `OnlyWorlds.Frame.MoppetopiaRootMap` needs a renderer (`-RenderOffscreen` instead of `-nullrhi`; a `-nullrhi`
+  run leaves it out): the world's root Map as a plane carrying its image, the Pins as markers, captured from above to
+  `Host/Saved/OWFrames/moppetopia-root-map.png`.
+
+The core's runner and the world tests read two real worlds from this machine when present (`OW_SIKELIA`,
+`OW_MOPPETOPIA`). In the core's runner a missing world is a named skip; in the automation tests it fails.
 
 `codegen/schema-dist/` is vendored verbatim; never edit it. `Core/Private/OWUnicodeData.generated.cpp` is written by
-`codegen/generate.py`; regenerate, never edit.
+`codegen/generate.py`, and `Source/OnlyWorlds/Public/OWModels.h`, `OWModelsJson.h` and `Private/OWModels.cpp` by
+`codegen/generate_models.py`; regenerate, never edit.
 
 ## Not built yet
 
-The Unreal module (`.uplugin`, Build.cs), the generated USTRUCT models, the Blueprint library and the automation tests.
-No platform other than Win64 has been built.
+- A runtime actor that lays a Map out in a level: the frame is built by a test, in the editor, with a material made
+  in code. A packaged game would need a material asset (the plugin ships no content yet).
+- Writing a struct back into an element (edits go through `UOWWorld`'s field setters for now).
+- Blueprint graphs: the structs and functions compile as Blueprint types; no graph has been run against them.
+- Any platform other than Win64, and any engine other than 5.8.

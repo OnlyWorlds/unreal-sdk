@@ -23,7 +23,8 @@ public class OnlyWorlds : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
 		// zlib: the engine's own (ThirdParty/zlib/1.3), the same one build.cmd links. Projects: IPluginManager, so
-		// the tests find the conformance set beside the plugin.
-		PrivateDependencyModuleNames.AddRange(new string[] { "zlib", "Projects" });
+		// the tests find the conformance set beside the plugin. RenderCore and ImageCore: the frame test's capture
+		// and PNG.
+		PrivateDependencyModuleNames.AddRange(new string[] { "zlib", "Projects", "RenderCore", "ImageCore" });
 	}
 }
