@@ -1,0 +1,19 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.8",
+	"Category": "",
+	"Description": "The host that builds and tests the OnlyWorlds plugin: the repository's root, linked in as Plugins/OnlyWorlds by link-plugin.cmd.",
+	"Modules": [
+		{
+			"Name": "OWHost",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "OnlyWorlds",
+			"Enabled": true
+		}
+	]
+}

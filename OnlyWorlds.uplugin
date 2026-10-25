@@ -1,0 +1,18 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "OnlyWorlds",
+	"Description": "Open OnlyWorlds world folders and .owworld world files: the elements as Blueprint structs, a world written back byte-equal.",
+	"Category": "OnlyWorlds",
+	"CreatedBy": "OnlyWorlds",
+	"CreatedByURL": "https://onlyworlds.com",
+	"CanContainContent": false,
+	"Modules": [
+		{
+			"Name": "OnlyWorlds",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

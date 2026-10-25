@@ -11,7 +11,20 @@ namespace OnlyWorlds {
 namespace OWFiles {
 
 namespace {
+// UTF-8 in and out of a path, in C++17 (build.cmd) and C++20 (the Unreal module: 5.8 builds no module as C++17),
+// where u8path is deprecated and u8string() returns std::u8string.
+#if defined(__cpp_char8_t)
+fs::path P(const std::string& utf8) {
+    return fs::path(std::u8string(reinterpret_cast<const char8_t*>(utf8.data()), utf8.size()));
+}
+std::string U8(const fs::path& p) {
+    std::u8string s = p.u8string();
+    return std::string(reinterpret_cast<const char*>(s.data()), s.size());
+}
+#else
 fs::path P(const std::string& utf8) { return fs::u8path(utf8); }
+std::string U8(const fs::path& p) { return p.u8string(); }
+#endif
 }  // namespace
 
 bool Read(const std::string& path, OWBytes& out) {
@@ -81,7 +94,7 @@ std::vector<std::string> List(const std::string& dir, bool dirs) {
     for (fs::directory_iterator it(P(dir), ec), end; !ec && it != end; it.increment(ec)) {
         std::error_code e2;
         bool is_dir = it->is_directory(e2);
-        if (is_dir == dirs && (dirs || it->is_regular_file(e2))) out.push_back(it->path().filename().u8string());
+        if (is_dir == dirs && (dirs || it->is_regular_file(e2))) out.push_back(U8(it->path().filename()));
     }
     std::sort(out.begin(), out.end());  // std::string orders by unsigned bytes: UTF-8 byte order
     return out;
@@ -96,7 +109,7 @@ bool RemoveTree(const std::string& dir) {
 std::string Absolute(const std::string& path) {
     std::error_code ec;
     fs::path p = fs::absolute(P(path), ec).lexically_normal();
-    std::string s = p.u8string();
+    std::string s = U8(p);
     std::replace(s.begin(), s.end(), '\\', '/');
     while (s.size() > 1 && s.back() == '/') s.pop_back();
     return s;
