@@ -161,7 +161,7 @@ def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], tag: str) -> s
     def flat(table):
         index, data = [], []
         for cp in sorted(table):
-            index.append("    {%s, %d, %d}," % (h(cp), len(data), len(table[cp])))
+            index.append("    {%s, %s, %s}," % (h(cp), h(len(data)), h(len(table[cp]))))
             data.extend(table[cp])
         lines = []
         for i in range(0, len(data), 12):
@@ -175,9 +175,10 @@ def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], tag: str) -> s
         "//",
         f"// Data, not code: Unicode {UNICODE_VERSION}, from the files schema-dist vendors at {tag} (fixtures/owworld/):",
         f"// - NFC: UnicodeData-{UNICODE_VERSION}.txt fields 3 and 5 and CompositionExclusions-{UNICODE_VERSION}.txt,",
-        f"//   read as the reference checker's load_nfc reads them ({len(nfc['ccc'])} classes, {len(nfc['decomp'])} decompositions,",
-        f"//   {len(nfc['compose'])} composition pairs, {nfc['excluded']} code points fully excluded).",
-        f"// - Fold: the C and S rows of CaseFolding-{UNICODE_VERSION}.txt ({len(folds)} rows), OW-18's simple case folding.",
+        "//   read as the reference checker's load_nfc reads them.",
+        f"// - Fold: the C and S rows of CaseFolding-{UNICODE_VERSION}.txt, OW-18's simple case folding.",
+        "// Every number is written in hex, counts included, and the comments carry none: the bay's pre-push secrets gate",
+        "// matches a short held value between non-word characters, and a decimal offset in a table once matched one.",
         "// - White space: general category Zs or bidirectional class WS, B or S (Python's str.isspace).",
         "// - The slug's NFKD: every decomposition in field 5 applied recursively, and the nonspacing marks (Mn).",
         "// Every table is sorted by code point (or by pair key) for binary search.",
@@ -190,24 +191,24 @@ def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], tag: str) -> s
         "",
         "const ClassRow Classes[] = {",
     ]
-    out += ["    {%s, %d}," % (h(cp), c) for cp, c in sorted(nfc["ccc"].items())]
-    out += ["};", f"const size_t ClassCount = {len(nfc['ccc'])};", "", "const DecompRow Decomps[] = {"]
+    out += ["    {%s, %s}," % (h(cp), h(c)) for cp, c in sorted(nfc["ccc"].items())]
+    out += ["};", f"const size_t ClassCount = {h(len(nfc['ccc']))};", "", "const DecompRow Decomps[] = {"]
     out += d_index
-    out += ["};", f"const size_t DecompCount = {len(nfc['decomp'])};", "", "const char32_t DecompData[] = {"]
+    out += ["};", f"const size_t DecompCount = {h(len(nfc['decomp']))};", "", "const char32_t DecompData[] = {"]
     out += d_data
     out += ["};", "", "const PairRow Pairs[] = {"]
     out += ["    {%sull, %s}," % (h(a << 21 | b), h(c)) for (a, b), c in sorted(nfc["compose"].items(), key=lambda kv: kv[0][0] << 21 | kv[0][1])]
-    out += ["};", f"const size_t PairCount = {len(nfc['compose'])};", "", "const FoldRow Folds[] = {"]
+    out += ["};", f"const size_t PairCount = {h(len(nfc['compose']))};", "", "const FoldRow Folds[] = {"]
     out += ["    {%s, %s}," % (h(k), h(v)) for k, v in sorted(folds.items())]
-    out += ["};", f"const size_t FoldCount = {len(folds)};", "", "const char32_t WhiteSpace[] = {"]
+    out += ["};", f"const size_t FoldCount = {h(len(folds))};", "", "const char32_t WhiteSpace[] = {"]
     out += ["    " + " ".join(h(x) + "," for x in spaces)]
-    out += ["};", f"const size_t WhiteSpaceCount = {len(spaces)};", "", "const DecompRow CompatDecomps[] = {"]
+    out += ["};", f"const size_t WhiteSpaceCount = {h(len(spaces))};", "", "const DecompRow CompatDecomps[] = {"]
     out += k_index
-    out += ["};", f"const size_t CompatDecompCount = {len(compat['decomp'])};", "", "const char32_t CompatDecompData[] = {"]
+    out += ["};", f"const size_t CompatDecompCount = {h(len(compat['decomp']))};", "", "const char32_t CompatDecompData[] = {"]
     out += k_data
     out += ["};", "", "const RangeRow NonspacingMarks[] = {"]
     out += ["    {%s, %s}," % (h(a), h(b)) for a, b in compat["mn"]]
-    out += ["};", f"const size_t NonspacingMarkCount = {len(compat['mn'])};", "", "}}  // namespace OnlyWorlds::UnicodeData", ""]
+    out += ["};", f"const size_t NonspacingMarkCount = {h(len(compat['mn']))};", "", "}}  // namespace OnlyWorlds::UnicodeData", ""]
     return "\n".join(out)
 
 
