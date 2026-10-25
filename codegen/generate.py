@@ -10,7 +10,7 @@ from the files the fixture set vendors, never from a runtime). What it reads and
   codegen/PIN                           the pin: the dist's tag and the sha256 of its MANIFEST.json
   codegen/schema-dist/                  the dist at that tag, verbatim; never edited. Read here: fixtures/owworld/
                                         UnicodeData-15.1.0.txt, CompositionExclusions-15.1.0.txt, CaseFolding-15.1.0.txt
-  -> Core/Private/OWUnicodeData.generated.cpp   the tables, as sorted C++ arrays (OWUnicodeData.h declares them)
+  -> Plugin/OnlyWorlds/Core/Private/OWUnicodeData.generated.cpp   the tables, as sorted C++ arrays (OWUnicodeData.h declares them)
 
 The NFC data is read as the reference checker reads it (`run_py.py`'s `load_nfc`; the workshop's README): field 3 of
 UnicodeData is the combining class, field 5 the decomposition (one in angle brackets is compatibility, not canonical),
@@ -39,7 +39,7 @@ OWWORLD = DIST / "fixtures" / "owworld"
 UNICODE_DATA = OWWORLD / f"UnicodeData-{UNICODE_VERSION}.txt"
 COMPOSITION_EXCLUSIONS = OWWORLD / f"CompositionExclusions-{UNICODE_VERSION}.txt"
 CASE_FOLDING = OWWORLD / f"CaseFolding-{UNICODE_VERSION}.txt"
-OUT = ROOT / "Core" / "Private" / "OWUnicodeData.generated.cpp"
+OUT = ROOT / "Plugin" / "OnlyWorlds" / "Core" / "Private" / "OWUnicodeData.generated.cpp"
 
 
 # -- the pin --------------------------------------------------------------------------------------------------------

@@ -1,16 +1,14 @@
 build/
 __pycache__/
-# The plugin's build output (the repository's root is the plugin's root)
-/Binaries/
-/Intermediate/
+# The plugin's build output
+/Plugin/OnlyWorlds/Binaries/
+/Plugin/OnlyWorlds/Intermediate/
 # The host project's build output, caches and logs
 /Host/Binaries/
 /Host/Intermediate/
 /Host/Saved/
 /Host/DerivedDataCache/
 /Host/.vs/
-# The junction link-plugin.cmd makes (Plugins\OnlyWorlds -> the repository's root)
-/Host/Plugins/
 # What the editor writes into a project on its first start (the host needs neither)
 /Host/Config/
 /Host/Content/

@@ -1,7 +1,8 @@
 #pragma once
-// Where the automation tests find their inputs: the conformance set beside the plugin (the vendored schema-dist, never
-// a path of this machine), the two real worlds by OW_SIKELIA and OW_MOPPETOPIA (with the defaults build.cmd's runner
-// uses), and a scratch folder under the project's Saved/.
+// Where the automation tests find their inputs: the conformance set in the repository that holds the plugin (the
+// vendored schema-dist, two folders above the plugin's own; OW_FIXTURES for a plugin copied elsewhere; never a path of
+// this machine), the two real worlds by OW_SIKELIA and OW_MOPPETOPIA (with the defaults build.cmd's runner uses), and
+// a scratch folder under the project's Saved/.
 
 #include "CoreMinimal.h"
 #include "HAL/PlatformMisc.h"
@@ -16,15 +17,17 @@ namespace OWTestPaths
 		return Plugin.IsValid() ? FPaths::ConvertRelativePathToFull(Plugin->GetBaseDir()) : FString();
 	}
 
-	inline FString Fixtures()
-	{
-		return FPaths::Combine(PluginDir(), TEXT("codegen/schema-dist/fixtures/owworld"));
-	}
-
-	inline FString Env(const TCHAR* Name, const TCHAR* Default)
+	inline FString Env(const TCHAR* Name, const FString& Default)
 	{
 		FString V = FPlatformMisc::GetEnvironmentVariable(Name);
-		return V.IsEmpty() ? FString(Default) : V;
+		return V.IsEmpty() ? Default : V;
+	}
+
+	inline FString Fixtures()
+	{
+		FString InRepo = FPaths::Combine(PluginDir(), TEXT("../../codegen/schema-dist/fixtures/owworld"));
+		FPaths::CollapseRelativeDirectories(InRepo);
+		return Env(TEXT("OW_FIXTURES"), InRepo);
 	}
 
 	inline FString Sikelia()

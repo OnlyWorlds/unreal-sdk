@@ -2,7 +2,7 @@
 *.cmd text eol=crlf
 *.owworld binary
 *.zip binary
-Core/Private/OWUnicodeData.generated.cpp linguist-generated=true
-Source/OnlyWorlds/Public/OWModels.h linguist-generated=true
-Source/OnlyWorlds/Public/OWModelsJson.h linguist-generated=true
-Source/OnlyWorlds/Private/OWModels.cpp linguist-generated=true
+Plugin/OnlyWorlds/Core/Private/OWUnicodeData.generated.cpp linguist-generated=true
+Plugin/OnlyWorlds/Source/OnlyWorlds/Public/OWModels.h linguist-generated=true
+Plugin/OnlyWorlds/Source/OnlyWorlds/Public/OWModelsJson.h linguist-generated=true
+Plugin/OnlyWorlds/Source/OnlyWorlds/Private/OWModels.cpp linguist-generated=true

@@ -1,16 +1,20 @@
 # OnlyWorlds for Unreal
 
 An Unreal Engine 5.8 code plugin for [OnlyWorlds](https://onlyworlds.com) world folders and `.owworld` world files:
-open a world, read its elements as Blueprint structs, write it back with every untouched file byte-equal. The
-repository's root is the plugin: clone it into a project's `Plugins/OnlyWorlds`.
+open a world, read its elements as Blueprint structs, write it back with every untouched file byte-equal.
 
-It is two layers:
+**The plugin is the folder `Plugin/OnlyWorlds/`, whole and on its own**: copy it into a project's
+`Plugins/OnlyWorlds/`. The rest of the repository builds and tests it: `build.cmd` and `tests/` (the core alone),
+`codegen/` (the generators and the vendored schema-dist), `Host/` (a project that builds the plugin and runs its
+automation tests).
 
-- **`Core/`, the engine-independent core**: plain C++, the standard library and zlib only, no Unreal header. It does
-  all the work, and builds and tests on its own with `build.cmd` (no Unreal process).
-- **`Source/OnlyWorlds/`, the Runtime module**: compiles the core in place (its `Build.cs` adds `Core/` as a module
-  directory, with no precompiled header and no unity build, so no Unreal header enters the core's files) and puts
-  UObject at the edges.
+The plugin is two layers:
+
+- **`Plugin/OnlyWorlds/Core/`, the engine-independent core**: plain C++, the standard library and zlib only, no
+  Unreal header. It does all the work, and builds and tests on its own with `build.cmd` (no Unreal process).
+- **`Plugin/OnlyWorlds/Source/OnlyWorlds/`, the Runtime module**: compiles the core in place (its `Build.cs` adds
+  `Core/` as a module directory, with no precompiled header and no unity build, so no Unreal header enters the core's
+  files) and puts UObject at the edges.
 
 ## The core
 
@@ -48,10 +52,11 @@ python tests/check_writer.py build/out/pass-good-repacked.owworld   # the refere
 ```
 
 The plugin, through the host project in `Host/` (Unreal 5.8, Visual Studio 2022 with the C++ workload and the .NET
-Framework SDK 4.6.2 or later):
+Framework SDK 4.6.2 or later). The host finds the plugin by `"AdditionalPluginDirectories": ["../Plugin"]` (Unreal
+looks for plugins in the subfolders of the folder named), and builds it into `Host/Binaries` and
+`Host/Intermediate/External`:
 
 ```
-Host\link-plugin.cmd       # once after a clone: links the root in as Host\Plugins\OnlyWorlds (a junction)
 "%UE_ROOT%\Engine\Build\BatchFiles\Build.bat" OWHostEditor Win64 Development -Project="%CD%\Host\OWHost.uproject"
 "%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "%CD%\Host\OWHost.uproject" ^
     -ExecCmds="Automation RunTests OnlyWorlds; Quit" -TestExit="Automation Test Queue Empty" ^
@@ -62,7 +67,8 @@ The automation tests (`OnlyWorlds.*`):
 
 - `OnlyWorlds.Archive.Conformance.<fixture>`: each of the `.owworld` conformance set's generated fixtures, read
   through `UOWLibrary`, its reader verdict and reason asserted (`codegen/schema-dist/fixtures/owworld/verdicts.json`,
-  found beside the plugin). `OnlyWorlds.Archive.Set` checks the set itself.
+  found two folders above the plugin; `OW_FIXTURES` for a plugin copied elsewhere). `OnlyWorlds.Archive.Set` checks
+  the set itself.
 - `OnlyWorlds.World.WriteBack.<world>`: a real world folder opened, written unedited to `Host/Saved/OWTests/`, and
   compared file by file with the folder read. `OnlyWorlds.World.Models`: the structs against their files, and one edit.
 - `OnlyWorlds.Frame.MoppetopiaRootMap` needs a renderer (`-RenderOffscreen` instead of `-nullrhi`; a `-nullrhi`
@@ -72,9 +78,10 @@ The automation tests (`OnlyWorlds.*`):
 The core's runner and the world tests read two real worlds from this machine when present (`OW_SIKELIA`,
 `OW_MOPPETOPIA`). In the core's runner a missing world is a named skip; in the automation tests it fails.
 
-`codegen/schema-dist/` is vendored verbatim; never edit it. `Core/Private/OWUnicodeData.generated.cpp` is written by
-`codegen/generate.py`, and `Source/OnlyWorlds/Public/OWModels.h`, `OWModelsJson.h` and `Private/OWModels.cpp` by
-`codegen/generate_models.py`; regenerate, never edit.
+`codegen/schema-dist/` is vendored verbatim; never edit it. Under `Plugin/OnlyWorlds/`,
+`Core/Private/OWUnicodeData.generated.cpp` is written by `codegen/generate.py`, and
+`Source/OnlyWorlds/Public/OWModels.h`, `OWModelsJson.h` and `Private/OWModels.cpp` by `codegen/generate_models.py`;
+regenerate, never edit.
 
 ## Not built yet
 

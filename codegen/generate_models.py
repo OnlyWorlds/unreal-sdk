@@ -7,11 +7,12 @@
 Standard library only. It shares generate.py's pin check (the vendored tree is what codegen/PIN says, or nothing is
 written). What it reads and writes:
 
-  codegen/schema-dist/schema.json                    the 22 types: base fields, then each type's own, with their kinds
-  -> Source/OnlyWorlds/Public/OWModels.h             USTRUCT(BlueprintType) FOW<Type> per type, and UOWElements, the
-                                                     Blueprint library that reads them out of a UOWWorld
-  -> Source/OnlyWorlds/Public/OWModelsJson.h         OWFromJson(body, struct) per type, for C++ callers
-  -> Source/OnlyWorlds/Private/OWModels.cpp          both, on the core's OWJsonValue (helpers: OWModelRead.h)
+  codegen/schema-dist/schema.json        the 22 types: base fields, then each type's own, with their kinds
+  and, under Plugin/OnlyWorlds/Source/OnlyWorlds/:
+  -> Public/OWModels.h                   USTRUCT(BlueprintType) FOW<Type> per type, and UOWElements, the Blueprint
+                                         library that reads them out of a UOWWorld
+  -> Public/OWModelsJson.h               OWFromJson(body, struct) per type, for C++ callers
+  -> Private/OWModels.cpp                both, on the core's OWJsonValue (helpers: OWModelRead.h)
 
 The mapping (the recon's gen_ue.py, with the Unity generator's names):
 
@@ -37,7 +38,7 @@ from pathlib import Path
 from generate import DIST, ROOT, read_pin, verify_dist
 
 SCHEMA = DIST / "schema.json"
-MODULE = ROOT / "Source" / "OnlyWorlds"
+MODULE = ROOT / "Plugin" / "OnlyWorlds" / "Source" / "OnlyWorlds"
 OUT_H = MODULE / "Public" / "OWModels.h"
 OUT_JSON_H = MODULE / "Public" / "OWModelsJson.h"
 OUT_CPP = MODULE / "Private" / "OWModels.cpp"
