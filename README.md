@@ -25,6 +25,7 @@ The plugin is two layers:
 | `OWZip` | the archive's own central-directory walk, each entry inflated by zlib and held to both sizes it declares, a writer with fixed stamps |
 | `OWWorldArchive` | reads an `.owworld` by every reader rule of section 4.7 (OW-1 to OW-22), refusing with one cause; packs a folder |
 | `OWWorld` | a world folder read and written back: an unedited file keeps its bytes, an edited one is written in section 5's form, a new element takes section 3.2's filename |
+| `OWAddress` | the address profile (schema-dist `profiles/address.md`): `Parse` reads an `ow://` link or a site URL into a reading (form, world, type, id, moment, lens, canonical) or refuses it by the profile's named reason; `Write` and `WriteJson` write an element's or a world's address, with the writer's own refusals. Held to the profile's 133-case fixture |
 
 ## The plugin
 
