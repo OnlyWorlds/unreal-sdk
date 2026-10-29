@@ -38,8 +38,7 @@ struct OWCalendarEra {
 
 struct OWCalendarIntercalary {
     std::string name;
-    // A whole number (Number.isInteger: not bounded by 2^53). One past +-2^62 is held as INT64_MAX or INT64_MIN, which
-    // no month index equals: the day sits in no month either way.
+    // 0 (before month 1) to the month count: the reader refuses any other (with no months, anything above 0).
     int64_t after_month = 0;
     std::optional<int64_t> every_years;  // a leap rule: the day is there in the years its rule selects
     std::vector<int64_t> except;         // version 2 only: empty in a version-1 calendar, whatever the value holds

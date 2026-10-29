@@ -1,5 +1,6 @@
-// OWCalendar on the calendar profile's conformance fixture (schema-dist profiles/calendar.fixture.json, dist.88's
-// copy): every case by name, a refused value refused, and each step's words and breakdown as the fixture gives them.
+// OWCalendar on the calendar profile's conformance fixture (schema-dist profiles/calendar.fixture.json, dist.89's
+// copy): every case by name, a refused value refused, each step's words and breakdown as the fixture gives them, and
+// the calendars found on a case's elements.
 // Then the readings the fixture leaves open (its gaps), as npm @onlyworlds/sdk 4.102.4 answers them (the profile's
 // reference: its built dist was run on each value on 2026-10-29), and the few npm cannot answer (it lists every day of
 // a year, so a month of 10^12 days does not fit in its memory; two edges where it throws).
@@ -22,8 +23,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.88's MANIFEST.json records it.
-const char* const DistSha256 = "5c50ad60cfd5e0320dab9c709588ddb139b8b22f8320c2d40647940c6e8e321a";
+// The fixture's sha256 as dist.89's MANIFEST.json records it.
+const char* const DistSha256 = "d9fd008326558c07bf079fd744bb8364cc83299ecbe0352cb1e2000e15e3aaea";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/calendar.fixture.json"; }
 
@@ -104,6 +105,16 @@ void Case(owtest::T& t, const OWJsonValue& c) {
     }
     t.Ok(cal.has_value(), name + ": refused a calendar the fixture reads (" + Str(c, "why") + ")");
     if (!cal) return;
+    // A world's elements, and the ids a reader finds a calendar on, in list order.
+    if (const OWJsonValue* elements = c.Find("elements")) {
+        const OWJsonValue* found = c.Find("found");
+        t.Ok(elements->IsArray() && found && found->IsArray(), name + ": its elements and the ids found");
+        if (!elements->IsArray() || !found || !found->IsArray()) return;
+        std::string want, got;
+        for (const OWJsonValue& id : found->Items()) want += (id.IsString() ? id.Text() : std::string("?")) + " ";
+        for (const OWWorldCalendar& w : OWCalendar::WorldCalendars(elements->Items())) got += w.id + " ";
+        t.Eq(got, want, name + ": the calendars found");
+    }
     const OWJsonValue* steps = c.Find("steps");
     t.Ok(steps && steps->IsArray() && steps->Size() > 0, name + ": its steps");
     if (!steps) return;
@@ -137,13 +148,10 @@ const std::vector<NpmCase>& NpmCases() {
     {"version-2.0-gregorian", "{\"version\":2.0,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"A\"],\"lengths\":[365]}},\"intercalary\":[{\"name\":\"Leap\",\"after_month\":1,\"every_years\":4.0,\"except\":[100.0,400],\"offset\":1.0}]}", true, {{0LL, "1 A, 0"}, {365LL, "1 A, 1"}, {1460LL, "Leap, 3"}, {1461LL, "1 A, 4"}}},
     {"version-string", "{\"version\":\"1\",\"grain\":\"day\"}", false, {}},
     {"version-true", "{\"version\":true,\"grain\":\"day\"}", false, {}},
-    {"grain-empty", "{\"version\":1,\"grain\":\"\"}", false, {}},  // an empty string is no grain (the profile as written)
     {"start-max-safe", "{\"version\":1,\"grain\":\"year\",\"eras\":[{\"name\":\"Far\",\"start\":9007199254740991}]}", true, {{0LL, "0"}, {9007199254740991LL, "1 Far"}}},
     {"start-2^53", "{\"version\":1,\"grain\":\"year\",\"eras\":[{\"name\":\"Far\",\"start\":9007199254740992}]}", false, {}},
     {"start-1e400", "{\"version\":1,\"grain\":\"year\",\"eras\":[{\"name\":\"Far\",\"start\":1e400}]}", false, {}},
     {"end-neg-2^53", "{\"version\":1,\"grain\":\"year\",\"eras\":[{\"name\":\"Far\",\"start\":0,\"end\":-9007199254740992}]}", false, {}},
-    {"after-month-1e300", "{\"version\":1,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"Frost\",\"Thaw\"],\"lengths\":[10,10]}},\"intercalary\":[{\"name\":\"Lost\",\"after_month\":1e300}]}", true, {{19LL, "10 Thaw, 0"}, {20LL, "0"}, {21LL, "1 Frost, 1"}}},
-    {"after-month-neg", "{\"version\":1,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"Frost\",\"Thaw\"],\"lengths\":[10,10]}},\"intercalary\":[{\"name\":\"Lost\",\"after_month\":-1}]}", true, {{19LL, "10 Thaw, 0"}, {20LL, "0"}, {21LL, "1 Frost, 1"}}},
     {"offset-neg-max-safe", "{\"version\":2,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"Frost\",\"Thaw\"],\"lengths\":[10,10]}},\"intercalary\":[{\"name\":\"Leap\",\"after_month\":2,\"every_years\":4,\"offset\":-9007199254740991}]}", true, {{0LL, "1 Frost, 0"}, {19LL, "10 Thaw, 0"}, {20LL, "1 Frost, 1"}, {21LL, "2 Frost, 1"}, {40LL, "1 Frost, 2"}}},
     {"offset-2^53", "{\"version\":2,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"Frost\",\"Thaw\"],\"lengths\":[10,10]}},\"intercalary\":[{\"name\":\"Leap\",\"after_month\":2,\"every_years\":4,\"offset\":9007199254740992}]}", false, {}},
     {"every-years-2^53", "{\"version\":1,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"Frost\",\"Thaw\"],\"lengths\":[10,10]}},\"intercalary\":[{\"name\":\"Leap\",\"after_month\":2,\"every_years\":9007199254740992}]}", false, {}},
@@ -220,7 +228,7 @@ std::string Plain(const std::string& extra = "") {
 OW_TEST(calendar_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the calendar fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.88's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.89's");
     // And the vendored manifest says the same.
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
@@ -243,10 +251,10 @@ OW_TEST(calendar_fixture_is_the_pinned_one) {
             ++refused;
         }
     }
-    t.Eq(cases->Size(), size_t(64), "64 cases (the profile page says 64)");
-    t.Eq(read, size_t(30), "30 calendars");
-    t.Eq(refused, size_t(34), "34 values a reader must refuse");
-    t.Eq(steps, size_t(198), "198 steps");
+    t.Eq(cases->Size(), size_t(75), "75 cases (the profile page says 75)");
+    t.Eq(read, size_t(34), "34 calendars");
+    t.Eq(refused, size_t(41), "41 values a reader must refuse");
+    t.Eq(steps, size_t(209), "209 steps");
 }
 
 OW_CASES(calendar_fixture_cases) {
@@ -280,7 +288,7 @@ OW_TEST(calendar_beside_the_fixture_as_npm_answers) {
             t.Eq(OWCalendar::FormatStep(*cal, step), std::string(words),
                  std::string(c.name) + " @" + std::to_string(step));
     }
-    t.Eq(n, size_t(76), "npm's 76 values");
+    t.Eq(n, size_t(73), "npm's 73 values");
 }
 
 OW_TEST(calendar_grain_is_something_after_the_trim) {
@@ -297,6 +305,37 @@ OW_TEST(calendar_grain_is_something_after_the_trim) {
     t.Ok(refused(R"({"version":2,"grain":" 　 "})"), "Unicode White_Space only");
     t.Ok(reads(R"({"version":1,"grain":" day "})"), "a padded grain reads");
     t.Ok(reads(R"({"version":1,"grain":"​"})"), "U+200B is not White_Space, so it is something left");
+    // npm 4.102.4 read an empty grain (its table's row grain-empty now lives here, as the first refusal above).
+}
+
+OW_TEST(calendar_after_month_names_a_month_the_year_has) {
+    // The profile (serial 89): an intercalary after_month that names a month the year does not have, past the last or
+    // below the first, is not a calendar; with no months, anything above 0. npm 4.102.4 read the first two values (its
+    // table's rows after-month-1e300 and after-month-neg, moved here) and placed the day in no month.
+    auto reads = [](const std::string& json) {
+        return Read(json).has_value() && OWCalendar::ReadValue(OWJsonValue::String(json)).has_value();
+    };
+    auto refused = [](const std::string& json) {
+        return !Read(json).has_value() && !OWCalendar::ReadValue(OWJsonValue::String(json)).has_value();
+    };
+    auto after = [](const std::string& am) { return Plain(R"(,"intercalary":[{"name":"Lost","after_month":)" + am + "}]"); };
+    t.Ok(refused(after("1e300")), "1e300: past the last month");
+    t.Ok(refused(after("-1")), "-1: below the first");
+    t.Ok(refused(after("3")), "3 on a year of two months");
+    t.Ok(refused(after("-1e300")), "-1e300");
+    t.Ok(reads(after("0")), "0: before month 1");
+    t.Ok(reads(after("-0")), "-0 is 0");
+    t.Ok(reads(after("2")), "2: after the last month");
+    t.Ok(reads(after("2.0")), "2.0 is 2");
+    const std::string no_months = R"({"version":1,"grain":"day","bundles":{"year":{"steps":10}},"intercalary":[{"name":"Gap","after_month":)";
+    t.Ok(reads(no_months + "0}]}"), "no months: 0 reads");
+    t.Ok(refused(no_months + "1}]}"), "no months: 1 is past the last");
+    // One entry out of range refuses the whole value, a leap entry too.
+    t.Ok(refused(Plain(R"(,"intercalary":[{"name":"Gap","after_month":1},{"name":"Leap","after_month":3,"every_years":4}])")),
+         "a leap entry past the last month");
+    // A falsy months value is no months.
+    t.Ok(refused(R"({"version":1,"grain":"day","bundles":{"months":0},"intercalary":[{"name":"Gap","after_month":1}]})"),
+         "months 0 is no months: 1 is past the last");
 }
 
 OW_TEST(calendar_json_string_is_strict_json) {
@@ -353,28 +392,19 @@ OW_TEST(calendar_numbers_npm_cannot_answer) {
 }
 
 OW_TEST(calendar_edges_where_npm_throws) {
-    // Two days after months the calendar does not have, and a free week: npm's weekday walk reads past its list of the
-    // year's days and throws a TypeError on the second (calendar.ts:507-510; Python raises the same, calendar.py
-    // weekday). This reader counts the days it has: the step reads with no weekday, as the first one does in npm.
-    std::optional<OWCalendarConfig> lost = Read(
-        R"({"version":1,"grain":"day","bundles":{"months":{"names":["A"],"lengths":[2]},"week":{"length":2,"names":["X","Y"]}},"intercalary":[{"name":"L1","after_month":5},{"name":"L2","after_month":6}]})");
-    t.Ok(lost.has_value(), "it reads (npm reads it too)");
-    if (lost) {
-        t.Eq(OWCalendar::FormatStep(*lost, 1), std::string("2 A, 0"), "npm: 2 A, 0");
-        t.Eq(OWCalendar::FormatStep(*lost, 2), std::string("0"), "npm: 0");
-        t.Eq(OWCalendar::FormatStep(*lost, 3), std::string("0"), "npm throws here; this reader prints the year");
-        t.Eq(OWCalendar::FormatStep(*lost, 4), std::string("1 A, 1"), "npm: 1 A, 1");
-        // npm's weekdays where it answers: 0 X, 1 Y, 2 X (the first lost day still counts in the free week), 4 X, 5 Y.
-        const std::pair<int64_t, const char*> npm[] = {{0, "X"}, {1, "Y"}, {2, "X"}, {4, "X"}, {5, "Y"}};
-        for (const auto& [step, name] : npm)
-            t.Eq(OWCalendar::Breakdown(*lost, step).weekday.value_or("-"), std::string(name),
-                 "weekday @" + std::to_string(step));
-        // Where npm throws (3, and -1 in year -1), the free week runs on over the days the year has.
-        t.Eq(OWCalendar::Breakdown(*lost, 3).weekday.value_or("-"), std::string("Y"), "weekday @3, npm throws");
-        t.Eq(OWCalendar::Breakdown(*lost, -1).weekday.value_or("-"), std::string("Y"), "weekday @-1, npm throws");
-    }
-    // A format that is not a string: npm throws at template.replace, Python raises. The profile lets a reader print its
-    // own way: this one prints the default template, as the Godot SDK does.
+    // Two days after months the calendar does not have, and a free week: npm 4.102.4's weekday walk reads past its list
+    // of the year's days and throws a TypeError on the second (calendar.ts:507-510; Python raises the same, calendar.py
+    // weekday). The profile (serial 89) settles it at read time: neither day has a position, so the value is not a
+    // calendar, and the step prints bare.
+    const std::string lost_json =
+        R"({"version":1,"grain":"day","bundles":{"months":{"names":["A"],"lengths":[2]},"week":{"length":2,"names":["X","Y"]}},"intercalary":[{"name":"L1","after_month":5},{"name":"L2","after_month":6}]})";
+    std::optional<OWCalendarConfig> lost = Read(lost_json);
+    t.Ok(!lost.has_value(), "not a calendar (npm 4.102.4 read it)");
+    t.Ok(!OWCalendar::ReadValue(OWJsonValue::String(lost_json)).has_value(), "nor as a JSON string");
+    t.Eq(OWCalendar::FormatStep(lost, 3), std::string("3"), "the bare step where npm threw");
+    // A format that is not a string: npm 4.102.4 throws at template.replace, Python raises. The profile (serial 89)
+    // ignores it, and the default template prints; the fixture's two cases hold a number and an object, these a number
+    // and a list.
     std::optional<OWCalendarConfig> numeric = Read(Plain(R"(,"format":5,"format_intercalary":[1],"intercalary":[{"name":"Gap","after_month":1}])"));
     t.Ok(numeric.has_value(), "a calendar with a number for its format reads (npm reads it too)");
     if (numeric) {
