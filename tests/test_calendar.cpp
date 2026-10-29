@@ -283,6 +283,22 @@ OW_TEST(calendar_beside_the_fixture_as_npm_answers) {
     t.Eq(n, size_t(76), "npm's 76 values");
 }
 
+OW_TEST(calendar_grain_is_something_after_the_trim) {
+    // The profile, ruled ahead of its fixture case: grain is a string with something left after trimming the room
+    // profile's White_Space set, the presence rule the marks use. Both the object and the JSON-string reading.
+    auto reads = [](const std::string& json) {
+        return Read(json).has_value() && OWCalendar::ReadValue(OWJsonValue::String(json)).has_value();
+    };
+    auto refused = [](const std::string& json) {
+        return !Read(json).has_value() && !OWCalendar::ReadValue(OWJsonValue::String(json)).has_value();
+    };
+    t.Ok(refused(R"({"version":1,"grain":""})"), "an empty grain");
+    t.Ok(refused(R"({"version":1,"grain":" \t\n"})"), "ASCII white space only");
+    t.Ok(refused(R"({"version":2,"grain":" 　 "})"), "Unicode White_Space only");
+    t.Ok(reads(R"({"version":1,"grain":" day "})"), "a padded grain reads");
+    t.Ok(reads(R"({"version":1,"grain":"​"})"), "U+200B is not White_Space, so it is something left");
+}
+
 OW_TEST(calendar_json_string_is_strict_json) {
     const std::string ok = R"({"version":1,"grain":"day"})";
     auto reads = [](const std::string& text) { return OWCalendar::ReadValue(OWJsonValue::String(text)).has_value(); };
