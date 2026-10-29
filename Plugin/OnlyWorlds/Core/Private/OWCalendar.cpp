@@ -192,8 +192,7 @@ double MeanLeap(const LeapRule& r) {
     return m;
 }
 
-// yearShape's base: the months and every day outside them with no leap rule (a day past the last month counts a step
-// here though no slot holds it, as the SDK counts it); without months, bundles.year.steps or 1.
+// yearShape's base: the months and every day outside them with no leap rule; without months, bundles.year.steps or 1.
 int64_t BaseLength(const OWCalendarConfig& cal) {
     if (!cal.has_months) return cal.year_steps.value_or(1);
     int64_t base = 0;
@@ -217,7 +216,8 @@ struct Position {
 };
 
 // positionOf with yearSlots walked by arithmetic: the days before month 1, then each month and the days after it, in
-// the list's order. A step past every slot (a day after a month the calendar does not have) has no slot.
+// the list's order. The reader refuses a day after a month the year does not have, so every step of a year has a slot;
+// the walk's end returns no slot only as a guard.
 Position PositionOf(const OWCalendarConfig& cal, int64_t step) {
     Position p;
     p.abs_year = AbsoluteYear(cal, step);
@@ -391,6 +391,13 @@ std::optional<OWCalendarConfig> ReadConfig(const OWJsonValue& value) {
                 }
             }
         }
+        // A day placed after a month the year does not have has no position, and a reader never invents one: an
+        // after_month below the first month or past the last (above 0 with no months) is not a calendar.
+        double month_count = names ? static_cast<double>(names->Size()) : 0.0;
+        for (const OWJsonValue& i : inter->Items()) {
+            double am = JsNumber(*Prop(&i, "after_month"));
+            if (am < 0 || am > month_count) return std::nullopt;
+        }
     }
 
     // Read: every value checked above.
@@ -432,9 +439,7 @@ std::optional<OWCalendarConfig> ReadConfig(const OWJsonValue& value) {
         for (const OWJsonValue& i : inter->Items()) {
             OWCalendarIntercalary ic;
             ic.name = Prop(&i, "name")->Text();
-            double am = JsNumber(*Prop(&i, "after_month"));
-            constexpr double Limit = 4611686018427387904.0;  // 2^62
-            ic.after_month = am > Limit ? INT64_MAX : am < -Limit ? INT64_MIN : static_cast<int64_t>(am);
+            ic.after_month = Int(Prop(&i, "after_month"));
             if (const OWJsonValue* every = Prop(&i, "every_years"); !Nullish(every)) ic.every_years = Int(every);
             if (v2) {
                 if (const OWJsonValue* ex = Prop(&i, "except"); !Nullish(ex))
