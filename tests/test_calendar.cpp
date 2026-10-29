@@ -180,7 +180,6 @@ const std::vector<NpmCase>& NpmCases() {
     {"week-mode-other", "{\"version\":1,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"A\",\"B\"],\"lengths\":[3,3]},\"week\":{\"length\":2,\"names\":[\"X\",\"Y\"],\"mode\":\"Nested\"}},\"format\":\"{weekday} {day} {month}\"}", true, {{3LL, "Y 1 B"}, {4LL, "X 2 B"}}},
     {"week-nested", "{\"version\":1,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"A\",\"B\"],\"lengths\":[3,3]},\"week\":{\"length\":2,\"names\":[\"X\",\"Y\"],\"mode\":\"nested\"}},\"format\":\"{weekday} {day} {month}\"}", true, {{3LL, "X 1 B"}, {4LL, "Y 2 B"}}},
     {"week-no-months-free", "{\"version\":1,\"grain\":\"day\",\"bundles\":{\"year\":{\"steps\":5},\"week\":{\"length\":3,\"names\":[\"X\",\"Y\",\"Z\"]}},\"format\":\"{weekday} {year}\"}", true, {{0LL, "X 0"}, {4LL, "Y 0"}, {5LL, "Z 1"}, {-1LL, "Z -1"}}},
-    {"leap-no-months", "{\"version\":1,\"grain\":\"day\",\"bundles\":{\"year\":{\"steps\":3}},\"intercalary\":[{\"name\":\"Leap\",\"after_month\":0,\"every_years\":2}]}", true, {{0LL, "0"}, {3LL, "0"}, {4LL, "1"}, {7LL, "2"}, {8LL, "2"}, {-1LL, "-1"}, {-3LL, "-1"}, {-4LL, "-2"}}},
     {"tmpl-middot", "{\"version\":1,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"Frost\",\"Thaw\"],\"lengths\":[10,10]}},\"format\":\"{weekday} \\u00b7 {day} {month} \\u00b7 {era}\"}", true, {{0LL, "1 Frost"}}},
     {"tmpl-edges", "{\"version\":1,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"Frost\",\"Thaw\"],\"lengths\":[10,10]}},\"format\":\", ; {era} {day} {month} ,;\"}", true, {{0LL, "1 Frost"}}},
     {"tmpl-ideographic", "{\"version\":1,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"Frost\",\"Thaw\"],\"lengths\":[10,10]}},\"format\":\"\\u3000{weekday}\\u3000{day}\\u00a0{month}\\ufeff{era}\\u2003\"}", true, {{0LL, "1\xc2\xa0""Frost"}}},
@@ -288,7 +287,7 @@ OW_TEST(calendar_beside_the_fixture_as_npm_answers) {
             t.Eq(OWCalendar::FormatStep(*cal, step), std::string(words),
                  std::string(c.name) + " @" + std::to_string(step));
     }
-    t.Eq(n, size_t(73), "npm's 73 values");
+    t.Eq(n, size_t(72), "npm's 72 values");
 }
 
 OW_TEST(calendar_grain_is_something_after_the_trim) {
@@ -328,14 +327,23 @@ OW_TEST(calendar_after_month_names_a_month_the_year_has) {
     t.Ok(reads(after("2")), "2: after the last month");
     t.Ok(reads(after("2.0")), "2.0 is 2");
     const std::string no_months = R"({"version":1,"grain":"day","bundles":{"year":{"steps":10}},"intercalary":[{"name":"Gap","after_month":)";
-    t.Ok(reads(no_months + "0}]}"), "no months: 0 reads");
+    // With no months there is no place between months, so any intercalary day refuses, 0 included (ruled ahead of the
+    // fixture's own case); an empty intercalary list still reads.
+    t.Ok(refused(no_months + "0}]}"), "no months: 0 has no place either");
     t.Ok(refused(no_months + "1}]}"), "no months: 1 is past the last");
+    t.Ok(reads(R"({"version":1,"grain":"day","bundles":{"year":{"steps":10}},"intercalary":[]})"),
+         "no months, no intercalary days: reads");
+    // npm 4.102.4 read this one and counted the leap day in a monthless year (its table's row leap-no-months, moved here).
+    t.Ok(refused(R"({"version":1,"grain":"day","bundles":{"year":{"steps":3}},"intercalary":[{"name":"Leap","after_month":0,"every_years":2}]})"),
+         "no months: a leap day at 0 has no place either");
     // One entry out of range refuses the whole value, a leap entry too.
     t.Ok(refused(Plain(R"(,"intercalary":[{"name":"Gap","after_month":1},{"name":"Leap","after_month":3,"every_years":4}])")),
          "a leap entry past the last month");
     // A falsy months value is no months.
     t.Ok(refused(R"({"version":1,"grain":"day","bundles":{"months":0},"intercalary":[{"name":"Gap","after_month":1}]})"),
          "months 0 is no months: 1 is past the last");
+    t.Ok(refused(R"({"version":1,"grain":"day","bundles":{"months":0},"intercalary":[{"name":"Gap","after_month":0}]})"),
+         "months 0 is no months: 0 has no place");
 }
 
 OW_TEST(calendar_json_string_is_strict_json) {

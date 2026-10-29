@@ -392,11 +392,12 @@ std::optional<OWCalendarConfig> ReadConfig(const OWJsonValue& value) {
             }
         }
         // A day placed after a month the year does not have has no position, and a reader never invents one: an
-        // after_month below the first month or past the last (above 0 with no months) is not a calendar.
+        // after_month below the first month or past the last is not a calendar, and with no months no intercalary day
+        // has a place between months at all, 0 included.
         double month_count = names ? static_cast<double>(names->Size()) : 0.0;
         for (const OWJsonValue& i : inter->Items()) {
             double am = JsNumber(*Prop(&i, "after_month"));
-            if (am < 0 || am > month_count) return std::nullopt;
+            if (month_count == 0 || am < 0 || am > month_count) return std::nullopt;
         }
     }
 
