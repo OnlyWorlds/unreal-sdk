@@ -320,7 +320,8 @@ std::optional<OWCalendarConfig> ReadConfig(const OWJsonValue& value) {
     const OWJsonValue* version = cfg->Find("version");
     if (!NumberIs(version, 1) && !NumberIs(version, 2)) return std::nullopt;
     const OWJsonValue* grain = cfg->Find("grain");
-    if (!IsString(grain)) return std::nullopt;
+    // The profile's grain is a string, and an empty string is no grain.
+    if (!IsString(grain) || grain->Text().empty()) return std::nullopt;
 
     const OWJsonValue* bundles = cfg->Find("bundles");
     // months: absent when falsy (null, false, 0, ""), as `if (months)` reads it.

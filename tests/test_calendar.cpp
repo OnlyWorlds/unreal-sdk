@@ -137,7 +137,7 @@ const std::vector<NpmCase>& NpmCases() {
     {"version-2.0-gregorian", "{\"version\":2.0,\"grain\":\"day\",\"bundles\":{\"months\":{\"names\":[\"A\"],\"lengths\":[365]}},\"intercalary\":[{\"name\":\"Leap\",\"after_month\":1,\"every_years\":4.0,\"except\":[100.0,400],\"offset\":1.0}]}", true, {{0LL, "1 A, 0"}, {365LL, "1 A, 1"}, {1460LL, "Leap, 3"}, {1461LL, "1 A, 4"}}},
     {"version-string", "{\"version\":\"1\",\"grain\":\"day\"}", false, {}},
     {"version-true", "{\"version\":true,\"grain\":\"day\"}", false, {}},
-    {"grain-empty", "{\"version\":1,\"grain\":\"\"}", true, {{2LL, "2"}}},
+    {"grain-empty", "{\"version\":1,\"grain\":\"\"}", false, {}},  // an empty string is no grain (the profile as written)
     {"start-max-safe", "{\"version\":1,\"grain\":\"year\",\"eras\":[{\"name\":\"Far\",\"start\":9007199254740991}]}", true, {{0LL, "0"}, {9007199254740991LL, "1 Far"}}},
     {"start-2^53", "{\"version\":1,\"grain\":\"year\",\"eras\":[{\"name\":\"Far\",\"start\":9007199254740992}]}", false, {}},
     {"start-1e400", "{\"version\":1,\"grain\":\"year\",\"eras\":[{\"name\":\"Far\",\"start\":1e400}]}", false, {}},
