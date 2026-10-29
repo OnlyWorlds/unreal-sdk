@@ -35,6 +35,7 @@ The plugin is two layers:
 |---|---|
 | `UOWLibrary` | `OpenWorldFolder`, `OpenWorldFile` (with the reader's verdict: accepted, reason, message), `CheckWorldFile`, `PackWorldFolder`. A relative path is taken from the project's folder |
 | `UOWWorld` | one world: its id and name, element ids by type, an element's type, name and JSON, `SetStringField` and `SetIntField`, `WriteFolder`, `PackToFile`; `Native()` hands C++ the core's `OnlyWorlds::OWWorld` |
+| `UOWCalendars` | the calendar profile on Blueprints: `GetWorldCalendars(World)` (each calendar's element id and name, found by the field), `FormatStep(World, CalendarId, Step)` (a step in words, "Year 1 BT"; the bare step when there is no such calendar or its value is refused, never an error) and `BreakdownStep(World, CalendarId, Step, Breakdown)` (an `FOWStepBreakdown`: year, era, month, day, the day outside the months, weekday; a part the calendar lacks is 0 or `""`). `CalendarId` `""` reads the world's only calendar when it holds exactly one. A step is an `int64` (Blueprint's Integer64) |
 | `FOW<Type>`, `UOWElements` | one `USTRUCT(BlueprintType)` per element type (`FOWCharacter`, `FOWPin`, ...), and the library that reads them out of a world: `GetAll<Types>(World)`, `Find<Type>(World, Id, Out)`. Generated from schema-dist's `schema.json` |
 
 Members are PascalCase (`birth_date` -> `BirthDate`, `STR` -> `Str`). A string field is an `FString` (`""` for unset),
@@ -74,6 +75,11 @@ The automation tests (`OnlyWorlds.*`):
   the set itself.
 - `OnlyWorlds.World.WriteBack.<world>`: a real world folder opened, written unedited to `Host/Saved/OWTests/`, and
   compared file by file with the folder read. `OnlyWorlds.World.Models`: the structs against their files, and one edit.
+- `OnlyWorlds.Calendar.GetWorldCalendars`, `.FormatStep`, `.BreakdownStep`: each `UOWCalendars` function called as a
+  Blueprint calls it (found by name, its parameters marshalled by property, `ProcessEvent` on the class default
+  object, the answer and the struct's members read back by property), on Moppetopia's calendar (Sikelia holds none).
+  `OnlyWorlds.Calendar.Fixture`: every case of the calendar profile's fixture (`codegen/schema-dist/profiles/`) placed
+  on that calendar's element and read back the same way: the words and the breakdown of each step, every refusal.
 - `OnlyWorlds.Frame.MoppetopiaRootMap` needs a renderer (`-RenderOffscreen` instead of `-nullrhi`; a `-nullrhi`
   run leaves it out): the world's root Map as a plane carrying its image, the Pins as markers, captured from above to
   `Host/Saved/OWFrames/moppetopia-root-map.png`.
@@ -91,5 +97,8 @@ regenerate, never edit.
 - A runtime actor that lays a Map out in a level: the frame is built by a test, in the editor, with a material made
   in code. A packaged game would need a material asset (the plugin ships no content yet).
 - Writing a struct back into an element (edits go through `UOWWorld`'s field setters for now).
-- Blueprint graphs: the structs and functions compile as Blueprint types; no graph has been run against them.
+- Blueprint graphs: the structs and functions compile as Blueprint types, and the calendar's functions are called
+  through reflection as a graph calls them; no graph has been run against any of them.
+- The message profile on Blueprints: the core reads it, but with no API client there is no members list to prove a
+  sender.
 - Any platform other than Win64, and any engine other than 5.8.
