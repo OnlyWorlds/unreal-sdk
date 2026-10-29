@@ -1,0 +1,1822 @@
+{
+ "about": "Message cases the profile's fixture does not hold, in the fixture's case shapes, each answer as npm @onlyworlds/sdk 4.102.4 gave it (its built dist, run 2026-10-29). A case without members reads the fixture's world. recipients: recipientsOf of one message and of a Note.",
+ "cases": [
+  {
+   "kind": "pair",
+   "name": "pair-upper-type-and-supertype",
+   "element": {
+    "type": "NARRATIVE",
+    "supertype": "MESSAGE"
+   },
+   "is_message": true
+  },
+  {
+   "kind": "pair",
+   "name": "pair-nel-and-ideographic-space-trimmed",
+   "element": {
+    "type": "\u0085narrative",
+    "supertype": "Message\u3000"
+   },
+   "is_message": true
+  },
+  {
+   "kind": "pair",
+   "name": "pair-bom-stays",
+   "element": {
+    "type": "narrative",
+    "supertype": "\ufeffMessage"
+   },
+   "is_message": false
+  },
+  {
+   "kind": "pair",
+   "name": "pair-zero-width-space-stays",
+   "element": {
+    "type": "narrative",
+    "supertype": "Message\u200b"
+   },
+   "is_message": false
+  },
+  {
+   "kind": "pair",
+   "name": "pair-long-s-folds",
+   "element": {
+    "type": "narrative",
+    "supertype": "Me\u017f\u017fage"
+   },
+   "is_message": true
+  },
+  {
+   "kind": "pair",
+   "name": "pair-kelvin-not-in-the-word",
+   "element": {
+    "type": "narrative",
+    "supertype": "Messa\u212ae"
+   },
+   "is_message": false
+  },
+  {
+   "kind": "pair",
+   "name": "pair-supertype-null",
+   "element": {
+    "type": "narrative",
+    "supertype": null
+   },
+   "is_message": false
+  },
+  {
+   "kind": "pair",
+   "name": "pair-type-missing",
+   "element": {
+    "supertype": "Message"
+   },
+   "is_message": false
+  },
+  {
+   "kind": "pair",
+   "name": "pair-type-a-number",
+   "element": {
+    "type": 5,
+    "supertype": "Message"
+   },
+   "is_message": false
+  },
+  {
+   "kind": "pair",
+   "name": "pair-note-is-not-a-message",
+   "element": {
+    "type": "narrative",
+    "supertype": "Note"
+   },
+   "is_message": false
+  },
+  {
+   "kind": "pair",
+   "name": "pair-tab-and-nbsp-trimmed",
+   "element": {
+    "type": "\tnarrative\u00a0",
+    "supertype": " message\u2003"
+   },
+   "is_message": true
+  },
+  {
+   "kind": "pair",
+   "name": "pair-a-list-is-not-a-body",
+   "element": [
+    {
+     "type": "narrative",
+     "supertype": "Message"
+    }
+   ],
+   "is_message": false
+  },
+  {
+   "kind": "unseen",
+   "name": "addressed-empty-id-in-the-list",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e001",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M1",
+    "story": "",
+    "characters": [
+     "",
+     "019a3b10-0000-7000-8000-0000000000a2"
+    ]
+   },
+   "character": "",
+   "addressed": false,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "unseen",
+   "name": "addressed-characters-a-string",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e002",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M2",
+    "story": "",
+    "characters": "019a3b10-0000-7000-8000-0000000000a1"
+   },
+   "character": "019a3b10-0000-7000-8000-0000000000a1",
+   "addressed": false,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "unseen",
+   "name": "addressed-characters-null-is-everyone",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e003",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M3",
+    "story": "",
+    "characters": null
+   },
+   "character": "019a3b10-0000-7000-8000-0000000000a4",
+   "addressed": true,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "unseen",
+   "name": "addressed-characters-with-null",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e004",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M4",
+    "story": "",
+    "characters": [
+     null,
+     "019a3b10-0000-7000-8000-0000000000a1"
+    ]
+   },
+   "character": "019a3b10-0000-7000-8000-0000000000a1",
+   "addressed": true,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "unseen",
+   "name": "addressed-characters-list-of-empty",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e005",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M5",
+    "story": "",
+    "characters": [
+     ""
+    ]
+   },
+   "character": "019a3b10-0000-7000-8000-0000000000a1",
+   "addressed": false,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "unseen",
+   "name": "addressed-trimmed-mark-a-string-is-no-mark",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e006",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M6",
+    "story": "",
+    "characters": [],
+    "x_served_trimmed": "characters"
+   },
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "addressed": true,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "unseen",
+   "name": "addressed-trimmed-mark-folded-is-no-mark",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e007",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M7",
+    "story": "",
+    "characters": [],
+    "x_served_trimmed": [
+     "Characters"
+    ]
+   },
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "addressed": true,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "unseen",
+   "name": "addressed-a-note-with-no-characters",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e008",
+    "type": "narrative",
+    "supertype": "Note",
+    "name": "N8",
+    "story": "",
+    "characters": []
+   },
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "addressed": false,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "everyone",
+   "name": "everyone-characters-a-string",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e009",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M9",
+    "story": "",
+    "characters": "x"
+   },
+   "keyless": false,
+   "to_everyone": false,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "everyone",
+   "name": "everyone-a-note",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e010",
+    "type": "narrative",
+    "supertype": "Note",
+    "name": "N10",
+    "story": ""
+   },
+   "keyless": false,
+   "to_everyone": false,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "everyone",
+   "name": "everyone-keyless-with-the-mark",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e011",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M11",
+    "story": "",
+    "characters": [],
+    "x_served_trimmed": [
+     "characters"
+    ]
+   },
+   "keyless": true,
+   "to_everyone": false,
+   "unseen_recipients": null
+  },
+  {
+   "kind": "everyone",
+   "name": "everyone-a-non-empty-list",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e012",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M12",
+    "story": "",
+    "characters": [
+     "019a3b10-0000-7000-8000-0000000000a1"
+    ]
+   },
+   "keyless": false,
+   "to_everyone": false,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "sent_by",
+   "name": "sent-by-empty-narrator",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e013",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M13",
+    "story": "",
+    "narrator": ""
+   },
+   "character": "",
+   "sent_by": false
+  },
+  {
+   "kind": "sent_by",
+   "name": "sent-by-a-note",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e014",
+    "type": "narrative",
+    "supertype": "Note",
+    "name": "N14",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2"
+   },
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "sent_by": true
+  },
+  {
+   "kind": "sent_by",
+   "name": "sent-by-a-number",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e015",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M15",
+    "story": "",
+    "narrator": 7
+   },
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "sent_by": false
+  },
+  {
+   "kind": "sender",
+   "name": "sender-empty-narrator-is-nobody",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e016",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M16",
+    "story": "",
+    "narrator": "",
+    "created_by": "019a3b10-0000-7000-8000-0000000000b2"
+   },
+   "status": "unverifiable",
+   "claimed": null,
+   "written_by": null
+  },
+  {
+   "kind": "sender",
+   "name": "sender-narrator-a-number",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e017",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M17",
+    "story": "",
+    "narrator": 5,
+    "created_by": "019a3b10-0000-7000-8000-0000000000b2"
+   },
+   "status": "unverifiable",
+   "claimed": null,
+   "written_by": null
+  },
+  {
+   "kind": "sender",
+   "name": "sender-created-by-a-number",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e018",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M18",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "created_by": 5
+   },
+   "status": "unverifiable",
+   "claimed": "019a3b10-0000-7000-8000-0000000000a2",
+   "written_by": null
+  },
+  {
+   "kind": "sender",
+   "name": "sender-members-not-a-list",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e019",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M19",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "created_by": "019a3b10-0000-7000-8000-0000000000b2"
+   },
+   "status": "unverifiable",
+   "claimed": "019a3b10-0000-7000-8000-0000000000a2",
+   "written_by": null,
+   "members": {
+    "rows": [
+     {
+      "id": null,
+      "kind": "owner",
+      "role": "owner",
+      "character": "019a3b10-0000-7000-8000-0000000000a1",
+      "status": "active"
+     },
+     {
+      "id": "019a3b10-0000-7000-8000-0000000000b2",
+      "kind": "person",
+      "role": "contributor",
+      "character": "019a3b10-0000-7000-8000-0000000000a2",
+      "status": "active"
+     },
+     {
+      "id": "019a3b10-0000-7000-8000-0000000000b3",
+      "kind": "agent",
+      "role": "contributor",
+      "character": "019a3b10-0000-7000-8000-0000000000a3",
+      "status": "active",
+      "name": "Wren"
+     },
+     {
+      "id": "019a3b10-0000-7000-8000-0000000000b5",
+      "kind": "person",
+      "role": "guest",
+      "character": null,
+      "status": "active"
+     },
+     {
+      "id": "019a3b10-0000-7000-8000-0000000000b6",
+      "kind": "person",
+      "role": "contributor",
+      "character": "019a3b10-0000-7000-8000-0000000000a5",
+      "status": "removed"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "sender",
+   "name": "sender-first-row-decides",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e020",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M20",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "created_by": "019a3b10-0000-7000-8000-0000000000b2"
+   },
+   "status": "unverifiable",
+   "claimed": "019a3b10-0000-7000-8000-0000000000a2",
+   "written_by": null,
+   "members": [
+    {
+     "id": "019a3b10-0000-7000-8000-0000000000b2",
+     "character": null
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-0000000000b2",
+     "character": "019a3b10-0000-7000-8000-0000000000a2"
+    }
+   ]
+  },
+  {
+   "kind": "sender",
+   "name": "sender-row-without-id-is-not-the-owner",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e021",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M21",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a1",
+    "created_by": null
+   },
+   "status": "unverifiable",
+   "claimed": "019a3b10-0000-7000-8000-0000000000a1",
+   "written_by": null,
+   "members": [
+    {
+     "character": "019a3b10-0000-7000-8000-0000000000a1"
+    }
+   ]
+  },
+  {
+   "kind": "sender",
+   "name": "sender-row-character-empty",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e022",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M22",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "created_by": "019a3b10-0000-7000-8000-0000000000b2"
+   },
+   "status": "unverifiable",
+   "claimed": "019a3b10-0000-7000-8000-0000000000a2",
+   "written_by": null,
+   "members": [
+    {
+     "id": "019a3b10-0000-7000-8000-0000000000b2",
+     "character": ""
+    }
+   ]
+  },
+  {
+   "kind": "sender",
+   "name": "sender-trimmed-mark-beside-a-narrator-is-not-unseen",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e023",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M23",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "created_by": "019a3b10-0000-7000-8000-0000000000b3",
+    "x_served_trimmed": [
+     "narrator"
+    ]
+   },
+   "status": "mismatch",
+   "claimed": "019a3b10-0000-7000-8000-0000000000a2",
+   "written_by": "019a3b10-0000-7000-8000-0000000000a3"
+  },
+  {
+   "kind": "sender",
+   "name": "sender-trimmed-mark-and-empty-narrator-is-unseen",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e024",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M24",
+    "story": "",
+    "narrator": "",
+    "x_served_trimmed": [
+     "narrator",
+     "characters"
+    ]
+   },
+   "status": "unseen",
+   "claimed": null,
+   "written_by": null
+  },
+  {
+   "kind": "sender",
+   "name": "sender-the-owner-with-a-numeric-membership-row",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e025",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M25",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "created_by": 2
+   },
+   "status": "verified",
+   "claimed": "019a3b10-0000-7000-8000-0000000000a2",
+   "written_by": null,
+   "members": [
+    {
+     "id": 2,
+     "character": "019a3b10-0000-7000-8000-0000000000a2"
+    }
+   ]
+  },
+  {
+   "kind": "edited",
+   "name": "edited-changed-by-equal-created-by",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e026",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M26",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+    "changed_by": "019a3b10-0000-7000-8000-0000000000b2"
+   },
+   "edited": false,
+   "edited_by": null
+  },
+  {
+   "kind": "edited",
+   "name": "edited-changed-by-without-created-by",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e027",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M27",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "changed_by": "019a3b10-0000-7000-8000-0000000000b3"
+   },
+   "edited": true,
+   "edited_by": "019a3b10-0000-7000-8000-0000000000a3"
+  },
+  {
+   "kind": "edited",
+   "name": "edited-two-objects-are-never-equal",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e028",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M28",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "created_by": {
+     "id": 1
+    },
+    "changed_by": {
+     "id": 1
+    }
+   },
+   "edited": true,
+   "edited_by": null
+  },
+  {
+   "kind": "edited",
+   "name": "edited-by-the-owner",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e029",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M29",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+    "changed_by": null
+   },
+   "edited": true,
+   "edited_by": "019a3b10-0000-7000-8000-0000000000a1"
+  },
+  {
+   "kind": "edited",
+   "name": "edited-off-the-list",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e030",
+    "type": "narrative",
+    "supertype": "Message",
+    "name": "M30",
+    "story": "",
+    "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+    "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+    "changed_by": "019a3b10-0000-7000-8000-0000000000b9"
+   },
+   "edited": true,
+   "edited_by": null
+  },
+  {
+   "kind": "mark",
+   "name": "mark-equal-times-keep-the-first",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e031",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": "2026-10-27T10:01:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e032",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": "2026-10-27T10:01:00Z"
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": "019a3b10-0000-7000-8000-00000000e031"
+  },
+  {
+   "kind": "mark",
+   "name": "mark-readable-beats-unreadable-listed-later",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e033",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": "2026-10-27T10:01:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e034",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": "soon"
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": "019a3b10-0000-7000-8000-00000000e033"
+  },
+  {
+   "kind": "mark",
+   "name": "mark-unreadable-only-keeps-the-first",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e035",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": null
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e036",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": []
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": "019a3b10-0000-7000-8000-00000000e035"
+  },
+  {
+   "kind": "mark",
+   "name": "mark-supertype-folded",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e037",
+     "type": "relation",
+     "supertype": " READ ",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": "2026-10-27T10:01:00Z"
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": "019a3b10-0000-7000-8000-00000000e037"
+  },
+  {
+   "kind": "mark",
+   "name": "mark-type-not-a-relation",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e038",
+     "type": "narrative",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": "2026-10-27T10:01:00Z"
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": null
+  },
+  {
+   "kind": "mark",
+   "name": "mark-actor-not-a-string",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e039",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": [
+      "019a3b10-0000-7000-8000-0000000000a1"
+     ],
+     "narratives": [],
+     "updated_at": "2026-10-27T10:01:00Z"
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": null
+  },
+  {
+   "kind": "mark",
+   "name": "mark-owner-hand-counts-for-the-owner",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e040",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "created_by": null,
+     "changed_by": null,
+     "updated_at": "2026-10-27T10:01:00Z"
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": "019a3b10-0000-7000-8000-00000000e040"
+  },
+  {
+   "kind": "mark",
+   "name": "mark-another-hand-made-it",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e041",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "updated_at": "2026-10-27T10:01:00Z"
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": null
+  },
+  {
+   "kind": "mark",
+   "name": "mark-no-members-list",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e042",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "created_by": null,
+     "updated_at": "2026-10-27T10:01:00Z"
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": null,
+   "members": null
+  },
+  {
+   "kind": "mark",
+   "name": "mark-plus-hour-offset-orders",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e043",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": "2026-10-27T11:30:00+01:00"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e044",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": "2026-10-27T10:20:00Z"
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": "019a3b10-0000-7000-8000-00000000e043"
+  },
+  {
+   "kind": "mark",
+   "name": "mark-microseconds-order",
+   "relations": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e045",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": "2026-10-27T10:00:00.0000019Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e046",
+     "type": "relation",
+     "supertype": "Read",
+     "name": "Read: Ada",
+     "actor": "019a3b10-0000-7000-8000-0000000000a1",
+     "narratives": [],
+     "updated_at": "2026-10-27T10:00:00.000001Z"
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "mark": "019a3b10-0000-7000-8000-00000000e045"
+  },
+  {
+   "kind": "unread",
+   "name": "unread-mark-ids-not-strings",
+   "messages": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e047",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M47",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "characters": [
+      "019a3b10-0000-7000-8000-0000000000a1"
+     ]
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e048",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M48",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "characters": [
+      "019a3b10-0000-7000-8000-0000000000a1"
+     ]
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "read_mark": {
+    "id": "019a3b10-0000-7000-8000-00000000e049",
+    "type": "relation",
+    "supertype": "Read",
+    "name": "Read: Ada",
+    "actor": "019a3b10-0000-7000-8000-0000000000a1",
+    "narratives": [
+     "019a3b10-0000-7000-8000-00000000e047",
+     48,
+     null
+    ]
+   },
+   "unread": [
+    "019a3b10-0000-7000-8000-00000000e048"
+   ]
+  },
+  {
+   "kind": "unread",
+   "name": "unread-message-id-a-number",
+   "messages": [
+    {
+     "id": 50,
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M50",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "characters": [
+      "019a3b10-0000-7000-8000-0000000000a1"
+     ]
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "read_mark": {
+    "id": "019a3b10-0000-7000-8000-00000000e051",
+    "type": "relation",
+    "supertype": "Read",
+    "name": "Read: Ada",
+    "actor": "019a3b10-0000-7000-8000-0000000000a1",
+    "narratives": [
+     "50"
+    ]
+   },
+   "unread": [
+    50
+   ]
+  },
+  {
+   "kind": "unread",
+   "name": "unread-own-claim-in-a-folder",
+   "messages": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e052",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M52",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a1",
+     "characters": []
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e053",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M53",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "characters": []
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "read_mark": null,
+   "unread": [
+    "019a3b10-0000-7000-8000-00000000e053"
+   ]
+  },
+  {
+   "kind": "unread",
+   "name": "unread-read-mark-not-a-body",
+   "messages": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e054",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M54",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "characters": [
+      "019a3b10-0000-7000-8000-0000000000a1"
+     ]
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "read_mark": [
+    "019a3b10-0000-7000-8000-00000000e054"
+   ],
+   "unread": [
+    "019a3b10-0000-7000-8000-00000000e054"
+   ]
+  },
+  {
+   "kind": "unread",
+   "name": "unread-hidden-and-proposed-still-unread",
+   "messages": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e055",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M55",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "characters": [
+      "019a3b10-0000-7000-8000-0000000000a1"
+     ],
+     "hidden": true,
+     "x_review_proposed": {
+      "by": "x"
+     }
+    }
+   ],
+   "reader": "019a3b10-0000-7000-8000-0000000000a1",
+   "read_mark": null,
+   "unread": [
+    "019a3b10-0000-7000-8000-00000000e055"
+   ]
+  },
+  {
+   "kind": "thread",
+   "name": "thread-created-at-readings",
+   "messages": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e060",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M60",
+     "story": "",
+     "created_at": "2026-10-27T04:00:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e061",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M61",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T10:00:00+05:30"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e062",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M62",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T04:29:59Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e063",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M63",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27t04:30:00z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e064",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M64",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T04:30:00"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e065",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M65",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T04:30:00.5Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e066",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M66",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-02-29T00:00:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e067",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M67",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2024-02-29T00:00:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e068",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M68",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T24:00:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e069",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M69",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": " 2026-10-27T04:30:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e070",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M70",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T04:30:00Z\n"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e071",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M71",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T04:30:00.Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e072",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M72",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T04:30:00+24:00"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e073",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M73",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27 04:30:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e074",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M74",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "0000-01-01T00:00:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e075",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M75",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "9999-12-31T23:59:59.999999Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e076",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M76",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T04:30:00-00:30"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e077",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M77",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T04:30:00+0100"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e078",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M78",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-13-01T00:00:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e079",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M79",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T04:30:60Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e080",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M80",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": 12345
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e081",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M81",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e060",
+     "created_at": "2026-10-27T04:30:00.123456789Z"
+    }
+   ],
+   "root": "019a3b10-0000-7000-8000-00000000e060",
+   "thread": [
+    "019a3b10-0000-7000-8000-00000000e074",
+    "019a3b10-0000-7000-8000-00000000e067",
+    "019a3b10-0000-7000-8000-00000000e060",
+    "019a3b10-0000-7000-8000-00000000e062",
+    "019a3b10-0000-7000-8000-00000000e061",
+    "019a3b10-0000-7000-8000-00000000e063",
+    "019a3b10-0000-7000-8000-00000000e064",
+    "019a3b10-0000-7000-8000-00000000e081",
+    "019a3b10-0000-7000-8000-00000000e065",
+    "019a3b10-0000-7000-8000-00000000e076",
+    "019a3b10-0000-7000-8000-00000000e075",
+    "019a3b10-0000-7000-8000-00000000e066",
+    "019a3b10-0000-7000-8000-00000000e068",
+    "019a3b10-0000-7000-8000-00000000e069",
+    "019a3b10-0000-7000-8000-00000000e070",
+    "019a3b10-0000-7000-8000-00000000e071",
+    "019a3b10-0000-7000-8000-00000000e072",
+    "019a3b10-0000-7000-8000-00000000e073",
+    "019a3b10-0000-7000-8000-00000000e077",
+    "019a3b10-0000-7000-8000-00000000e078",
+    "019a3b10-0000-7000-8000-00000000e079",
+    "019a3b10-0000-7000-8000-00000000e080"
+   ]
+  },
+  {
+   "kind": "thread",
+   "name": "thread-a-loop-and-a-root-not-in-the-list",
+   "messages": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e082",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M82",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e083"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e083",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M83",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e082"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e084",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M84",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e085"
+    }
+   ],
+   "root": "019a3b10-0000-7000-8000-00000000e085",
+   "thread": [
+    "019a3b10-0000-7000-8000-00000000e084"
+   ]
+  },
+  {
+   "kind": "thread",
+   "name": "thread-walks-through-a-note-never-lists-it",
+   "messages": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e086",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M86",
+     "story": ""
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e087",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N87",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e086"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e088",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M88",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e087"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e089",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M89",
+     "story": "",
+     "parent_narrative": {
+      "id": "019a3b10-0000-7000-8000-00000000e086"
+     }
+    }
+   ],
+   "root": "019a3b10-0000-7000-8000-00000000e086",
+   "thread": [
+    "019a3b10-0000-7000-8000-00000000e086",
+    "019a3b10-0000-7000-8000-00000000e088"
+   ]
+  },
+  {
+   "kind": "thread",
+   "name": "thread-an-id-given-twice",
+   "messages": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e090",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "first",
+     "story": ""
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e091",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M91",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e090"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e090",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "second",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e092"
+    }
+   ],
+   "root": "019a3b10-0000-7000-8000-00000000e090",
+   "thread": [
+    "019a3b10-0000-7000-8000-00000000e090",
+    "019a3b10-0000-7000-8000-00000000e091",
+    "019a3b10-0000-7000-8000-00000000e090"
+   ]
+  },
+  {
+   "kind": "thread",
+   "name": "thread-a-repeated-id-walks-the-first",
+   "messages": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e093",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M93",
+     "story": ""
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e094",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "first",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e093"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e095",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "M95",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e094"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e094",
+     "type": "narrative",
+     "supertype": "Message",
+     "name": "second",
+     "story": "",
+     "parent_narrative": "019a3b10-0000-7000-8000-00000000e096"
+    }
+   ],
+   "root": "019a3b10-0000-7000-8000-00000000e093",
+   "thread": [
+    "019a3b10-0000-7000-8000-00000000e093",
+    "019a3b10-0000-7000-8000-00000000e094",
+    "019a3b10-0000-7000-8000-00000000e095"
+   ]
+  },
+  {
+   "kind": "unseen",
+   "name": "unseen-a-note-with-the-trimmed-mark",
+   "message": {
+    "id": "019a3b10-0000-7000-8000-00000000e097",
+    "type": "narrative",
+    "supertype": "Note",
+    "name": "N97",
+    "story": "",
+    "characters": [],
+    "x_served_trimmed": [
+     "characters"
+    ]
+   },
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "addressed": false,
+   "unseen_recipients": false
+  },
+  {
+   "kind": "note",
+   "name": "note-proposed-a-string-is-shown",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e100",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N100",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "x_review_proposed": "yes"
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e100"
+  },
+  {
+   "kind": "note",
+   "name": "note-proposed-an-empty-object-is-shown",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e101",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N101",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "x_review_proposed": {}
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e101"
+  },
+  {
+   "kind": "note",
+   "name": "note-proposed-a-list-is-shown",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e102",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N102",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "x_review_proposed": [
+      "x"
+     ]
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e102"
+  },
+  {
+   "kind": "note",
+   "name": "note-proposed-an-object-is-not",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e103",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N103",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "x_review_proposed": {
+      "by": "x"
+     }
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": null
+  },
+  {
+   "kind": "note",
+   "name": "note-hidden-zero",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e104",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N104",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "hidden": 0
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": null
+  },
+  {
+   "kind": "note",
+   "name": "note-hidden-empty-string",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e105",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N105",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "hidden": ""
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": null
+  },
+  {
+   "kind": "note",
+   "name": "note-hidden-false",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e106",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N106",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "hidden": false
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e106"
+  },
+  {
+   "kind": "note",
+   "name": "note-hidden-null",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e107",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N107",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "hidden": null
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e107"
+  },
+  {
+   "kind": "note",
+   "name": "note-newest-listed-later",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e108",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N108",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "created_at": "2026-10-27T10:01:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e109",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N109",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "created_at": "2026-10-27T10:02:00Z"
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e109"
+  },
+  {
+   "kind": "note",
+   "name": "note-equal-times-the-later",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e110",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N110",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "created_at": "2026-10-27T10:01:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e111",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N111",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "created_at": "2026-10-27T10:01:00Z"
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e111"
+  },
+  {
+   "kind": "note",
+   "name": "note-unreadable-only-the-last",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e112",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N112",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "created_at": "x"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e113",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N113",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2"
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e113"
+  },
+  {
+   "kind": "note",
+   "name": "note-readable-beats-unreadable-later",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e114",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N114",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "created_at": "2026-10-27T10:01:00Z"
+    },
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e115",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N115",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "created_at": "x"
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e114"
+  },
+  {
+   "kind": "note",
+   "name": "note-empty-id-skipped",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e116",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N116",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "created_at": "2026-10-27T10:01:00Z"
+    },
+    {
+     "id": "",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N117",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2",
+     "created_at": "2026-10-27T10:02:00Z"
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e116"
+  },
+  {
+   "kind": "note",
+   "name": "note-supertype-folded",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e118",
+     "type": "narrative",
+     "supertype": " NOTE ",
+     "name": "N118",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2"
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": "019a3b10-0000-7000-8000-00000000e118"
+  },
+  {
+   "kind": "note",
+   "name": "note-no-members-list",
+   "notes": [
+    {
+     "id": "019a3b10-0000-7000-8000-00000000e119",
+     "type": "narrative",
+     "supertype": "Note",
+     "name": "N119",
+     "story": "",
+     "narrator": "019a3b10-0000-7000-8000-0000000000a2",
+     "created_by": "019a3b10-0000-7000-8000-0000000000b2"
+    }
+   ],
+   "character": "019a3b10-0000-7000-8000-0000000000a2",
+   "line": null,
+   "members": null
+  }
+ ],
+ "recipients": {
+  "message": {
+   "id": "019a3b10-0000-7000-8000-00000000e120",
+   "type": "narrative",
+   "supertype": "Message",
+   "name": "M120",
+   "story": "",
+   "characters": [
+    "019a3b10-0000-7000-8000-0000000000a1",
+    "",
+    5,
+    null,
+    "019a3b10-0000-7000-8000-0000000000a2",
+    "019a3b10-0000-7000-8000-0000000000a1"
+   ]
+  },
+  "of": [
+   "019a3b10-0000-7000-8000-0000000000a1",
+   "019a3b10-0000-7000-8000-0000000000a2",
+   "019a3b10-0000-7000-8000-0000000000a1"
+  ],
+  "note": {
+   "id": "019a3b10-0000-7000-8000-00000000e121",
+   "type": "narrative",
+   "supertype": "Note",
+   "name": "N121",
+   "story": "",
+   "characters": [
+    "019a3b10-0000-7000-8000-0000000000a1"
+   ]
+  },
+  "of_note": []
+ }
+}
