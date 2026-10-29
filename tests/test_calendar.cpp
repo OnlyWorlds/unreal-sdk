@@ -1,4 +1,4 @@
-// OWCalendar on the calendar profile's conformance fixture (schema-dist profiles/calendar.fixture.json, dist.89's
+// OWCalendar on the calendar profile's conformance fixture (schema-dist profiles/calendar.fixture.json, dist.90's
 // copy): every case by name, a refused value refused, each step's words and breakdown as the fixture gives them, and
 // the calendars found on a case's elements.
 // Then the readings the fixture leaves open (its gaps), as npm @onlyworlds/sdk 4.102.4 answers them (the profile's
@@ -23,8 +23,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.89's MANIFEST.json records it.
-const char* const DistSha256 = "d9fd008326558c07bf079fd744bb8364cc83299ecbe0352cb1e2000e15e3aaea";
+// The fixture's sha256 as dist.90's MANIFEST.json records it.
+const char* const DistSha256 = "1dddb5c94d9b290bc0dcba9a966b3934dee5e4bf7e1dd8e579f4f783ff081d5e";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/calendar.fixture.json"; }
 
@@ -227,7 +227,7 @@ std::string Plain(const std::string& extra = "") {
 OW_TEST(calendar_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the calendar fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.89's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.90's");
     // And the vendored manifest says the same.
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
@@ -250,9 +250,9 @@ OW_TEST(calendar_fixture_is_the_pinned_one) {
             ++refused;
         }
     }
-    t.Eq(cases->Size(), size_t(75), "75 cases (the profile page says 75)");
+    t.Eq(cases->Size(), size_t(76), "76 cases (the profile page says 76)");
     t.Eq(read, size_t(34), "34 calendars");
-    t.Eq(refused, size_t(41), "41 values a reader must refuse");
+    t.Eq(refused, size_t(42), "42 values a reader must refuse");
     t.Eq(steps, size_t(209), "209 steps");
 }
 
