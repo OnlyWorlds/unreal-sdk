@@ -28,6 +28,18 @@ The plugin is two layers:
 | `OWAddress` | the address profile (schema-dist `profiles/address.md`): `Parse` reads an `ow://` link or a site URL into a reading (form, world, type, id, moment, lens, canonical) or refuses it by the profile's named reason; `Write` and `WriteJson` write an element's or a world's address, with the writer's own refusals. Held to the profile's 133-case fixture |
 | `OWCalendar` | the calendar profile (`profiles/calendar.md`, version 2): `ReadValue` reads an `atlas_calendar` value (an object, or the same object as a strict JSON string) into an `OWCalendarConfig`, or refuses it (a tool then shows the bare step); `Breakdown` and `FormatStep` read a step aloud ("3 Frost, 12 AG"); `WorldCalendars` finds a world's calendars by the field, never by supertype. Numbers are read as JavaScript reads them (whole to 2^53 - 1, `1.0` is 1), as the profile's reference package does. Held to the profile's 76-case fixture |
 | `OWMessage` | the message profile (`profiles/message.md`): over element bodies as JSON, `IsMessage` and `IsNote` (the pair, trimmed and folded), addressing (`IsAddressedTo`, `IsToEveryone`, `HasUnseenRecipients` with the server's trimmed mark and a keyless reader), `SenderStatus` (verified, mismatch, unverifiable, unseen, against the world's members list), `EditedBy`, the read mark (`ReadMarkOf`: the reader's own hand, the newest), `UnreadFor`, `ThreadOf`, and a Character's line (`NoteOf`), each ordered by `created_at` as the profile orders. Held to the profile's 87-case fixture |
+| `OWOpeners` | the Open with menu's rows (the tools list's README, "Open with"), as the npm SDK's `openersFor` and the Python package's `openers_for` give them: `OpenersFor(tools, kind, address, surface)` for a world or an element, the site's page first, then each listed tool with a door for that kind in the list's order, each with its word ("Sign in to Atlas first", "Opens in your browser", ...) or none. `OWTools::All()` is the OnlyWorlds tools list at the pinned commit (`codegen/tools-pin.json`), generated; `OpenersForJson` takes the list, the address and the surface as JSON. A refused address answers the address profile's `reason`; any other mistake an empty `reason` and a `message` naming the key. Held to the packages' shared 41-case fixture |
+
+An Open with menu in a game, which cannot see the browser's sign-in:
+
+```cpp
+using namespace OnlyWorlds;
+OWOpenerSurface surface;
+surface.audience = OWOpeners::Member;  // or OWOpeners::Public: only the rows that need nothing first
+surface.browser = false;               // a game: a tool that needs an account says "Opens in your browser"
+OWOpenersResult menu = OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, OWAddress::Parse(link), surface);
+for (const OWOpener& row : menu.rows) AddItem(row.name, row.href, row.state.value_or(""));
+```
 
 ## The plugin
 
@@ -52,6 +64,7 @@ build.cmd                  # build\ow_tests.exe, linking the engine's zlib 1.3 (
 build\ow_tests.exe         # every test; exits 0 only when none failed (--filter=<text>, --require-all)
 python codegen/generate.py --check                    # the generated Unicode tables match the vendored files
 python codegen/generate_models.py --check             # the generated structs match schema.json
+python codegen/generate_tools.py --check              # the tools list's pin holds, OWTools.generated.cpp is current
 python tests/check_writer.py build/out/pass-good-repacked.owworld   # the reference checker on what pack wrote
 ```
 
@@ -87,8 +100,9 @@ The automation tests (`OnlyWorlds.*`):
 The core's runner and the world tests read two real worlds from this machine when present (`OW_SIKELIA`,
 `OW_MOPPETOPIA`). In the core's runner a missing world is a named skip; in the automation tests it fails.
 
-`codegen/schema-dist/` is vendored verbatim; never edit it. Under `Plugin/OnlyWorlds/`,
-`Core/Private/OWUnicodeData.generated.cpp` is written by `codegen/generate.py`, and
+`codegen/schema-dist/` is vendored verbatim; never edit it, nor `codegen/tools/tools.json` (the tools list at the
+commit `codegen/tools-pin.json` names). Under `Plugin/OnlyWorlds/`, `Core/Private/OWUnicodeData.generated.cpp` is
+written by `codegen/generate.py`, `Core/Private/OWTools.generated.cpp` by `codegen/generate_tools.py`, and
 `Source/OnlyWorlds/Public/OWModels.h`, `OWModelsJson.h` and `Private/OWModels.cpp` by `codegen/generate_models.py`;
 regenerate, never edit.
 
@@ -99,6 +113,7 @@ regenerate, never edit.
 - Writing a struct back into an element (edits go through `UOWWorld`'s field setters for now).
 - Blueprint graphs: the structs and functions compile as Blueprint types, and the calendar's functions are called
   through reflection as a graph calls them; no graph has been run against any of them.
+- The Open with menu on Blueprints: `OWOpeners` is in the core only.
 - The message profile on Blueprints: the core reads it, but with no API client there is no members list to prove a
   sender.
 - Any platform other than Win64, and any engine other than 5.8.

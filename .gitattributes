@@ -3,6 +3,7 @@
 *.owworld binary
 *.zip binary
 Plugin/OnlyWorlds/Core/Private/OWUnicodeData.generated.cpp linguist-generated=true
+Plugin/OnlyWorlds/Core/Private/OWTools.generated.cpp linguist-generated=true
 Plugin/OnlyWorlds/Source/OnlyWorlds/Public/OWModels.h linguist-generated=true
 Plugin/OnlyWorlds/Source/OnlyWorlds/Public/OWModelsJson.h linguist-generated=true
 Plugin/OnlyWorlds/Source/OnlyWorlds/Private/OWModels.cpp linguist-generated=true
