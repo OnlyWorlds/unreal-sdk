@@ -1158,10 +1158,12 @@ std::optional<std::string> CheckKeys(const OWJsonValue* x_lens) { return ReadRec
 
 std::vector<std::string> LensesInUse(const OWJsonValue* membership, const OWJsonValue* x_lens_uses) {
     const OWJsonValue* list = membership && membership->IsArray() ? membership : x_lens_uses;
+    // Each string once, in the order given, "" dropped (the profile's owner, 2026-10-30, as the npm and Python packages
+    // read it; keel kept the list as written).
     std::vector<std::string> out;
     if (list && list->IsArray())
         for (const OWJsonValue& id : list->Items())
-            if (id.IsString()) out.push_back(id.Text());
+            if (id.IsString() && !id.Text().empty() && !Has(out, id.Text())) out.push_back(id.Text());
     return out;
 }
 

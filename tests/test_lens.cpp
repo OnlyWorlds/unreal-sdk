@@ -536,3 +536,17 @@ OW_TEST(lens_an_element_with_no_updated_at_sorts_last) {
     r = OWLens::Resolve(world, lens, Parse(R"({"rung": "owner"})"), o);
     t.Ok(r.kept == std::vector<std::string>{"c0", "c3", "c1"}, "a budget cuts the undated-by-change first");
 }
+
+OW_TEST(lens_lenses_in_use_reads_each_id_once_and_drops_the_empty_one) {
+    // The profile's owner, 2026-10-30 (fixture cases with serial 93): the choice's strings each once, in the order
+    // given, "" dropped, as the npm and Python packages read it; the membership still wins whole.
+    auto uses = [](const char* membership, const char* x_lens_uses) {
+        OWJsonValue m = Parse(membership), x = Parse(x_lens_uses);
+        return OWLens::LensesInUse(&m, &x);
+    };
+    using Ids = std::vector<std::string>;
+    t.Ok(uses("null", R"(["a", "", "b", "a", 7, "b"])") == Ids{"a", "b"}, "x_lens_uses: each once, no \"\", no number");
+    t.Ok(uses(R"(["x", "x", ""])", R"(["a"])") == Ids{"x"}, "the membership: each once, and it wins");
+    t.Ok(uses(R"([""])", R"(["a"])").empty(), "a membership of only \"\" is a choice of nothing");
+    t.Ok(uses("null", R"(["b", "a", "b"])") == Ids{"b", "a"}, "the order given, the first place kept");
+}

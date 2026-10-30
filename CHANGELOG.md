@@ -14,6 +14,7 @@ packages' reading (the fixture's cases for them come with serial 93):
   is not text) carries none: no `""` is written.
 - Under rule 5's order an element with no `updated_at` sorts after every element of its type that has one, never
   as the reading's now; two without one by id. A budget cuts them first.
+- `LensesInUse` reads each id once, in the order given, and drops `""`; the membership still wins whole.
 
 ### Added
 

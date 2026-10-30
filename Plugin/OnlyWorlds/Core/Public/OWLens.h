@@ -136,8 +136,8 @@ bool IsTemplate(const OWJsonValue& element);
 std::optional<std::string> CheckKeys(const OWJsonValue* x_lens);
 
 // The lenses a seat reads, by id: its membership's choice when it made one (a list; an empty list is a choice), else
-// its Character's x_lens_uses, else none. The membership wins whole. The strings of the list, as written (keel's
-// lenses_in_use); nullptr, null or a value that is not a list is no choice.
+// its Character's x_lens_uses, else none. The membership wins whole. The strings of the list, each once in the order
+// given, "" dropped; nullptr, null or a value that is not a list is no choice.
 std::vector<std::string> LensesInUse(const OWJsonValue* membership, const OWJsonValue* x_lens_uses);
 
 // An element's date as the profile reads it: the whole number in its type's date field (the type trimmed and folded),
