@@ -1,5 +1,6 @@
 #include "OWLens.h"
 
+#include "OWLensView.h"
 #include "OWMessage.h"
 #include "OWPresentation.h"
 
@@ -1061,6 +1062,71 @@ std::string CheckReader(const OWJsonValue& reader, const std::string& where) {
     return std::string();
 }
 
+// The checks a reading makes before it reads (the world, the reader, the clock, the lens's kind; `lens` nullptr for
+// none), then the reading's date and wall clock. "" when the call reads, else the mistake, prefixed by `where`.
+std::string Prepare(const OWJsonValue& world, const OWJsonValue& reader, const OWJsonValue* lens,
+                    const OWLensOptions& options, const std::string& where, std::optional<int64_t>& as_of, Time& wall) {
+    const OWJsonValue* elements = world.IsObject() ? world.Find("elements") : nullptr;
+    if (!elements || !elements->IsArray()) return where + ": world is an object with an elements list";
+    if (std::string bad = CheckReader(reader, where + ": reader"); !bad.empty()) return bad;
+    std::optional<Time> clock;
+    if (options.clock) {
+        OWJsonValue text = OWJsonValue::String(*options.clock);
+        clock = OWMessage::TimeKey(&text);
+        if (!clock) return where + ": clock is an RFC 3339 date-time; got " + *options.clock;
+    }
+    if (lens && !lens->IsString() && !lens->IsObject()) return where + ": lens is a lens body or its id";
+    as_of = options.as_of;
+    if (!as_of)
+        for (const char* key : {"now", "time_current", "time_range_current"})
+            if ((as_of = Integral(world.Find(key)))) break;
+    wall = clock ? *clock : MachineNow();
+    return std::string();
+}
+
+// One lens read over one reader's view: Resolve below its checks. With `cut_by`, each cut element's first reason, by
+// its key, before the counts drop the owner's two for another reader.
+OWLensReading ReadLens(View& v, const OWJsonValue& lens, std::map<Key, std::string>* cut_by) {
+    OWLensReading out;
+    // A lens named by id is read from the body this reader is served whole: a stub serves no links and no recipe.
+    const OWJsonValue* body = &lens;
+    if (lens.IsString()) {
+        auto it = v.by_id.find(lens.Text());
+        body = it != v.by_id.end() && v.Whole(it->second) ? v.els[it->second] : nullptr;
+    }
+    if (!body || !IsLens(*body)) return out;
+    Recipe r;
+    if ((out.unreadable = ReadRecipe(body->Find(Field), &r))) return out;
+    if (IsTemplate(*body)) return out;
+    std::set<std::string> visited = {Str(body->Find("id"))};
+    Reader reading{v};
+    Part p = reading.One(*body, r, visited);
+    // The counts are the reader's: the owner's two only for the owner (reading as itself or as another).
+    std::map<std::string, int64_t> counts;
+    for (const auto& [k, why] : p.cut)
+        if (v.owner_counts || !Has(OwnerOnly, why)) ++counts[why];
+    for (const std::string& why : Reasons)
+        if (counts[why] > 0) out.cut.emplace_back(why, counts[why]);
+    if (cut_by) *cut_by = p.cut;
+    std::set<std::string> anchor_ids, noted;
+    for (const Key& k : p.anchors) anchor_ids.insert(k.second);
+    noted = anchor_ids;
+    for (const Key& k : p.unseen) noted.insert(k.second);
+    // A note on an id that is not an anchor is counted only where the reader sees that id.
+    if (r.notes)
+        for (const std::string& id : r.notes->Keys()) {
+            auto it = v.by_id.find(id);
+            if (!noted.count(id) && it != v.by_id.end() && v.view[it->second]) ++out.notes_ignored;
+        }
+    for (const Key& k : p.kept) {
+        size_t i = *v.Find(k);
+        out.kept.push_back(k.second);
+        out.rows.push_back(reading.Row(i, r, anchor_ids));
+    }
+    out.mail = std::move(p.mail);
+    return out;
+}
+
 }  // namespace
 
 const std::vector<std::string>& AnchorFields() { return Anchors; }
@@ -1126,73 +1192,52 @@ bool IsProposed(const OWJsonValue& element) {
 
 OWLensReading Resolve(const OWJsonValue& world, const OWJsonValue& lens, const OWJsonValue& reader,
                       const OWLensOptions& options) {
-    OWLensReading out;
-    const OWJsonValue* elements = world.IsObject() ? world.Find("elements") : nullptr;
-    if (!elements || !elements->IsArray()) {
-        out.error = "resolve: world is an object with an elements list";
-        return out;
-    }
-    if (std::string bad = CheckReader(reader, "resolve: reader"); !bad.empty()) {
+    std::optional<int64_t> as_of;
+    Time wall;
+    if (std::string bad = Prepare(world, reader, &lens, options, "resolve", as_of, wall); !bad.empty()) {
+        OWLensReading out;
         out.error = bad;
         return out;
     }
-    std::optional<Time> clock;
-    if (options.clock) {
-        OWJsonValue text = OWJsonValue::String(*options.clock);
-        clock = OWMessage::TimeKey(&text);
-        if (!clock) {
-            out.error = "resolve: clock is an RFC 3339 date-time; got " + *options.clock;
-            return out;
-        }
-    }
-    if (!lens.IsString() && !lens.IsObject()) {
-        out.error = "resolve: lens is a lens body or its id";
-        return out;
-    }
-    std::optional<int64_t> as_of = options.as_of;
-    if (!as_of)
-        for (const char* key : {"now", "time_current", "time_range_current"})
-            if ((as_of = Integral(world.Find(key)))) break;
-    View v(world, reader, as_of, clock ? *clock : MachineNow());
-    // A lens named by id is read from the body this reader is served whole: a stub serves no links and no recipe.
-    const OWJsonValue* body = &lens;
-    if (lens.IsString()) {
-        auto it = v.by_id.find(lens.Text());
-        body = it != v.by_id.end() && v.Whole(it->second) ? v.els[it->second] : nullptr;
-    }
-    if (!body || !IsLens(*body)) return out;
-    Recipe r;
-    if ((out.unreadable = ReadRecipe(body->Find(Field), &r))) return out;
-    if (IsTemplate(*body)) return out;
-    std::set<std::string> visited = {Str(body->Find("id"))};
-    Reader reading{v};
-    Part p = reading.One(*body, r, visited);
-    // The counts are the reader's: the owner's two only for the owner (reading as itself or as another).
-    std::map<std::string, int64_t> counts;
-    for (const auto& [k, why] : p.cut)
-        if (v.owner_counts || !Has(OwnerOnly, why)) ++counts[why];
-    for (const std::string& why : Reasons)
-        if (counts[why] > 0) out.cut.emplace_back(why, counts[why]);
-    std::set<std::string> anchor_ids, noted;
-    for (const Key& k : p.anchors) anchor_ids.insert(k.second);
-    noted = anchor_ids;
-    for (const Key& k : p.unseen) noted.insert(k.second);
-    // A note on an id that is not an anchor is counted only where the reader sees that id.
-    if (r.notes)
-        for (const std::string& id : r.notes->Keys()) {
-            auto it = v.by_id.find(id);
-            if (!noted.count(id) && it != v.by_id.end() && v.view[it->second]) ++out.notes_ignored;
-        }
-    for (const Key& k : p.kept) {
-        size_t i = *v.Find(k);
-        out.kept.push_back(k.second);
-        out.rows.push_back(reading.Row(i, r, anchor_ids));
-    }
-    out.mail = std::move(p.mail);
-    return out;
+    View v(world, reader, as_of, wall);
+    return ReadLens(v, lens, nullptr);
 }
 
 }  // namespace OWLens
+
+namespace OWLensView {
+
+std::string CheckReader(const OWJsonValue& reader, const std::string& where) { return OWLens::CheckReader(reader, where); }
+
+std::string See(const OWJsonValue& world, const OWJsonValue& reader, const OWJsonValue* lens,
+                const OWLensOptions& options, const std::string& where, Sight& out) {
+    std::optional<int64_t> as_of;
+    OWLens::Time wall;
+    if (std::string bad = OWLens::Prepare(world, reader, lens, options, where, as_of, wall); !bad.empty()) return bad;
+    OWLens::View v(world, reader, as_of, wall);
+    out.els = v.els;
+    out.ids = v.ids;
+    out.types = v.types;
+    out.by_id = v.by_id;
+    out.room = v.room;
+    out.hidden = v.hidden;
+    out.proposed = v.proposed;
+    out.view = v.view;
+    out.stub = v.stub;
+    out.aid.clear();
+    for (const std::string& pair : v.aid) out.aid.push_back(!pair.empty());
+    out.owner_counts = v.owner_counts;
+    out.seen_rung = v.seen_rung;
+    if (lens) {
+        OWLensReading reading = OWLens::ReadLens(v, *lens, &out.cut_by);
+        out.kept = std::move(reading.kept);
+        out.cut = std::move(reading.cut);
+        out.unreadable = std::move(reading.unreadable);
+    }
+    return std::string();
+}
+
+}  // namespace OWLensView
 
 int64_t OWLensReading::Cut(std::string_view reason) const {
     for (const auto& [why, n] : cut)

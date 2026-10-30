@@ -5,7 +5,7 @@
 // choice lives, an element's date by the profile's table, and the one resolution every reader agrees on
 // (resolveLens), held to the profile's conformance fixture (profiles/lens.fixture.json). keel's reader
 // (elements/lens.py, with the served bodies of elements/serialize.py) is the rule this follows; the graph section is
-// not read here yet.
+// OWGraph's (OWGraph.h), which reads through this resolution.
 //
 // Element bodies are JSON objects (OWJsonValue), as the API serves them and a world folder keeps them. A parsed number
 // keeps its text, so x_lens refuses an integral float (7.0) as the profile asks of a reader that can see the text.

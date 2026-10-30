@@ -1,13 +1,15 @@
 // OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.91's copy, its sha256
 // held to MANIFEST.json): the pair and the template, the legal values of x_lens, where a seat's choice lives, every
-// resolution over the fixture's eight worlds and their readers, and the invariants. The graph kind's 39 cases are
-// counted, not run: the graph section is not read here yet. The profile's tables are held equal to the fixture's, the
-// field table to schema.json and the stub's public fields to presentation.json; then readings the fixture leaves open.
+// resolution over the fixture's eight worlds and their readers, the invariants, and the graph kind's 39 cases (each its
+// own world, through OWGraph::WorldGraph, the want compared whole). The profile's tables are held equal to the
+// fixture's, the field table to schema.json and the stub's public fields to presentation.json; then readings the
+// fixture leaves open. The graph's own tests are in test_graph.cpp.
 
 #include "ow_test.h"
 #include "sha256.h"
 
 #include "OWFiles.h"
+#include "OWGraph.h"
 #include "OWJson.h"
 #include "OWLens.h"
 
@@ -212,6 +214,20 @@ void Holds(owtest::T& t, const OWJsonValue& c) {
     }
 }
 
+// A graph case's options: the lens (a body or an id), the reading's as_of and clock, and the four flags.
+OWGraphOptions GraphOptionsOf(const OWJsonValue& c) {
+    OWGraphOptions o;
+    const OWJsonValue* opt = c.Find("options");
+    if (!opt || !opt->IsObject()) return o;
+    if (const OWJsonValue* lens = opt->Find("lens")) o.lens = *lens;
+    if (const OWJsonValue* a = opt->Find("as_of"); a && a->IsNumber()) o.as_of = int64_t(std::llround(a->AsDouble()));
+    if (const OWJsonValue* k = opt->Find("clock"); k && k->IsString()) o.clock = k->Text();
+    for (auto [key, flag] : {std::pair<const char*, bool*>{"rooms", &o.rooms}, {"hidden", &o.hidden},
+                             {"proposed", &o.proposed}, {"map_space", &o.map_space}})
+        if (const OWJsonValue* v = opt->Find(key); v && v->IsBool()) *flag = v->AsBool();
+    return o;
+}
+
 // One case, by its kind. A text_only case holds for a reader that can see a number's text: this one can, so it runs.
 void Case(owtest::T& t, const OWJsonValue& c) {
     std::string kind = Str(c, "kind");
@@ -238,13 +254,17 @@ void Case(owtest::T& t, const OWJsonValue& c) {
         Check(t, ResolveCase(world, c, reader), c, world);
     } else if (kind == "invariant") {
         Holds(t, c);
+    } else if (kind == "graph") {
+        OWWorldGraph got = OWGraph::WorldGraph(at("world"), at("reader"), GraphOptionsOf(c));
+        t.Eq(got.error, std::string(), "no caller's mistake");
+        Same(t, got.ToJson(), c.Find("want"), "the graph");
     } else {
         t.Fail("a case of unknown kind " + kind);
     }
 }
 
-// The kinds this file runs, and the one it counts only.
-const char* const Run[] = {"shape", "keys", "uses", "resolve", "invariant"};
+// The kinds this file runs: every kind of the fixture.
+const char* const Run[] = {"shape", "keys", "uses", "resolve", "invariant", "graph"};
 
 bool Runs(const std::string& kind) {
     for (const char* k : Run)
@@ -288,7 +308,7 @@ OW_TEST(lens_fixture_is_the_pinned_one) {
     }
     t.Eq(sum, size_t(153), "the six kinds are every case");
     t.Eq(kinds.size(), size_t(6), "and no other kind");
-    t.Eq(run, size_t(114), "114 run here, the 39 graph cases not yet");
+    t.Eq(run, size_t(153), "every case runs here, the 39 graph cases among them");
 }
 
 OW_TEST(lens_tables_are_the_fixtures) {
