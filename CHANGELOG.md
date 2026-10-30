@@ -23,6 +23,8 @@ packages' reading (the fixture's cases for them come with serial 93):
   refused. Serial 83's refusal of `7.0` where a reader can see the number's text is retired. The fixture's text_only
   case (`keys-an-integral-float-is-refused-where-the-text-shows`) is expected to change at serial 93; it still passes
   as written, since `7.0` now reads as 7, past `depth`'s table.
+- The mail part keeps two messages with one `created_at` in the order of the world's list, as the message profile
+  rules and `OWMessage::UnreadFor` reads a tie; they are no longer ordered by id first.
 
 Two readings of `OWGraph`, ruled the same day to keel's reading:
 

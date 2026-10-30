@@ -982,13 +982,11 @@ struct Reader {
         OWLensMail part;
         if (!v.character) return part;
         // Whole bodies only, as served: a known-of stub serves no characters, so its recipients are unknown, never
-        // everyone. By id first, so equal created_at times keep keel's order (created_at, then id).
-        std::vector<size_t> order;
-        for (size_t i = 0; i < v.els.size(); ++i)
-            if (v.Whole(i)) order.push_back(i);
-        std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return v.ids[a] < v.ids[b]; });
+        // everyone. In the order of the world's list, never by id: two messages with one created_at keep it, as the
+        // message profile rules (the lens profile's owner, ahead of its next serial).
         std::vector<const OWJsonValue*> messages, relations;
-        for (size_t i : order) {
+        for (size_t i = 0; i < v.els.size(); ++i) {
+            if (!v.Whole(i)) continue;
             if (OWMessage::IsMessage(*v.els[i])) messages.push_back(&v.Served(i));
             if (v.types[i] == "relation") relations.push_back(&v.Served(i));
         }

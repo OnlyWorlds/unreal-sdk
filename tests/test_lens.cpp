@@ -590,3 +590,26 @@ OW_TEST(lens_a_known_of_stub_is_shaped_as_keel_serves_it) {
     const OWJsonValue* background = stub->Find("background");
     t.Ok(background && background->IsString() && background->Text().empty(), "a field outside the keeps reads unset");
 }
+
+OW_TEST(lens_a_mail_tie_keeps_the_lists_order) {
+    // Ruling 11, as the profile's owner reversed it (2026-10-30): two messages with one created_at keep the order of
+    // the list they came in, as the message profile rules, never by id. A tie listed in reverse id order stays as listed.
+    auto unread = [&](const char* first, const char* second) {
+        std::string letters;
+        for (const char* id : {first, second})
+            letters += std::string(R"(, {"id": ")") + id + R"(", "type": "narrative", "name": ")" + id +
+                       R"(", "supertype": "Message", "narrator": "a", "characters": ["me"],
+                       "created_at": "2026-10-20T12:00:00Z"})";
+        OWJsonValue world = Parse((std::string(R"({"elements": [{"id": "me", "type": "character", "name": "Me"},
+            {"id": "a", "type": "character", "name": "A"})") + letters + "]}").c_str());
+        OWJsonValue lens = Parse(R"({"id": "L", "type": "construct", "supertype": "Lens",
+            "x_lens": {"types": ["narrative/message"], "mail": "all"}})");
+        OWLensOptions o;
+        o.clock = "2026-10-28T00:00:00Z";
+        OWLensReading r = OWLens::Resolve(world, lens, Parse(R"({"rung": "owner", "character": "me"})"), o);
+        return r.mail ? r.mail->unread : std::vector<std::string>{};
+    };
+    using Ids = std::vector<std::string>;
+    t.Ok(unread("m2", "m1") == Ids{"m2", "m1"}, "m2 before m1, as listed");
+    t.Ok(unread("m1", "m2") == Ids{"m1", "m2"}, "listed the other way, read the other way");
+}
