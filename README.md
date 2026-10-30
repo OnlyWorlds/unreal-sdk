@@ -61,7 +61,9 @@ for (const OWOpener& row : menu.rows) AddItem(row.name, row.href, row.state.valu
 Members are PascalCase (`birth_date` -> `BirthDate`, `STR` -> `Str`). A string field is an `FString` (`""` for unset),
 an integer a `TOptional<int64>` (unset for null), a link the linked element's id (an `FString`, or a `TArray<FString>`
 for a list), and the Pin's generic link two strings, `ElementType` and `ElementId`. The JSON key and the schema's
-description are each member's tooltip.
+description are each member's tooltip. **An integer member has no pin in a Blueprint graph** (5.8's K2 schema converts
+no `TOptional`: `OnlyWorlds.Graph.Pins` lists the 70 members, all 22 structs' integers and dates): C++ reads them, a
+graph cannot yet, and a Make node leaves them unset.
 
 ## Build and test
 
@@ -111,6 +113,12 @@ The automation tests (`OnlyWorlds.*`):
   in the three spellings and read back, and its Open with rows and type words as the core gives them; the openers
   fixture's (`tests/data/`) 27 row cases (the core's rows for the baked list, the fixture's first row) and 6 address
   refusals; the names fixture's 29 cases placed on Moppetopia's World.
+- `OnlyWorlds.Graph.Pins`, `.Run` (editor only): Blueprints built in code. `Pins` places a Break and a Make node on
+  each of the plugin's 28 structs and lists which member got a pin, of which category. `Run` builds one function graph
+  of real K2 nodes (`ParseAddress` -> Break -> Make -> `WriteAddress` and `OpenersForAddress`, `FormatStep`,
+  `TypeWord`), compiles it with the Kismet compiler (no error, no warning), and calls it once per element of Sikelia
+  and twice per element of Moppetopia, every answer the core's; three mutant graphs (a pin wired past the schema, two
+  pins swapped, a node left out) are each caught, by the compiler or by the answers.
 - `OnlyWorlds.Frame.MoppetopiaRootMap` needs a renderer (`-RenderOffscreen` instead of `-nullrhi`; a `-nullrhi`
   run leaves it out): the world's root Map as a plane carrying its image, the Pins as markers, captured from above to
   `Host/Saved/OWFrames/moppetopia-root-map.png`.
@@ -130,9 +138,10 @@ regenerate, never edit.
 - A runtime actor that lays a Map out in a level: the frame is built by a test, in the editor, with a material made
   in code. A packaged game would need a material asset (the plugin ships no content yet).
 - Writing a struct back into an element (edits go through `UOWWorld`'s field setters for now).
-- Blueprint graphs: the structs and functions compile as Blueprint types, and the calendar's, the address's, the
-  openers' and the names' functions are called through reflection as a graph calls them; no graph has been run
-  against any of them.
+- The generated structs' integers in a Blueprint graph: a `TOptional<int64>` member gets no pin (above).
+- A Blueprint graph saved as an asset, or one built in the editor's UI: the graphs that run are built in code by the
+  tests; the calendar's `GetWorldCalendars` and `BreakdownStep` and the openers' `OpenersFor` are held through
+  reflection only, not in a graph.
 - The Open with menu over a tools list other than the baked one (`OWOpeners::OpenersForJson` is in the core only).
 - The lens, its graph and the charter on Blueprints: `OWLens`, `OWGraph` and `OWCharter` are in the core only.
 - The message profile on Blueprints: the core reads it, but with no API client there is no members list to prove a

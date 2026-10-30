@@ -59,6 +59,11 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
 
 ### Added
 
+- Blueprint graphs built, compiled and run in the editor's automation tests (`OnlyWorlds.Graph.Pins`, `.Run`): a
+  function graph of real K2 nodes over every door, compiled by the Kismet compiler with no error or warning, its
+  answers the core's on every element of Sikelia and Moppetopia. The editor's answer to the open question: no
+  generated struct's `TOptional<int64>` member gets a pin on a Break or a Make node (70 members). The module links
+  `UnrealEd` and `BlueprintGraph` in an editor target only, for these tests.
 - The address, the Open with rows and the names on Blueprints: `UOWAddresses` (`ParseAddress`, `WriteAddress`, the
   `FOWAddress` struct with a `bHas` flag per part, so an empty string refuses as that part would), `UOWOpeners`
   (`OpenersFor` an element of an opened world or the world itself, `OpenersForAddress`, over the baked tools list;

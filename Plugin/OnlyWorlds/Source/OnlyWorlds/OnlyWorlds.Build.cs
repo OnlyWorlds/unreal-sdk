@@ -26,5 +26,13 @@ public class OnlyWorlds : ModuleRules
 		// the tests find the conformance set beside the plugin. RenderCore and ImageCore: the frame test's capture
 		// and PNG.
 		PrivateDependencyModuleNames.AddRange(new string[] { "zlib", "Projects", "RenderCore", "ImageCore" });
+
+		// The graph tests only (Private/Tests/OWGraphTests.cpp, all of it under WITH_EDITOR): a Blueprint built, its
+		// K2 nodes (BlueprintGraph), compiled by the Kismet compiler through FKismetEditorUtilities (UnrealEd). An editor
+		// target only, so a game's build of this module gains no editor module.
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "BlueprintGraph" });
+		}
 	}
 }
