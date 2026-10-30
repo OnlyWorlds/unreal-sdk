@@ -1038,11 +1038,10 @@ struct Reader {
                 const OWJsonValue* f = body.Find(k);
                 row.Set(k, f ? *f : OWJsonValue::Null());
             }
-            if (r.show == "first_line") {
-                // keel: the description up to its first line feed, "" when it has none.
-                std::string text = Str(body.Find("description"));
-                row.Set("description", OWJsonValue::String(text.substr(0, text.find('\n'))));
-            }
+            // The description up to its first CR or LF, and none the body does not give as text (the profile's owner,
+            // 2026-10-30, as the npm and Python packages read it; keel cut at LF only and wrote "" for none).
+            if (const OWJsonValue* d = body.Find("description"); r.show == "first_line" && d && d->IsString())
+                row.Set("description", OWJsonValue::String(d->Text().substr(0, d->Text().find_first_of("\r\n"))));
         }
         if (const OWJsonValue* note = r.NoteOf(v.ids[i]); note && anchor_ids.count(v.ids[i])) row.Set("note", *note);
         return row;

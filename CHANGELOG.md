@@ -5,6 +5,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Changed
+
+Four readings `OWLens` first took from keel, ruled by the lens profile's owner on 2026-10-30 to the npm and Python
+packages' reading (the fixture's cases for them come with serial 93):
+
+- `show: first_line` cuts the description at its first CR or LF, and a row whose body has no description (or one that
+  is not text) carries none: no `""` is written.
+
 ### Added
 
 - `OWGraph` in the core, the lens profile's graph section: `WorldGraph(world, reader, options)` (the profile's

@@ -493,3 +493,24 @@ OW_TEST(lens_an_unreadable_lens_names_its_key_and_resolves_nothing) {
     t.Ok(r.unreadable && *r.unreadable == "depth", "unreadable names depth");
     t.Ok(r.kept.empty() && r.cut.empty() && r.rows.empty(), "and nothing is resolved");
 }
+
+OW_TEST(lens_first_line_cuts_at_cr_or_lf_and_writes_no_description_it_was_not_given) {
+    // The profile's owner, 2026-10-30 (fixture cases with serial 93): first_line cuts at the first CR or LF, and a row
+    // whose body has no description (or one that is not text) carries none, as the npm and Python packages read it.
+    OWJsonValue world = Parse(R"({"elements": [
+        {"id": "a", "type": "character", "name": "A", "description": "One\r\nTwo"},
+        {"id": "b", "type": "character", "name": "B", "description": "Up\rDown"},
+        {"id": "c", "type": "character", "name": "C", "description": "Left\nRight"},
+        {"id": "d", "type": "character", "name": "D"},
+        {"id": "e", "type": "character", "name": "E", "description": null}]})");
+    OWJsonValue lens = Parse(R"({"id": "L", "type": "construct", "supertype": "Lens",
+        "characters": ["a", "b", "c", "d", "e"], "x_lens": {"depth": 0, "show": "first_line"}})");
+    OWLensReading r = OWLens::Resolve(world, lens, Parse(R"({"rung": "owner"})"));
+    OWJsonValue want = Parse(R"([
+        {"id": "a", "type": "character", "name": "A", "description": "One"},
+        {"id": "b", "type": "character", "name": "B", "description": "Up"},
+        {"id": "c", "type": "character", "name": "C", "description": "Left"},
+        {"id": "d", "type": "character", "name": "D"},
+        {"id": "e", "type": "character", "name": "E"}])");
+    Same(t, *r.ToJson().Find("rows"), &want, "the rows");
+}
