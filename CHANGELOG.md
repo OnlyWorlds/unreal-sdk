@@ -59,6 +59,12 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
 
 ### Added
 
+- The address, the Open with rows and the names on Blueprints: `UOWAddresses` (`ParseAddress`, `WriteAddress`, the
+  `FOWAddress` struct with a `bHas` flag per part, so an empty string refuses as that part would), `UOWOpeners`
+  (`OpenersFor` an element of an opened world or the world itself, `OpenersForAddress`, over the baked tools list;
+  `FOWOpenerSurface`, `FOWOpener`) and `UOWNames` (`TypeWord`). A refusal is `false` and the reason. Each function is
+  held by automation tests that call it through reflection as a graph does: the address fixture's parse and format
+  cases, the openers and names fixtures where a Blueprint pin can carry a case, and every element of Sikelia.
 - `OWNames::TypeWord(world, type, supertype, many)`: a world's own word for a type, the names profile's `x_names`
   on the World (schema-dist `profiles/names.md`), a port of the npm SDK's `typeWord` and the Python package's
   `type_word`. The supertype's entry first, its key trimmed and folded as the room profile reads (`OWMessage::Trim`,

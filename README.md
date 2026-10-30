@@ -53,6 +53,9 @@ for (const OWOpener& row : menu.rows) AddItem(row.name, row.href, row.state.valu
 | `UOWLibrary` | `OpenWorldFolder`, `OpenWorldFile` (with the reader's verdict: accepted, reason, message), `CheckWorldFile`, `PackWorldFolder`. A relative path is taken from the project's folder |
 | `UOWWorld` | one world: its id and name, element ids by type, an element's type, name and JSON, `SetStringField` and `SetIntField`, `WriteFolder`, `PackToFile`; `Native()` hands C++ the core's `OnlyWorlds::OWWorld` |
 | `UOWCalendars` | the calendar profile on Blueprints: `GetWorldCalendars(World)` (each calendar's element id and name, found by the field), `FormatStep(World, CalendarId, Step)` (a step in words, "Year 1 BT"; the bare step when there is no such calendar or its value is refused, never an error) and `BreakdownStep(World, CalendarId, Step, Breakdown)` (an `FOWStepBreakdown`: year, era, month, day, the day outside the months, weekday; a part the calendar lacks is 0 or `""`). `CalendarId` `""` reads the world's only calendar when it holds exactly one. A step is an `int64` (Blueprint's Integer64) |
+| `UOWAddresses` | the address profile on Blueprints: `ParseAddress(Text, Address, Reason)` reads an `ow://` link or a site URL into an `FOWAddress` (form, world, type, id, lens, moment, and a reading's `bWorldIsSlug` and `bCanonical`), `WriteAddress(Address, Text, Reason)` writes one. A part is given when its string is not empty or its `bHas` flag is set, so an empty string can refuse as that part would; the moment is an `int64` given by `bHasMoment` alone, past 32 bits `bad_moment`. A refusal is `false` and the profile's reason |
+| `UOWOpeners` | the Open with menu on Blueprints, over the baked tools list: `OpenersFor(World, ElementId, Surface, Rows, Reason)` for an element of an opened world (`""` for the world itself) and `OpenersForAddress(Address, Surface, Rows, Reason)` for an address (an element's rows when it gives an id). `FOWOpenerSurface`: `Audience` (`Public` by default), `Tool`, `SignIn` (`Unknown`, `SignedIn`, `SignedOut`), `bBrowser` (false by default: a game), `bPhone`. Each `FOWOpener` row: `Id`, `Name`, `Href`, `State` (`""` for none) |
+| `UOWNames` | the names profile on Blueprints: `TypeWord(World, Type, Supertype, bMany, Word)`, the world's own word for a type from `x_names` on its World, or `false` for the standard's name (`Supertype` `""` for none) |
 | `FOW<Type>`, `UOWElements` | one `USTRUCT(BlueprintType)` per element type (`FOWCharacter`, `FOWPin`, ...), and the library that reads them out of a world: `GetAll<Types>(World)`, `Find<Type>(World, Id, Out)`. Generated from schema-dist's `schema.json` |
 
 Members are PascalCase (`birth_date` -> `BirthDate`, `STR` -> `Str`). A string field is an `FString` (`""` for unset),
@@ -101,6 +104,13 @@ The automation tests (`OnlyWorlds.*`):
   object, the answer and the struct's members read back by property), on Moppetopia's calendar (Sikelia holds none).
   `OnlyWorlds.Calendar.Fixture`: every case of the calendar profile's fixture (`codegen/schema-dist/profiles/`) placed
   on that calendar's element and read back the same way: the words and the breakdown of each step, every refusal.
+- `OnlyWorlds.Address.Fixture`, `.World`, `.Parts`, `OnlyWorlds.Openers.World`, `.Address`, `OnlyWorlds.Names.World`,
+  `.Fixture`: each `UOWAddresses`, `UOWOpeners` and `UOWNames` function called the same way, its structs set and read
+  member by member and the rows read out of the out array. The address fixture's 101 parse cases and 33 of its 36
+  format cases (a moment that is not a whole number cannot be set on an `int64` pin); every element of Sikelia written
+  in the three spellings and read back, and its Open with rows and type words as the core gives them; the openers
+  fixture's (`tests/data/`) 27 row cases (the core's rows for the baked list, the fixture's first row) and 6 address
+  refusals; the names fixture's 29 cases placed on Moppetopia's World.
 - `OnlyWorlds.Frame.MoppetopiaRootMap` needs a renderer (`-RenderOffscreen` instead of `-nullrhi`; a `-nullrhi`
   run leaves it out): the world's root Map as a plane carrying its image, the Pins as markers, captured from above to
   `Host/Saved/OWFrames/moppetopia-root-map.png`.
@@ -120,11 +130,11 @@ regenerate, never edit.
 - A runtime actor that lays a Map out in a level: the frame is built by a test, in the editor, with a material made
   in code. A packaged game would need a material asset (the plugin ships no content yet).
 - Writing a struct back into an element (edits go through `UOWWorld`'s field setters for now).
-- Blueprint graphs: the structs and functions compile as Blueprint types, and the calendar's functions are called
-  through reflection as a graph calls them; no graph has been run against any of them.
-- The Open with menu on Blueprints: `OWOpeners` is in the core only.
+- Blueprint graphs: the structs and functions compile as Blueprint types, and the calendar's, the address's, the
+  openers' and the names' functions are called through reflection as a graph calls them; no graph has been run
+  against any of them.
+- The Open with menu over a tools list other than the baked one (`OWOpeners::OpenersForJson` is in the core only).
 - The lens, its graph and the charter on Blueprints: `OWLens`, `OWGraph` and `OWCharter` are in the core only.
-- The names profile on Blueprints: `OWNames` is in the core only.
 - The message profile on Blueprints: the core reads it, but with no API client there is no members list to prove a
   sender.
 - Any platform other than Win64, and any engine other than 5.8.

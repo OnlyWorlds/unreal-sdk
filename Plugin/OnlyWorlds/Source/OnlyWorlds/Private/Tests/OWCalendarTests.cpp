@@ -18,6 +18,7 @@
 #include "OWModels.h"
 #include "OWWorld.h"
 #include "OWWorldObject.h"
+#include "OWBlueprintCall.h"
 #include "OWTestPaths.h"
 
 #include <string>
@@ -37,112 +38,14 @@ namespace
 	const TCHAR* const TreatyId = TEXT("01a11ff9-e0aa-7e43-9b13-1a1320cf9270");
 	const TCHAR* const TreatyName = TEXT("The Treaty Reckoning");
 
-	// One call of a UOWCalendars function as a Blueprint makes it. Each parameter is set through its property, whose
-	// class is asserted (an int64 must cross as an FInt64Property, or no Blueprint can pass one).
-	class FBlueprintCall
+	// One call of a UOWCalendars function as a Blueprint makes it (OWBlueprintCall.h). Each parameter is set through its
+	// property, whose class is asserted (an int64 must cross as an FInt64Property, or no Blueprint can pass one).
+	struct FBlueprintCall : OWBlueprintTest::FCall
 	{
-	public:
-		FBlueprintCall(FAutomationTestBase& InTest, const TCHAR* InName)
-			: Test(InTest), Name(InName), Func(UOWCalendars::StaticClass()->FindFunctionByName(InName))
-		{
-			if (!Func)
-			{
-				Test.AddError(FString::Printf(TEXT("no UFUNCTION %s on UOWCalendars"), Name));
-				return;
-			}
-			const EFunctionFlags Need = FUNC_Native | FUNC_Static | FUNC_Public | FUNC_BlueprintCallable | FUNC_BlueprintPure;
-			if (!Func->HasAllFunctionFlags(Need))
-			{
-				Test.AddError(FString::Printf(TEXT("%s is not a static, public, pure Blueprint function"), Name));
-			}
-			Frame = static_cast<uint8*>(FMemory::Malloc(FMath::Max<int32>(Func->ParmsSize, 1), Func->GetMinAlignment()));
-			Func->InitializeStruct(Frame);
-		}
-
-		~FBlueprintCall()
-		{
-			if (Frame)
-			{
-				Func->DestroyStruct(Frame);
-				FMemory::Free(Frame);
-			}
-		}
-
-		// The parameter's slot in the frame, as its property's own type, or nullptr (an error logged).
-		template <typename PropT>
-		typename PropT::TCppType* Slot(const TCHAR* Param)
-		{
-			if (!Frame) return nullptr;
-			PropT* P = CastField<PropT>(Func->FindPropertyByName(Param));
-			if (!P)
-			{
-				Test.AddError(FString::Printf(TEXT("%s has no %s parameter %s"), Name, *PropT::StaticClass()->GetName(), Param));
-				return nullptr;
-			}
-			return P->template ContainerPtrToValuePtr<typename PropT::TCppType>(Frame);
-		}
-
-		void SetWorld(const UOWWorld* World)
-		{
-			if (!Frame) return;
-			FObjectProperty* P = CastField<FObjectProperty>(Func->FindPropertyByName(TEXT("World")));
-			if (!P || P->PropertyClass != UOWWorld::StaticClass())
-			{
-				Test.AddError(FString::Printf(TEXT("%s has no UOWWorld parameter World"), Name));
-				return;
-			}
-			P->SetObjectPropertyValue_InContainer(Frame, const_cast<UOWWorld*>(World));
-		}
-
-		void SetString(const TCHAR* Param, const FString& Value)
-		{
-			if (FString* S = Slot<FStrProperty>(Param)) *S = Value;
-		}
-
-		void SetInt64(const TCHAR* Param, int64 Value)
-		{
-			if (int64* V = Slot<FInt64Property>(Param)) *V = Value;
-		}
-
-		void Invoke()
-		{
-			if (Frame) UOWCalendars::StaticClass()->GetDefaultObject()->ProcessEvent(Func, Frame);
-		}
-
-		FProperty* Property(const TCHAR* Param) const { return Func ? Func->FindPropertyByName(Param) : nullptr; }
-		FProperty* Return() const { return Func ? Func->GetReturnProperty() : nullptr; }
-		uint8* GetFrame() const { return Frame; }
-
-	private:
-		FAutomationTestBase& Test;
-		const TCHAR* Name;
-		UFunction* Func;
-		uint8* Frame = nullptr;
+		FBlueprintCall(FAutomationTestBase& InTest, const TCHAR* InName) : FCall(InTest, UOWCalendars::StaticClass(), InName) {}
 	};
-
-	// A struct's member read by its property, as a Break node reads it.
-	template <typename PropT>
-	typename PropT::TCppType Member(FAutomationTestBase& Test, const UScriptStruct* Struct, const void* Data, const TCHAR* Name)
-	{
-		const PropT* P = CastField<PropT>(Struct->FindPropertyByName(Name));
-		if (!P)
-		{
-			Test.AddError(FString::Printf(TEXT("%s has no %s member %s"), *Struct->GetName(), *PropT::StaticClass()->GetName(), Name));
-			return typename PropT::TCppType();
-		}
-		return *P->template ContainerPtrToValuePtr<typename PropT::TCppType>(Data);
-	}
-
-	bool BoolMember(FAutomationTestBase& Test, const UScriptStruct* Struct, const void* Data, const TCHAR* Name)
-	{
-		const FBoolProperty* P = CastField<FBoolProperty>(Struct->FindPropertyByName(Name));
-		if (!P)
-		{
-			Test.AddError(FString::Printf(TEXT("%s has no bool member %s"), *Struct->GetName(), Name));
-			return false;
-		}
-		return P->GetPropertyValue_InContainer(Data);
-	}
+	using OWBlueprintTest::BoolMember;
+	using OWBlueprintTest::Member;
 
 	struct FCalendarRow
 	{
