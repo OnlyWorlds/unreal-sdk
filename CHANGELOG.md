@@ -7,11 +7,13 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
-Four readings `OWLens` first took from keel, ruled by the lens profile's owner on 2026-10-30 to the npm and Python
+Readings `OWLens` first took from keel, ruled by the lens profile's owner on 2026-10-30 to the npm and Python
 packages' reading (the fixture's cases for them come with serial 93):
 
 - `show: first_line` cuts the description at its first CR or LF, and a row whose body has no description (or one that
   is not text) carries none: no `""` is written.
+- Under rule 5's order an element with no `updated_at` sorts after every element of its type that has one, never
+  as the reading's now; two without one by id. A budget cuts them first.
 
 ### Added
 

@@ -632,18 +632,17 @@ struct View {
     // keel's _stops (rule 4): nothing hops on out of a room element, nor out of a reading aid whose pair is not named.
     bool Stops(size_t i, const Recipe& r) const { return room[i] || (!aid[i].empty() && !r.types.count(Pair(i))); }
 
-    // Rule 5 past the anchors: the schema's type order, newest updated_at first, then by id. keel reads a row with no
-    // updated_at as now (the reading's clock here), so it sorts as the newest.
+    // Rule 5 past the anchors: the schema's type order, newest updated_at first, then by id. An element with no
+    // readable updated_at sorts after every one that has one (the profile's owner, 2026-10-30, as the npm and Python
+    // packages read it; keel read it as now, the newest).
     std::vector<size_t> Ordered(std::vector<size_t> list) const {
         auto rank = [&](size_t i) { return size_t(std::find(Order.begin(), Order.end(), types[i]) - Order.begin()); };
-        auto when = [&](size_t i) {
-            std::optional<Time> t = OWMessage::TimeKey(Get(*els[i], "updated_at"));
-            return t ? *t : wall;
-        };
+        auto when = [&](size_t i) { return OWMessage::TimeKey(Get(*els[i], "updated_at")); };
         std::sort(list.begin(), list.end(), [&](size_t a, size_t b) {
             if (rank(a) != rank(b)) return rank(a) < rank(b);
-            Time ta = when(a), tb = when(b);
-            if (!(ta == tb)) return tb < ta;
+            std::optional<Time> ta = when(a), tb = when(b);
+            if (ta.has_value() != tb.has_value()) return ta.has_value();
+            if (ta && !(*ta == *tb)) return *tb < *ta;
             return ids[a] < ids[b];
         });
         return list;

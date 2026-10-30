@@ -514,3 +514,25 @@ OW_TEST(lens_first_line_cuts_at_cr_or_lf_and_writes_no_description_it_was_not_gi
         {"id": "e", "type": "character", "name": "E"}])");
     Same(t, *r.ToJson().Find("rows"), &want, "the rows");
 }
+
+OW_TEST(lens_an_element_with_no_updated_at_sorts_last) {
+    // The profile's owner, 2026-10-30 (fixture cases with serial 93): under rule 5 an element with no updated_at sorts
+    // after every element of its type that has one, never as now; two without one by id. The npm and Python packages'
+    // reading.
+    OWJsonValue world = Parse(R"({"elements": [
+        {"id": "c0", "type": "character", "name": "Anchor", "friends": ["c1", "c2", "c3", "c4"]},
+        {"id": "c1", "type": "character", "name": "Old", "updated_at": "2026-01-01T00:00:00Z"},
+        {"id": "c4", "type": "character", "name": "None, by id after c2"},
+        {"id": "c2", "type": "character", "name": "None"},
+        {"id": "c3", "type": "character", "name": "New", "updated_at": "2026-06-01T00:00:00Z"}]})");
+    OWJsonValue lens = Parse(R"({"id": "L", "type": "construct", "supertype": "Lens", "characters": ["c0"]})");
+    OWLensOptions o;
+    o.clock = "2026-10-30T00:00:00Z";
+    OWLensReading r = OWLens::Resolve(world, lens, Parse(R"({"rung": "owner"})"), o);
+    t.Ok(r.kept == std::vector<std::string>{"c0", "c3", "c1", "c2", "c4"},
+         "kept: the anchor, the newest, the older, then the two with no updated_at by id");
+    lens = Parse(R"({"id": "L", "type": "construct", "supertype": "Lens", "characters": ["c0"],
+        "x_lens": {"budget": 3}})");
+    r = OWLens::Resolve(world, lens, Parse(R"({"rung": "owner"})"), o);
+    t.Ok(r.kept == std::vector<std::string>{"c0", "c3", "c1"}, "a budget cuts the undated-by-change first");
+}
