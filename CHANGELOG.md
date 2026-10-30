@@ -24,6 +24,10 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to schema-dist serial 98: the strand profile, new (`profiles/strand.md` and its fixture, 17 cases): one
+  story in a world in miniature, named on the World by `x_strand`'s three ids and read through four existing links.
+  No schema file moved; the generated stamp lines move with the tag, the presentation table's too (its stamp had
+  stayed at serial 91, so its drift check failed; the table itself is unchanged).
 - Schema pin to schema-dist serial 97: the address profile's four format cases on an empty string, one per part (an
   empty world, type, id or lens refuses by that part's own reason; only null or a missing key is absent), which
   `OWAddress` already answered so.
