@@ -10,9 +10,13 @@ Nothing is released yet; the history before this file is in the git log.
 - Schema pin to schema-dist serial 92: a Zone leaves map space in the lens profile's graph. A Zone is content that
   gains spatial presence through its Markers, so `OWGraph::WorldGraph` carries Zones as nodes by default, for a
   public reader too; Map, Pin and Marker stay out until `map_space`.
+- Schema pin to schema-dist serial 93: the lens fixture carries a case for each of the readings below, nineteen new
+  cases over a ninth world (171 in all: 86 resolve, 45 graph, 5 uses), and `profiles/lens.md` states each reading.
+  The text_only keys case `keys-an-integral-float-is-refused-where-the-text-shows` is retired for
+  `keys-an-integral-float-reads-whole`. Every case passes.
 
 Readings `OWLens` first took from keel, ruled by the lens profile's owner on 2026-10-30 to the npm and Python
-packages' reading (the fixture's cases for them come with serial 93):
+packages' reading (the fixture's cases for them came with serial 93):
 
 - `show: first_line` cuts the description at its first CR or LF, and a row whose body has no description (or one that
   is not text) carries none: no `""` is written.
@@ -20,9 +24,7 @@ packages' reading (the fixture's cases for them come with serial 93):
   as the reading's now; two without one by id. A budget cuts them first.
 - `LensesInUse` reads each id once, in the order given, and drops `""`; the membership still wins whole.
 - A whole float as an `x_lens` key value reads whole (`depth: 2.0` is 2, `budget: 7.0` is 7); only a fraction is
-  refused. Serial 83's refusal of `7.0` where a reader can see the number's text is retired. The fixture's text_only
-  case (`keys-an-integral-float-is-refused-where-the-text-shows`) is expected to change at serial 93; it still passes
-  as written, since `7.0` now reads as 7, past `depth`'s table.
+  refused. Serial 83's refusal of `7.0` where a reader can see the number's text is retired.
 - The mail part keeps two messages with one `created_at` in the order of the world's list, as the message profile
   rules and `OWMessage::UnreadFor` reads a tie; they are no longer ordered by id first.
 

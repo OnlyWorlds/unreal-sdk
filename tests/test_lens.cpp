@@ -1,6 +1,6 @@
-// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.92's copy, its sha256
+// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.93's copy, its sha256
 // held to MANIFEST.json): the pair and the template, the legal values of x_lens, where a seat's choice lives, every
-// resolution over the fixture's eight worlds and their readers, the invariants, and the graph kind's 39 cases (each its
+// resolution over the fixture's nine worlds and their readers, the invariants, and the graph kind's 45 cases (each its
 // own world, through OWGraph::WorldGraph, the want compared whole). The profile's tables are held equal to the
 // fixture's, the field table to schema.json and the stub's public fields to presentation.json; then readings the
 // fixture leaves open. The graph's own tests are in test_graph.cpp.
@@ -24,8 +24,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.92's MANIFEST.json records it.
-const char* const DistSha256 = "a54a7d434dc197e57b0f80c9050ee5f51ff619c2364de768884858b1c77fdf06";
+// The fixture's sha256 as dist.93's MANIFEST.json records it.
+const char* const DistSha256 = "49e16262b5320bc922f23382fe17e5d5d73a9c78a4dd75059f334dc0b4516bd3";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/lens.fixture.json"; }
 
@@ -228,11 +228,7 @@ OWGraphOptions GraphOptionsOf(const OWJsonValue& c) {
     return o;
 }
 
-// One case, by its kind. A text_only case holds for a reader that can see a number's text: this one can, so it runs.
-// Expected to change at serial 93: keys-an-integral-float-is-refused-where-the-text-shows. The profile's owner ruled on
-// 2026-10-30 that a whole float reads whole in every reader, retiring the refusal the case was written for; its want
-// (depth refused) still holds, now because 7.0 reads as 7, past depth's table, so it runs as written until serial 93
-// replaces it.
+// One case, by its kind.
 void Case(owtest::T& t, const OWJsonValue& c) {
     std::string kind = Str(c, "kind");
     static const OWJsonValue none;
@@ -281,7 +277,7 @@ bool Runs(const std::string& kind) {
 OW_TEST(lens_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the lens fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.91's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.93's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -301,18 +297,18 @@ OW_TEST(lens_fixture_is_the_pinned_one) {
         names.insert(Str(c, "name"));
         if (Runs(Str(c, "kind"))) ++run;
     }
-    t.Eq(cases->Size(), size_t(153), "153 cases");
-    t.Eq(names.size(), size_t(153), "each name its own");
-    const std::pair<const char*, size_t> want[] = {{"shape", 6},   {"keys", 25},      {"uses", 4},
-                                                   {"resolve", 75}, {"invariant", 4}, {"graph", 39}};
+    t.Eq(cases->Size(), size_t(171), "171 cases");
+    t.Eq(names.size(), size_t(171), "each name its own");
+    const std::pair<const char*, size_t> want[] = {{"shape", 6},   {"keys", 25},      {"uses", 5},
+                                                   {"resolve", 86}, {"invariant", 4}, {"graph", 45}};
     size_t sum = 0;
     for (const auto& [kind, n] : want) {
         t.Eq(kinds[kind], n, std::string("kind ") + kind);
         sum += n;
     }
-    t.Eq(sum, size_t(153), "the six kinds are every case");
+    t.Eq(sum, size_t(171), "the six kinds are every case");
     t.Eq(kinds.size(), size_t(6), "and no other kind");
-    t.Eq(run, size_t(153), "every case runs here, the 39 graph cases among them");
+    t.Eq(run, size_t(171), "every case runs here, the 45 graph cases among them");
 }
 
 OW_TEST(lens_tables_are_the_fixtures) {
