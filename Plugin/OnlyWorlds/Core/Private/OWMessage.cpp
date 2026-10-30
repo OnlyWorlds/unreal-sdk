@@ -276,8 +276,8 @@ OWEdited EditedBy(const OWJsonValue& message, const OWJsonValue* members) {
 }
 
 const OWJsonValue* ReadMarkOf(const std::vector<const OWJsonValue*>& relations, std::string_view character_id,
-                              const OWJsonValue* members) {
-    if (character_id.empty()) return nullptr;
+                              const OWJsonValue* members, bool keyless) {
+    if (keyless || character_id.empty()) return nullptr;
     const OWJsonValue* mark = nullptr;
     std::optional<OWTimeKey> mark_key;
     for (const OWJsonValue* rel : relations) {

@@ -91,9 +91,11 @@ OWEdited EditedBy(const OWJsonValue& message, const OWJsonValue* members);
 
 // The reader's read mark among the Relations: supertype Read, `actor` the reader, every write the reader's own hand
 // (created_by verified where present; changed_by equal to created_by where present); the newest updated_at (a
-// readable time beats an unreadable one, equal times keep the first). nullptr when none, and always for "".
+// readable time beats an unreadable one, equal times keep the first). nullptr when none, and always for "". keyless
+// true for bodies read with no credential, as IsToEveryone takes it: the keyless public reader is served no created_by
+// or changed_by on any body, so no mark counts there.
 const OWJsonValue* ReadMarkOf(const std::vector<const OWJsonValue*>& relations, std::string_view character_id,
-                              const OWJsonValue* members);
+                              const OWJsonValue* members, bool keyless = false);
 
 // The messages unread for the Character, in created_at order: addressed to it, not its own (no created_by: narrator
 // trusted; with created_by: verified only), not on the mark's `narratives`. read_mark nullptr: no mark.

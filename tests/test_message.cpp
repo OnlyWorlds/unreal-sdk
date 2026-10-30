@@ -1,4 +1,4 @@
-// OWMessage on the message profile's conformance fixture (schema-dist profiles/message.fixture.json, dist.89's copy):
+// OWMessage on the message profile's conformance fixture (schema-dist profiles/message.fixture.json, dist.95's copy):
 // every case by name, dispatched on its kind, each answer as the fixture gives it. Then tests/data/
 // message-beside-the-fixture.json: 79 cases in the fixture's own shapes that it does not hold (the pair's trim and fold,
 // addressing and sender edges, the read mark's ties and times, created_at readings, threads through a Note, the Note's
@@ -22,8 +22,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.89's MANIFEST.json records it.
-const char* const DistSha256 = "7d7ea66e4c987fe39f208dba9e80b6ede85d6c65097727226a9253a0058ca206";
+// The fixture's sha256 as dist.95's MANIFEST.json records it.
+const char* const DistSha256 = "c7dafdab913996f6c5ccdaf454a156abce413ba59a97d5d64a5abaddba96b88f";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/message.fixture.json"; }
 std::string BesidePath() { return P().root + "/tests/data/message-beside-the-fixture.json"; }
@@ -116,7 +116,10 @@ void Case(owtest::T& t, const OWJsonValue& c, const OWJsonValue& world) {
         Same(t, OWJsonValue::Bool(e.edited), c.Find("edited"), name + " edited");
         Same(t, OptStr(e.by), c.Find("edited_by"), name + " edited_by");
     } else if (kind == "mark") {
-        const OWJsonValue* mark = OWMessage::ReadMarkOf(OWMessage::List(at("relations")), Str(c, "reader"), members);
+        // A case without keyless has a credential, or is a folder.
+        const OWJsonValue* k = c.Find("keyless");
+        const OWJsonValue* mark = OWMessage::ReadMarkOf(OWMessage::List(at("relations")), Str(c, "reader"), members,
+                                                        k && k->IsBool() && k->AsBool());
         const OWJsonValue* id = mark ? mark->Find("id") : nullptr;
         Same(t, id ? *id : OWJsonValue::Null(), c.Find("mark"), name);
     } else if (kind == "unread") {
@@ -151,7 +154,7 @@ owtest::Cases CasesOf(const std::shared_ptr<OWJsonValue>& doc, const std::string
 OW_TEST(message_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the message fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.89's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.95's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -169,17 +172,17 @@ OW_TEST(message_fixture_is_the_pinned_one) {
         ++kinds[Str(c, "kind")];
         names.insert(Str(c, "name"));
     }
-    t.Eq(cases->Size(), size_t(87), "87 cases");
-    t.Eq(names.size(), size_t(87), "each name its own");
+    t.Eq(cases->Size(), size_t(88), "88 cases");
+    t.Eq(names.size(), size_t(88), "each name its own");
     const std::pair<const char*, size_t> want[] = {{"pair", 10},  {"addressed", 11}, {"sent_by", 3}, {"sender", 14},
-                                                   {"unread", 17}, {"mark", 10},     {"thread", 4},  {"unseen", 3},
+                                                   {"unread", 17}, {"mark", 11},     {"thread", 4},  {"unseen", 3},
                                                    {"everyone", 3}, {"edited", 4},   {"note", 8}};
     size_t sum = 0;
     for (const auto& [kind, n] : want) {
         t.Eq(kinds[kind], n, std::string("kind ") + kind);
         sum += n;
     }
-    t.Eq(sum, size_t(87), "the eleven kinds are every case");
+    t.Eq(sum, size_t(88), "the eleven kinds are every case");
     t.Eq(kinds.size(), size_t(11), "and no other kind");
 }
 
