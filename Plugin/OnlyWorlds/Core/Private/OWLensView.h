@@ -1,12 +1,13 @@
 #pragma once
 // Private to the core: one reader's view of a world as OWLens builds it, and a lens's reading over it, for the graph
-// (OWGraph.cpp). The graph reads who sees what, and what a lens kept and cut, through the lens reader's own View and
-// resolution, never a second copy of their rules.
+// (OWGraph.cpp) and the charter's reader (OWCharter.cpp). They read who sees what, what a body serves, and what a lens
+// kept and cut, through the lens reader's own View and resolution, never a second copy of their rules.
 
 #include "OWJson.h"
 #include "OWLens.h"
 
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <optional>
 #include <string>
@@ -32,6 +33,9 @@ struct Sight {
     // The owner, reading as itself or as another (the owner's counts), and the rung the reading is judged by.
     bool owner_counts = false;
     std::string seen_rung;
+    // The body this reader is served of element i, as the lens reader serves it (keel's serialize: a link it cannot
+    // see left out, a known-of element as its stub); each made once, valid while the world lives.
+    std::function<const OWJsonValue&(size_t)> served;
 
     // With a lens: its kept ids in order, each cut element's first reason by (type, id), the counts as Resolve gives
     // them, and the key that made it unreadable.

@@ -9,6 +9,7 @@
 #include <cmath>
 #include <iterator>
 #include <map>
+#include <memory>
 #include <set>
 #include <unordered_map>
 
@@ -1216,7 +1217,10 @@ std::string See(const OWJsonValue& world, const OWJsonValue& reader, const OWJso
     std::optional<int64_t> as_of;
     OWLens::Time wall;
     if (std::string bad = OWLens::Prepare(world, reader, lens, options, where, as_of, wall); !bad.empty()) return bad;
-    OWLens::View v(world, reader, as_of, wall);
+    // The view outlives the call behind `served`, which makes each body once.
+    auto held = std::make_shared<OWLens::View>(world, reader, as_of, wall);
+    OWLens::View& v = *held;
+    out.served = [held](size_t i) -> const OWJsonValue& { return held->Served(i); };
     out.els = v.els;
     out.ids = v.ids;
     out.types = v.types;
