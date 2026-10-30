@@ -68,6 +68,12 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
 
 ### Added
 
+- The Open with rows offline, as the npm SDK 4.118.0 and the Python package 0.96.0 give them: `OWOpenerSurface::online`
+  (default true; `online` in `OpenersForJson`'s surface, anything but a boolean refused by name) and
+  `FOWOpenerSurface.bOnline` on Blueprints. Offline, every row whose href is a web address (`http:` or `https:`, in any
+  case) says "Needs a connection", the site's own row included, after "You are here" and before the browser, sign-in
+  and phone words; a row whose link opens an app keeps its own word, and every href stays. Held to the packages' shared
+  fixture, now 54 cases (sha256 `5a9ebbc8...`), and to an exact-refusal test for `online` beside it.
 - Blueprint graphs built, compiled and run in the editor's automation tests (`OnlyWorlds.Graph.Pins`, `.Run`): a
   function graph of real K2 nodes over every door, compiled by the Kismet compiler with no error or warning, its
   answers the core's on every element of Sikelia and Moppetopia. The editor's answer to the open question: no

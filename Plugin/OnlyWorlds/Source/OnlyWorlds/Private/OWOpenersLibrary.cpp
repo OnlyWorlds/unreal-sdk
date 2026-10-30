@@ -19,6 +19,7 @@ namespace
 		if (Surface.SignIn != EOWSignIn::Unknown) Out.signed_in = Surface.SignIn == EOWSignIn::SignedIn;
 		Out.browser = Surface.bBrowser;
 		Out.phone = Surface.bPhone;
+		Out.online = Surface.bOnline;
 		return Out;
 	}
 

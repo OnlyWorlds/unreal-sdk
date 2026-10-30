@@ -19,8 +19,10 @@ using owtest::P;
 
 namespace {
 
-const char* const FixtureSha256 = "93cb3f121cb1eef5ba4c6951c414399c13136c3896f864221a29a3802b82d266";
-const size_t CaseCount = 45;
+// The npm SDK's test/fixtures/openers.fixture.json at 538c8ac (4.118.0: the offline row), the Python package's at
+// 223b5be the same bytes.
+const char* const FixtureSha256 = "5a9ebbc8604d2fc87078fef25156dd2e767605a1b08cb2bec43e37c6bc2fd9db";
+const size_t CaseCount = 54;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";
@@ -131,7 +133,7 @@ OW_TEST(openers_every_case_is_answered_and_none_is_dropped) {
     const OWJsonValue* cases = Fixture()->Find("cases");
     t.Ok(cases && cases->IsArray(), "the fixture parses, with its cases");
     if (!cases) return;
-    t.Eq(cases->Size(), CaseCount, "45 cases");
+    t.Eq(cases->Size(), CaseCount, std::to_string(CaseCount) + " cases");
     std::set<std::string> names;
     size_t answered = 0;
     for (const OWJsonValue& c : cases->Items()) {
@@ -230,6 +232,81 @@ OW_TEST(openers_the_baked_list_gives_the_sites_row_then_each_listed_tool_with_a_
     t.Ok(got_public == want_public, "the public's rows");
     t.Eq(std::string(OWTools::Commit).size(), size_t(40), "the pinned commit");
     t.Eq(std::string(OWTools::Sha256).size(), size_t(64), "the list's sha256");
+}
+
+// -- offline (the surface's online, false) ----------------------------------------------------------------------
+
+// The fixture's online-not-a-boolean case names only "online", which a reader that does not know the key also names
+// (as an unknown key): the refusal itself, by its words, for each value the Python package's tests try.
+OW_TEST(openers_an_online_that_is_not_a_boolean_is_refused_by_name) {
+    OWJsonParseResult address = OWJson::Parse("{\"form\": \"human\", \"world\": \"" + World + "\"}");
+    for (const char* v : {"\"no\"", "null", "0", "1", "\"false\""}) {
+        OWJsonParseResult surface = OWJson::Parse(std::string("{\"audience\": \"member\", \"online\": ") + v + "}");
+        OWOpenersResult r = OWOpeners::OpenersForJson(OWJsonValue::Array(), OWOpeners::World, address.value, surface.value);
+        t.Ok(!r.ok && r.reason.empty() && r.rows.empty(), std::string("online ") + v + ": refused, not an address's refusal");
+        t.Ok(r.message.find("surface online is a boolean") != std::string::npos,
+             std::string("online ") + v + ": the message says so: " + r.message);
+    }
+    OWJsonParseResult yes = OWJson::Parse("{\"audience\": \"member\", \"online\": true}");
+    OWJsonParseResult absent = OWJson::Parse("{\"audience\": \"member\"}");
+    OWOpenersResult a = OWOpeners::OpenersForJson(OWJsonValue::Array(), OWOpeners::World, address.value, yes.value);
+    OWOpenersResult b = OWOpeners::OpenersForJson(OWJsonValue::Array(), OWOpeners::World, address.value, absent.value);
+    t.Ok(a.ok && b.ok && Rows(a.rows) == Rows(b.rows), "online true is online absent");
+}
+
+OW_TEST(openers_offline_the_baked_list_keeps_every_href) {
+    OWAddressParts parts;
+    parts.form = OWAddress::Human;
+    parts.world = World;
+    parts.type = "character";
+    parts.id = Element;
+    OWOpenerSurface on = Member(true), off = Member(true);
+    off.online = false;
+    OWOpenersResult a = OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, parts, on);
+    OWOpenersResult b = OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, parts, off);
+    t.Ok(a.ok && b.ok && a.rows.size() == b.rows.size() && !b.rows.empty(), "the same rows, online and off");
+    for (size_t i = 0; i < b.rows.size() && i < a.rows.size(); ++i) {
+        t.Eq(b.rows[i].href, a.rows[i].href, b.rows[i].id + ": the href stays");
+        t.Eq(b.rows[i].state.value_or(""), std::string(OWOpeners::NeedsAConnection), b.rows[i].id + ": a web row, offline");
+    }
+    t.Ok(OWOpenerSurface().online, "online by default");
+}
+
+OW_TEST(openers_offline_the_scheme_in_any_case_and_a_link_with_no_scheme) {
+    auto tool = [](const char* id, const char* world) {
+        OWTool x;
+        x.id = id;
+        x.name = id;
+        x.url = "https://example.org";
+        x.client = id;
+        x.rung = "listed";
+        x.open = OWToolOpen{std::string(world), std::nullopt, std::nullopt};
+        return x;
+    };
+    std::vector<OWTool> tools{tool("upper", "HTTPS://upper.example/{world}"), tool("mixed", "Http://mixed.example/{world}"),
+                              tool("relative", "//relative.example/{world}"), tool("app", "app://open?world={world}"),
+                              tool("ftp", "ftp://ftp.example/{world}"), tool("bare", "https//bare.example/{world}")};
+    OWAddressParts parts;
+    parts.form = OWAddress::Human;
+    parts.world = World;
+    OWOpenerSurface off = Member(std::nullopt);
+    off.online = false;
+    OWOpenersResult r = OWOpeners::OpenersFor(tools, OWOpeners::World, parts, off);
+    t.Ok(r.ok && r.rows.size() == 7, "the site and six rows: " + r.message);
+    if (r.rows.size() != 7) return;
+    const std::string word = OWOpeners::NeedsAConnection;
+    t.Eq(r.rows[0].state.value_or(""), word, "the site's row");
+    t.Eq(r.rows[1].state.value_or(""), word, "HTTPS: in capitals is a web address");
+    t.Eq(r.rows[2].state.value_or(""), word, "Http: in mixed case is one");
+    t.Ok(!r.rows[3].state, "a link with no scheme (//host) is not one");
+    t.Ok(!r.rows[4].state, "an app's link is not one");
+    t.Ok(!r.rows[5].state, "ftp: is not one");
+    t.Ok(!r.rows[6].state, "https// (no colon) is not one");
+    OWOpenerSurface own = off;
+    own.tool = "upper";
+    OWOpenersResult here = OWOpeners::OpenersFor(tools, OWOpeners::World, parts, own);
+    t.Eq(here.rows.size() > 1 ? here.rows[1].state.value_or("") : std::string(), std::string(OWOpeners::YouAreHere),
+         "You are here before Needs a connection");
 }
 
 OW_TEST(openers_a_game_outside_a_browser_says_opens_in_your_browser) {

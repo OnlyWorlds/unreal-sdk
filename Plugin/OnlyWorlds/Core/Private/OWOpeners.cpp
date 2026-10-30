@@ -15,6 +15,7 @@ const char* const YouAreHere = "You are here";
 const char* const OpensInYourBrowser = "Opens in your browser";
 const char* const NeedsTheWorldOnThisPhone = "Needs the world on this phone";
 const char* const OpensTheWorld = "Opens the world";
+const char* const NeedsAConnection = "Needs a connection";
 
 std::string SignInFirst(std::string_view name) { return "Sign in to " + std::string(name) + " first"; }
 
@@ -26,7 +27,7 @@ const char* const Listed = "listed";
 const char* const Account = "account";
 const char* const Device = "device";
 const char* const AddressKeys[] = {"form", "world", "type", "id", "lens", "moment", "world_is_slug", "canonical"};
-const char* const SurfaceKeys[] = {"tool", "audience", "signed_in", "browser", "phone"};
+const char* const SurfaceKeys[] = {"tool", "audience", "signed_in", "browser", "phone", "online"};
 
 OWOpenersResult Mistake(const std::string& what) {
     OWOpenersResult r;
@@ -67,6 +68,21 @@ std::string AsciiLower(std::string s) {
 
 bool IsKind(std::string_view kind) { return kind == World || kind == Element; }
 
+// A web address: http: or https: at the start, in any case (the npm SDK's /^https?:/i). A link with no scheme, or one
+// that opens an app (vault://), is not one.
+bool IsWeb(std::string_view href) {
+    auto starts = [&](std::string_view scheme) {
+        if (href.size() < scheme.size()) return false;
+        for (size_t i = 0; i < scheme.size(); ++i) {
+            char c = href[i];
+            if (c >= 'A' && c <= 'Z') c = char(c + 32);
+            if (c != scheme[i]) return false;
+        }
+        return true;
+    };
+    return starts("http:") || starts("https:");
+}
+
 // Each {world}, {type} and {id} in one pass; any other brace is kept as written.
 std::string Fill(const std::string& tpl, const std::string& world, const std::string& type, const std::string& id) {
     std::string out;
@@ -98,7 +114,12 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
     OWAddressParts site;
     site.form = OWAddress::Human;
     site.world = world;
-    out.rows.push_back({SiteId, SiteName, element ? page : OWAddress::Write(site).address, std::nullopt});
+    // With no connection a web link opens nothing, the site's own row included, whatever else it needs.
+    auto offline = [&surface](const std::string& href) { return !surface.online && IsWeb(href); };
+    const std::string site_href = element ? page : OWAddress::Write(site).address;
+    std::optional<std::string> site_state;
+    if (offline(site_href)) site_state = NeedsAConnection;
+    out.rows.push_back({SiteId, SiteName, site_href, site_state});
     for (const OWTool& r : tools) {
         if (!r.open) continue;
         const OWToolOpen& o = *r.open;
@@ -112,12 +133,14 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
         // somewhere else), so a world door alone that needs a sign-in says the sign-in.
         std::optional<std::string> state;
         const bool account = o.needs && *o.needs == Account;
+        const std::string href = Fill(*tpl, world, type, id);
         if (surface.tool && r.client && *r.client == *surface.tool) state = YouAreHere;
+        else if (offline(href)) state = NeedsAConnection;
         else if (account && !surface.browser) state = OpensInYourBrowser;
         else if (account && surface.signed_in == false) state = SignInFirst(r.name);
         else if (o.needs && *o.needs == Device && surface.phone) state = NeedsTheWorldOnThisPhone;
         else if (element && !o.element) state = OpensTheWorld;
-        out.rows.push_back({r.id, r.name, Fill(*tpl, world, type, id), state});
+        out.rows.push_back({r.id, r.name, href, state});
     }
     out.ok = true;
     return out;
@@ -260,6 +283,10 @@ OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, 
     if (const OWJsonValue* v = surface.Find("phone")) {
         if (!v->IsBool()) return Mistake("surface phone is a boolean");
         s.phone = v->AsBool();
+    }
+    if (const OWJsonValue* v = surface.Find("online")) {
+        if (!v->IsBool()) return Mistake("surface online is a boolean");
+        s.online = v->AsBool();
     }
 
     std::vector<OWTool> rows;

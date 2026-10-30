@@ -41,6 +41,7 @@ namespace
 		SetEnumMember(Test, T, Data, TEXT("SignIn"), StaticEnum<EOWSignIn>(), static_cast<int64>(S.SignIn));
 		SetBoolMember(Test, T, Data, TEXT("bBrowser"), S.bBrowser);
 		SetBoolMember(Test, T, Data, TEXT("bPhone"), S.bPhone);
+		SetBoolMember(Test, T, Data, TEXT("bOnline"), S.bOnline);
 	}
 
 	struct FRow
@@ -115,6 +116,7 @@ namespace
 		if (S.SignIn != EOWSignIn::Unknown) C.signed_in = S.SignIn == EOWSignIn::SignedIn;
 		C.browser = S.bBrowser;
 		C.phone = S.bPhone;
+		C.online = S.bOnline;
 		return C;
 	}
 
@@ -179,6 +181,22 @@ bool FOWOpenersWorldTest::RunTest(const FString& Parameters)
 	// On a phone too: no tool of the list needs the device, so nothing changes.
 	TestTrue(TEXT("a phone changes no row of the baked list"),
 		CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member, false, EOWSignIn::Unknown, TEXT(""), true)).Rows == Game);
+
+	// Offline: every row of the baked list is a web address, so each says "Needs a connection", the site's included,
+	// before the browser's word, and keeps its href. A surface left as it is made is online.
+	FOWOpenerSurface Offline = Surface(EOWAudience::Member);
+	Offline.bOnline = false;
+	M = CallOpenersFor(*this, World, Characters[0], Offline);
+	bool bAllOffline = M.bOk && M.Rows.Num() == Game.Num();
+	for (int32 I = 0; bAllOffline && I < M.Rows.Num(); ++I)
+		bAllOffline = M.Rows[I].Href == Game[I].Href && M.Rows[I].State == TEXT("Needs a connection");
+	TestTrue(TEXT("offline: every row says Needs a connection, its href kept (") + M.Show() + TEXT(")"), bAllOffline);
+	Offline.Tool = TEXT("atlas");
+	M = CallOpenersFor(*this, World, FString(), Offline);
+	TestTrue(TEXT("offline, Atlas's own surface: You are here first (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 3
+		&& M.Rows[0].State == TEXT("Needs a connection") && M.Rows[1].State == TEXT("You are here")
+		&& M.Rows[2].State == TEXT("Needs a connection"));
+	TestTrue(TEXT("a surface as it is made is online"), FOWOpenerSurface().bOnline);
 
 	// In a browser: the sign-in decides, and only when it is known.
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member, true, EOWSignIn::SignedOut));
@@ -350,6 +368,7 @@ bool FOWOpenersAddressTest::RunTest(const FString& Parameters)
 					S.SignIn = V->IsNull() ? EOWSignIn::Unknown : V->AsBool() ? EOWSignIn::SignedIn : EOWSignIn::SignedOut;
 				else if (Key == "browser" && V->IsBool()) S.bBrowser = V->AsBool();
 				else if (Key == "phone" && V->IsBool()) S.bPhone = V->AsBool();
+				else if (Key == "online" && V->IsBool()) S.bOnline = V->AsBool();
 				else Why = TEXT("its surface's ") + Str(Key) + TEXT(" is no member's value");
 			}
 			if (!Surf->Find("audience")) Why = TEXT("its surface has no audience (an enum always holds one)");
@@ -389,8 +408,8 @@ bool FOWOpenersAddressTest::RunTest(const FString& Parameters)
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	TestEqual(TEXT("45 cases"), static_cast<int32>(Cases->Items().size()), 45);
-	TestEqual(TEXT("the row cases carried"), RowCases, 27);
+	TestEqual(TEXT("54 cases"), static_cast<int32>(Cases->Items().size()), 54);
+	TestEqual(TEXT("the row cases carried"), RowCases, 35);
 	TestEqual(TEXT("the address refusals carried"), Refusals, 6);
 	TestEqual(TEXT("cases failed"), Failed, 0);
 	AddInfo(FString::Printf(TEXT("openers fixture: %d row cases and %d address refusals through the Blueprint path; not carried (%d): %s"),

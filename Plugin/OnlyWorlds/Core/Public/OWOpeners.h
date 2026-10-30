@@ -8,17 +8,19 @@
 // (tests/data/openers.fixture.json), so every package gives the same rows.
 //
 // OpenersFor gives, in order: first the site's own row (id "onlyworlds", name "onlyworlds.com", the world's or the
-// element's page on www.onlyworlds.com, never a word, for every audience), then one row per tools row, in the list's
-// order, that is "listed" and has a door for this kind. A row with no open, or with no door for this kind, is not there.
-// On an element, a tool with only a world door is a row to its world door that says "Opens the world". For the public
-// audience only rows whose needs is absent are there: a row that needs anything does not exist for the public. A lens
-// and a moment on the address ride on no href.
+// element's page on www.onlyworlds.com, for every audience, its one word "Needs a connection" when offline), then one
+// row per tools row, in the list's order, that is "listed" and has a door for this kind. A row with no open, or with
+// no door for this kind, is not there. On an element, a tool with only a world door is a row to its world door that
+// says "Opens the world". For the public audience only rows whose needs is absent are there: a row that needs anything
+// does not exist for the public. A lens and a moment on the address ride on no href.
 //
-// Each row's state, the first that holds: "You are here" for the surface's own tool (its client is surface.tool); then
-// what needs asks of this surface: "account" outside a browser "Opens in your browser", in a browser signed out "Sign in
-// to <name> first" (none when signed_in is unknown: a word shows only when the surface knows it is true), "device" on a
-// phone "Needs the world on this phone"; then "Opens the world" (a world door on an element: a sign-in the row needs is
-// the more urgent word); else none.
+// Each row's state, the first that holds: "You are here" for the surface's own tool (its client is surface.tool); then,
+// when surface.online is false, "Needs a connection" for a row whose href is a web address (it begins http: or https:,
+// in any case; a row whose link opens an app on the device keeps its own word, and the href stays in the row either
+// way); then what needs asks of this surface: "account" outside a browser "Opens in your browser", in a browser signed
+// out "Sign in to <name> first" (none when signed_in is unknown: a word shows only when the surface knows it is true),
+// "device" on a phone "Needs the world on this phone"; then "Opens the world" (a world door on an element: a sign-in
+// the row needs is the more urgent word); else none.
 //
 // Refusals, as OWAddressWritten spells them: reason is the address profile's word for whatever OWAddress::Write refuses
 // of the whole address in its own form (the site's when it has none): a form, type, id, pairing, moment or lens
@@ -65,6 +67,7 @@ struct OWOpenerSurface {
     std::optional<bool> signed_in;    // absent when the surface cannot know, and then no row says so
     bool browser = true;              // false in a game or a desktop app, which cannot see the browser's sign-in
     bool phone = false;
+    bool online = true;               // false when the device has no connection: every web row says "Needs a connection"
 };
 
 // One row of the menu.
@@ -95,6 +98,7 @@ extern const char* const YouAreHere;             // "You are here"
 extern const char* const OpensInYourBrowser;     // "Opens in your browser"
 extern const char* const NeedsTheWorldOnThisPhone;  // "Needs the world on this phone"
 extern const char* const OpensTheWorld;          // "Opens the world"
+extern const char* const NeedsAConnection;       // "Needs a connection"
 std::string SignInFirst(std::string_view name);  // "Sign in to <name> first"
 
 // The rows for a world ("world") or one element of it ("element") at these parts (their form is not read: the site's
@@ -109,7 +113,7 @@ OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view ki
 // The rows with every argument as JSON, the shape the npm and Python packages take and the fixture writes: tools an
 // array of rows (straight from tools.json: keys it does not read are ignored), the address an object of the address's
 // keys (OWAddress::WriteJson's), the surface an object with snake_case keys (tool, audience, signed_in, browser,
-// phone). Checks in the npm SDK's order.
+// phone, online). Checks in the npm SDK's order.
 OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, const OWJsonValue& address,
                                const OWJsonValue& surface);
 

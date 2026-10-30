@@ -57,6 +57,10 @@ struct ONLYWORLDS_API FOWOpenerSurface
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Open with")
 	bool bPhone = false;
+
+	/** False when the device has no connection: every row whose link is a web address says "Needs a connection" (its href kept). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Open with")
+	bool bOnline = true;
 };
 
 /** One row of the menu. */
@@ -76,7 +80,7 @@ struct ONLYWORLDS_API FOWOpener
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Open with")
 	FString Href;
 
-	/** What the row says ("You are here", "Opens in your browser", "Sign in to Atlas first", ...); "" when it opens now and says nothing. */
+	/** What the row says ("You are here", "Needs a connection", "Opens in your browser", "Sign in to Atlas first", ...); "" when it opens now and says nothing. */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Open with")
 	FString State;
 };
