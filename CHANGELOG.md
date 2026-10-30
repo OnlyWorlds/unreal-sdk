@@ -33,6 +33,15 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
 
 ### Added
 
+- `OWCharter` in the core, the charter profile's reader (schema-dist `profiles/charter.md`): `CharterOf(world, reader)`
+  (the profile's `charterOf`: the packet `{charter, guide, domains}` as one reader sees the world, the Charter
+  `{id, name, rules, skill}` and the Guide `{id, name}` the newest marked ones, the Domains `{id, name, sentence, hubs}`
+  in the Guide's order, then by folded name and id), `DomainsOf`, `IsCharterElement` (the pair and the mark),
+  `ReadingAidOf` (the pair alone), `FirstLine` and the profile's tables. It reads who sees what, and the body each
+  reader is served, through `OWLens`'s own view. keel's reading aids (`reading_aids`, `charter_skill`) are the rule
+  followed: the Charter is read whole as stored, so a guest who knows it only as a stub still reads its rules and
+  skill, and a skill id matches an Object's whatever its case. A proposed element is in no reader's view here, as in
+  the lens reader. Tested by every case of the profile's fixture (18 `charter`, 5 `element`).
 - `OWGraph` in the core, the lens profile's graph section: `WorldGraph(world, reader, options)` (the profile's
   `worldGraph`: the nodes by id with their colour word and icon from `OWPresentation`, their marks and `known_of`; the
   edges by source, field and index, the index the reader is served; `edges_cut` and `cut` by reason; `unreadable`; or
