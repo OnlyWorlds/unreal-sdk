@@ -56,11 +56,13 @@ OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader) {
     }
     const OWJsonValue* mark = world.Find(Mark);
     if (!mark || !mark->IsObject()) return out;
-    // The mark's three members, each a string, or no mark.
-    const OWJsonValue* named[3] = {};
-    for (size_t m = 0; m < 3; ++m) {
-        named[m] = mark->Find(Members()[m]);
-        if (!named[m] || !named[m]->IsString()) return out;
+    // The story's member a string; the event's and the place's each a non-empty string, or null or absent (unset);
+    // anything else there (an empty string, a number, an object) is no mark.
+    const OWJsonValue* named[3] = {mark->Find(Members()[0]), mark->Find(Members()[1]), mark->Find(Members()[2])};
+    if (!named[0] || !named[0]->IsString()) return out;
+    for (size_t m = 1; m < 3; ++m) {
+        if (named[m] && named[m]->IsNull()) named[m] = nullptr;
+        if (named[m] && (!named[m]->IsString() || named[m]->Text().empty())) return out;
     }
     const OWJsonValue* open = world.Find("open");
     if (s.seen_rung == "public" && !(open && open->IsBool() && open->AsBool())) return out;

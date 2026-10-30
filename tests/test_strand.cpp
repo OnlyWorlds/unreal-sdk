@@ -1,8 +1,8 @@
 // OWStrand on the strand profile's conformance fixture (schema-dist profiles/strand.fixture.json, dist.98's copy, its
 // sha256 held to MANIFEST.json): the six slots over the fixture's fifteen worlds and their readers, every case by name,
 // and the mark held equal to the fixture's; then readings the fixture leaves open (the public rung on a closed and an
-// open world, the mark shapes that are no mark, an empty-string member, a caller's mistake, a reading that never moves
-// the world).
+// open world, the mark shapes that are no mark with an empty-string member among them, a story alone, a non-list
+// multi-link, a nameless slot, a caller's mistake, a reading that never moves the world).
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -181,16 +181,21 @@ OW_TEST(strand_the_public_reads_nothing_of_a_closed_world) {
     Same(t, OWStrand::StrandOf(world, Parse(R"({"rung": "public"})")).ToJson(), &owner, "open: the owner's strand");
 }
 
-// A mark that is not an object of three strings is no mark: a member missing, null, a number, the mark a list, a bare
-// id, null, no key. Kills: a mark read from whichever members are strings.
-OW_TEST(strand_a_mark_that_is_not_three_strings_is_no_mark) {
+// A value that is not the profile's shape is no mark (serial 99): the story's member missing, null or not a string; the
+// event's or the place's an empty string, a number or an object; the mark a list, a bare id, null, no key. Kills: a mark
+// read from whichever members are strings, and one that refuses only the empty string.
+OW_TEST(strand_a_mark_that_is_not_the_profiles_shape_is_no_mark) {
     OWJsonValue harbour = World("harbour");
     std::string n = "\"019a7f00-0000-7000-8000-000000000301\"", e = "\"019a7f00-0000-7000-8000-000000000311\"",
                 l = "\"019a7f00-0000-7000-8000-000000000321\"";
     const std::string bad[] = {
-        "{\"narrative\": " + n + ", \"location\": " + l + "}",
-        "{\"narrative\": " + n + ", \"event\": " + e + ", \"location\": null}",
+        "{\"event\": " + e + ", \"location\": " + l + "}",
+        "{\"narrative\": null, \"event\": " + e + ", \"location\": " + l + "}",
         "{\"narrative\": 7, \"event\": " + e + ", \"location\": " + l + "}",
+        "{\"narrative\": " + n + ", \"event\": 7, \"location\": " + l + "}",
+        "{\"narrative\": " + n + ", \"event\": " + e + ", \"location\": 7}",
+        "{\"narrative\": " + n + ", \"event\": {}, \"location\": " + l + "}",
+        "{\"narrative\": " + n + ", \"event\": " + e + ", \"location\": []}",
         "[" + n + ", " + e + ", " + l + "]",
         n,
         "null",
@@ -205,20 +210,67 @@ OW_TEST(strand_a_mark_that_is_not_three_strings_is_no_mark) {
     Same(t, OWStrand::StrandOf(none, Owner()).ToJson(), &Empty(), "no key");
 }
 
-// The page's words on a member that is an empty string: a string, so the mark's shape holds, and an id that names no
-// element in the view, so its slot is empty and the rest still read (keel's mark_of). The npm SDK and the Python
-// package read it as no mark; the difference is open with the profile's owner.
-OW_TEST(strand_an_empty_string_member_is_an_empty_slot) {
+// An empty string in the event's or the place's member is neither an id nor unset, so the whole value is no mark
+// (ruled for serial 99, the npm and Python readers' reading). Kills: an empty string read as an empty slot.
+OW_TEST(strand_an_empty_string_member_is_no_mark) {
+    for (const char* member : {"event", "location"}) {
+        OWJsonValue world = World("harbour");
+        if (OWJsonValue* mark = world.Find(OWStrand::Mark)) mark->Set(member, OWJsonValue::String(""));
+        Same(t, OWStrand::StrandOf(world, Owner()).ToJson(), &Empty(), member);
+    }
+}
+
+// Only the story is required (serial 99): the event and the place null or absent read as unset, so a story alone is a
+// strand begun, its hero and now read; a place named with no event is an empty place. Kills: an unset member read as
+// no mark, and a place read without its event.
+OW_TEST(strand_a_story_alone_is_a_strand_begun) {
+    std::string n = "\"019a7f00-0000-7000-8000-000000000301\"", l = "\"019a7f00-0000-7000-8000-000000000321\"";
+    const std::string begun[] = {
+        "{\"narrative\": " + n + ", \"event\": null, \"location\": null}",
+        "{\"narrative\": " + n + "}",
+        "{\"narrative\": " + n + ", \"event\": null, \"location\": " + l + "}",
+        "{\"narrative\": " + n + ", \"location\": " + l + "}",
+    };
+    const OWJsonValue want = Parse(R"({"narrative": {"id": "019a7f00-0000-7000-8000-000000000301",
+        "name": "The Night the Lighthouse Went Dark"}, "event": null, "location": null,
+        "character": {"id": "019a7f00-0000-7000-8000-000000000331", "name": "Ilse the Keeper"},
+        "now": {"id": "019a7f00-0000-7000-8000-000000000322", "name": "The Docks"}, "same": null})");
+    for (const std::string& mark : begun) {
+        OWJsonValue world = World("harbour");
+        world.Set(OWStrand::Mark, Parse(mark));
+        Same(t, OWStrand::StrandOf(world, Owner()).ToJson(), &want, mark);
+    }
+}
+
+// A multi-link that is not a list is empty (serial 99): the owner's stored story with a bare string in its events lists
+// nothing, so the event and the place are empty and the rest reads. Kills: keel's one-item reading.
+OW_TEST(strand_a_multi_link_that_is_not_a_list_is_empty) {
     OWJsonValue world = World("harbour");
-    if (OWJsonValue* mark = world.Find(OWStrand::Mark)) mark->Set("event", OWJsonValue::String(""));
+    if (OWJsonValue* elements = world.Find("elements"))
+        for (OWJsonValue& el : elements->Items())
+            if (Str(el, "id") == Story) el.Set("events", OWJsonValue::String("019a7f00-0000-7000-8000-000000000311"));
     OWWorldStrand got = OWStrand::StrandOf(world, Owner());
-    t.Eq(got.narrative ? got.narrative->id : std::string(), std::string(Story), "the story reads");
-    t.Ok(!got.event, "the event is empty");
-    t.Ok(!got.location, "the place hangs off the event");
-    t.Eq(got.character ? got.character->id : std::string(), std::string("019a7f00-0000-7000-8000-000000000331"),
-         "the hero reads");
-    t.Eq(got.now ? got.now->id : std::string(), std::string("019a7f00-0000-7000-8000-000000000322"), "now reads");
-    t.Ok(!got.same, "same needs both");
+    t.Eq(got.narrative ? got.narrative->id : std::string(), std::string(Story), "the story");
+    t.Ok(!got.event, "no event");
+    t.Ok(!got.location, "no place");
+    t.Eq(got.character ? got.character->id : std::string(), std::string("019a7f00-0000-7000-8000-000000000331"), "the hero");
+}
+
+// A slot whose element has no name, a null one or one that is not text reads an empty string, never null (serial 99).
+OW_TEST(strand_a_slot_without_a_name_reads_an_empty_string) {
+    const OWJsonValue want = Parse(R"({"id": "019a7f00-0000-7000-8000-000000000322", "name": ""})");
+    for (int shape = 0; shape < 3; ++shape) {
+        OWJsonValue world = World("harbour");
+        if (OWJsonValue* elements = world.Find("elements"))
+            for (OWJsonValue& el : elements->Items()) {
+                if (Str(el, "id") != "019a7f00-0000-7000-8000-000000000322") continue;
+                if (shape == 0) el.Erase("name");
+                else el.Set("name", shape == 1 ? OWJsonValue::Null() : OWJsonValue::Number(int64_t(7)));
+            }
+        OWJsonValue got = OWStrand::StrandOf(world, Owner()).ToJson();
+        const OWJsonValue* now = got.Find("now");
+        t.Ok(now && Equal(*now, want), "name shape " + std::to_string(shape) + ": " + (now ? Compact(*now) : "none"));
+    }
 }
 
 // A caller's mistake is no reading: the message names it, and the strand is empty.

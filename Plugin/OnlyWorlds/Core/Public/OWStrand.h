@@ -44,7 +44,7 @@ struct OWWorldStrand {
 
 namespace OWStrand {
 
-// The World's field that carries the mark, and the mark's three members in the profile's order.
+// The World's field that carries the mark, and the mark's three members in the profile's order (only the first required).
 extern const char* const Mark;  // "x_strand"
 const std::vector<std::string>& Members();  // narrative, event, location
 
@@ -65,9 +65,12 @@ const std::vector<std::string>& Members();  // narrative, event, location
 // hero's location, nor the reverse. Each slot's links are read from the body the reader is served, so a story known
 // only as a stub fills its own slot and nothing past it.
 //
-// The mark is an object whose three members are each a string; any other shape (a bare string, a member missing, null
-// or not a string) is no mark, and the strand is empty. An id that names no element in the reader's view, an empty
-// string included, is an empty slot: there is no id-format test here (a malformed id is the doctor's to name).
+// The mark is an object whose `narrative` is a string; `event` and `location` are each a string id, null or absent, and
+// null or absent reads as unset (serial 99: a strand begins when a story is chosen, and a place with no happening is an
+// empty place). Any other shape is no mark, and the strand is empty: a bare string, `narrative` missing or not a
+// string, `event` or `location` an empty string, a number or an object. An id that names no element in the reader's
+// view is an empty slot: there is no id-format test here (a malformed id is the doctor's to name). A multi-link that is
+// not a list lists nothing, and a slot whose element has no name reads "", never null.
 OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader);
 
 }  // namespace OWStrand
