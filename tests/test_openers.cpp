@@ -19,8 +19,8 @@ using owtest::P;
 
 namespace {
 
-const char* const FixtureSha256 = "d10485997d9149805284eb1d2b907a4e349dedd7524f514f923ad25bf50e7e45";
-const size_t CaseCount = 41;
+const char* const FixtureSha256 = "93cb3f121cb1eef5ba4c6951c414399c13136c3896f864221a29a3802b82d266";
+const size_t CaseCount = 45;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";
@@ -131,7 +131,7 @@ OW_TEST(openers_every_case_is_answered_and_none_is_dropped) {
     const OWJsonValue* cases = Fixture()->Find("cases");
     t.Ok(cases && cases->IsArray(), "the fixture parses, with its cases");
     if (!cases) return;
-    t.Eq(cases->Size(), CaseCount, "41 cases");
+    t.Eq(cases->Size(), CaseCount, "45 cases");
     std::set<std::string> names;
     size_t answered = 0;
     for (const OWJsonValue& c : cases->Items()) {

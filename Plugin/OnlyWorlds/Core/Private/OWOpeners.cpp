@@ -123,8 +123,23 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
     return out;
 }
 
-// The address's checks are the writer's, so a slug, a missing world and a bad type or id refuse as there. Then an
-// element's openers need an element. On success fills page and the lowercase parts; else returns the refusal.
+// The address's checks are the writer's: the whole address in its own form (the site's when it has none), so a bad
+// form, a slug, a bad type, id, moment or lens refuse as there. CheckAddress then writes the site's page.
+std::optional<OWOpenersResult> CheckWhole(const OWAddressWritten& written) {
+    if (written.ok) return std::nullopt;
+    OWOpenersResult r;
+    r.reason = written.reason;
+    r.message = written.message;
+    return r;
+}
+
+std::optional<OWOpenersResult> CheckWhole(OWAddressParts whole) {
+    if (whole.form.empty()) whole.form = OWAddress::Human;
+    return CheckWhole(OWAddress::Write(whole));
+}
+
+// The site's page, where a missing world refuses. Then an element's openers need an element. On success fills page
+// and the lowercase parts; else returns the refusal.
 std::optional<OWOpenersResult> CheckAddress(std::string_view kind, const std::optional<std::string>& world,
                                             const std::optional<std::string>& type, const std::optional<std::string>& id,
                                             std::string& page, std::string& w, std::string& t, std::string& i) {
@@ -173,6 +188,8 @@ OWOpenersResult Typed(const std::vector<OWTool>& tools, std::string_view kind, c
 
 OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view kind, const OWAddressParts& address,
                            const OWOpenerSurface& surface) {
+    if (auto bad = CheckKind(kind)) return *bad;
+    if (auto bad = CheckWhole(address)) return *bad;
     return Typed(tools, kind, address.world, address.type, address.id, surface);
 }
 
@@ -184,6 +201,14 @@ OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view ki
         r.reason = address.reason;
         return r;
     }
+    OWAddressParts whole;
+    whole.form = address.form;
+    whole.world = address.world;
+    whole.type = address.type;
+    whole.id = address.id;
+    whole.lens = address.lens;
+    whole.moment = address.moment;
+    if (auto bad = CheckWhole(whole)) return *bad;
     return Typed(tools, kind, address.world, address.type, address.id, surface);
 }
 
@@ -195,6 +220,9 @@ OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, 
     for (const std::string& key : address.Keys())
         if (!OneOf(key, AddressKeys))
             return Mistake("unknown key '" + key + "' in the address. The keys are " + Joined(AddressKeys) + ".");
+    OWJsonValue whole = address;
+    if (const OWJsonValue* f = address.Find("form"); !f || f->IsNull()) whole.Set("form", OWJsonValue::String(std::string(OWAddress::Human)));
+    if (auto bad = CheckWhole(OWAddress::WriteJson(whole))) return *bad;
     // A part as OWAddress::WriteJson reads one: absent for a missing key or JSON null; a string's text; anything else
     // present as its JSON text, which refuses as that part would.
     auto part = [&](const char* key) -> std::optional<std::string> {

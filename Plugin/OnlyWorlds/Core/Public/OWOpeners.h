@@ -20,8 +20,10 @@
 // phone "Needs the world on this phone"; then "Opens the world" (a world door on an element: a sign-in the row needs is
 // the more urgent word); else none.
 //
-// Refusals, as OWAddressWritten spells them: reason is the address profile's word for an address without a world
-// (no_world), with a slug or anything else for its id (bad_world), and a type, id or pairing OWAddress::Write refuses;
+// Refusals, as OWAddressWritten spells them: reason is the address profile's word for whatever OWAddress::Write refuses
+// of the whole address in its own form (the site's when it has none): a form, type, id, pairing, moment or lens
+// (bad_moment, bad_lens), a slug or anything else for the world's id (bad_world); and an address without a world
+// (no_world), the text form inside a world included;
 // reason is empty and message names the rest (the npm SDK's TypeError): a kind that is neither, an element's openers
 // asked of an address with no element, an unknown key on the address or the surface, a missing or unknown audience, a
 // surface value of the wrong type, a tools row that is not one (a needs outside the list's format included).
