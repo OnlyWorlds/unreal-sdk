@@ -636,3 +636,156 @@ OW_TEST(lens_a_mail_tie_keeps_the_lists_order) {
     t.Ok(unread("m2", "m1") == Ids{"m2", "m1"}, "m2 before m1, as listed");
     t.Ok(unread("m1", "m2") == Ids{"m1", "m2"}, "listed the other way, read the other way");
 }
+
+namespace {
+using Counts = std::vector<std::pair<std::string, int64_t>>;
+using Ids = std::vector<std::string>;
+
+OWLensReading ReadAs(const OWJsonValue& world, const OWJsonValue& lens, const char* reader) {
+    return OWLens::Resolve(world, lens, Parse(reader));
+}
+
+std::string RowsOf(const OWLensReading& r) {
+    OWJsonValue rows = OWJsonValue::Array();
+    for (const OWJsonValue& row : r.rows) rows.Push(row);
+    return Compact(rows);
+}
+}  // namespace
+
+OW_TEST(lens_a_lens_whose_anchor_fields_hold_only_empty_strings_names_no_anchor_and_is_a_filter) {
+    // An empty string is no id, so a lens whose anchor fields hold only empty strings names no anchor and is a filter,
+    // as rule 7 reads a lens with empty lists. One real id beside them anchors it, and a served lens whose
+    // x_served_trimmed names an anchor field stays anchored. Kills: [""] read as naming an anchor.
+    OWJsonValue world = Parse(R"({"elements": [{"id": "e03", "type": "law", "name": "Law"},
+        {"id": "a", "type": "character", "name": "Ada"}]})");
+    auto lens = [](const char* anchors) {
+        return Parse((std::string(R"({"id": "L", "type": "construct", "name": "L", "supertype": "Lens", "x_lens": {}, )") +
+                      anchors + "}").c_str());
+    };
+    t.Ok(ReadAs(world, lens(R"("narratives": [""])"), R"({"rung": "owner"})").kept == Ids{"a", "e03"}, "a filter");
+    t.Ok(ReadAs(world, lens(R"("characters": ["", ""], "laws": [""])"), R"({"rung": "public"})").kept == Ids{"a", "e03"},
+         "a filter, for any reader");
+    t.Ok(ReadAs(world, lens(R"("characters": ["", "a"])"), R"({"rung": "owner"})").kept == Ids{"a"}, "one id anchors it");
+    t.Ok(ReadAs(world, lens(R"("narratives": [""], "x_served_trimmed": ["narratives"])"), R"({"rung": "owner"})").kept.empty(),
+         "an anchor field the server trimmed still names an anchor");
+}
+
+OW_TEST(lens_an_owners_full_row_of_a_hidden_element_carries_hidden_true_as_served) {
+    // A row is the body as the wire serves it to that reader, and a served body of an element under the hidden mark
+    // carries hidden: true: the owner's full row of a hidden element, by the world's list or by its own key; a guest's
+    // row of its own hidden creation. A name row never carries it. Kills: the row as stored, a guest's row unmarked.
+    const char* elements = R"("elements": [
+        {"id": "e05", "type": "collective", "name": "Guild"},
+        {"id": "e06", "type": "collective", "name": "Choir", "hidden": true},
+        {"id": "L", "type": "construct", "name": "L", "supertype": "Lens", "x_lens": %s}])";
+    auto world = [&](const char* x_lens) {
+        std::string body = elements;
+        body.replace(body.find("%s"), 2, x_lens);
+        return Parse((std::string(R"({"hidden": ["e05"], )") + body + "}").c_str());
+    };
+    OWJsonValue full = world("{}");
+    OWLensReading owner = ReadAs(full, OWJsonValue::String("L"), R"({"rung": "owner"})");
+    t.Ok(owner.rows.size() == 2 &&
+             Equal(owner.rows[0], Parse(R"({"id": "e05", "type": "collective", "name": "Guild", "hidden": true})")) &&
+             Equal(owner.rows[1], Parse(R"({"id": "e06", "type": "collective", "name": "Choir", "hidden": true})")),
+         "the world's list and the element's own key, one mark: " + RowsOf(owner));
+    OWLensReading guest = ReadAs(full, OWJsonValue::String("L"), R"({"rung": "guest", "whole": ["L", "e05"]})");
+    t.Ok(guest.rows.size() == 1 &&
+             Equal(guest.rows[0], Parse(R"({"id": "e05", "type": "collective", "name": "Guild", "hidden": true})")),
+         "a guest's own hidden creation: " + RowsOf(guest));
+    OWLensReading named = ReadAs(world(R"({"show": "name"})"), OWJsonValue::String("L"), R"({"rung": "owner"})");
+    t.Ok(named.rows.size() == 2 && named.rows[0].Find("hidden") == nullptr, "a name row: " + RowsOf(named));
+}
+
+OW_TEST(lens_a_stored_hidden_false_is_dropped_from_the_row) {
+    // keel serves no hidden key on a body no mark hides, so a stored hidden: false is dropped from the row, for the
+    // owner and every reader below it. Kills: the stored key carried onto the row.
+    OWJsonValue world = Parse(R"({"elements": [{"id": "e05", "type": "collective", "name": "Guild", "hidden": false},
+        {"id": "L", "type": "construct", "name": "L", "supertype": "Lens", "x_lens": {}}]})");
+    for (const char* reader : {R"({"rung": "owner"})", R"({"rung": "contributor"})",
+                               R"({"rung": "guest", "whole": ["L", "e05"]})", R"({"rung": "public"})"}) {
+        OWLensReading r = ReadAs(world, OWJsonValue::String("L"), reader);
+        t.Ok(r.rows.size() == 1 && Equal(r.rows[0], Parse(R"({"id": "e05", "type": "collective", "name": "Guild"})")),
+             std::string(reader) + ": " + RowsOf(r));
+    }
+}
+
+OW_TEST(lens_the_cut_counts_each_element_once_and_a_kept_element_is_never_also_cut) {
+    // The cut counts each element once under its first reason, and a kept element is never also counted as cut; an
+    // anchor resolves by its field's type and the id. One id an umbrella and its child anchor under two wrong types (a
+    // Location under characters, then objects) is one element, counted once; one the umbrella anchors under the wrong
+    // type and the child under its own is kept and not counted, and so the other way round. Kills: the cut keyed by
+    // (type, id).
+    auto read = [&](const char* u, const char* k) {
+        OWJsonValue world = Parse((std::string(R"({"elements": [{"id": "C", "type": "construct", "name": "C",
+            "supertype": "Lens", "x_lens": {"depth": 0}, )") + k + R"(}, {"id": "x", "type": "location", "name": "Harbour"}]})").c_str());
+        OWJsonValue umbrella = Parse((std::string(R"({"id": "U", "type": "construct", "name": "U", "supertype": "Lens",
+            "constructs": ["C"], "x_lens": {"depth": 0}, )") + u + "}").c_str());
+        return OWLens::Resolve(world, umbrella, Parse(R"({"rung": "owner"})"));
+    };
+    OWLensReading r = read(R"("characters": ["x"])", R"("objects": ["x"])");
+    t.Ok(r.kept.empty() && r.cut == Counts{{"anchor_not_visible", 1}}, "one element, once");
+    r = read(R"("characters": ["x"])", R"("locations": ["x"])");
+    t.Ok(r.kept == Ids{"x"} && r.cut.empty(), "kept by the child, so never also cut");
+    r = read(R"("locations": ["x"])", R"("characters": ["x"])");
+    t.Ok(r.kept == Ids{"x"} && r.cut.empty(), "kept by the umbrella, the child's wrong type not counted");
+}
+
+OW_TEST(lens_below_the_owner_an_unseen_anchor_a_cut_child_reaches_is_counted_under_the_childs_reason) {
+    // Counts are per reader: below the owner an element whose owner-side reason was anchor_not_visible (a Location the
+    // umbrella names under characters) and which a child cuts by types is counted under the child's reason; for the
+    // owner anchor_not_visible comes first and it is counted once there. Guards what this reader already does. Kills:
+    // the unseen anchor recorded for every reader and dropped at the count.
+    OWJsonValue world = Parse(R"({"elements": [
+        {"id": "U", "type": "construct", "name": "U", "supertype": "Lens", "characters": ["x"], "constructs": ["C"], "x_lens": {"depth": 0}},
+        {"id": "C", "type": "construct", "name": "C", "supertype": "Lens", "characters": ["y"], "x_lens": {"types": ["character"]}},
+        {"id": "y", "type": "character", "name": "Ysolde", "birthplace": "x"},
+        {"id": "x", "type": "location", "name": "Harbour"}]})");
+    OWLensReading contributor = ReadAs(world, OWJsonValue::String("U"), R"({"rung": "contributor"})");
+    t.Ok(contributor.kept == Ids{"y"}, "Ysolde");
+    t.Ok(contributor.cut == Counts{{"types", 1}}, "the child's reason");
+    t.Ok(ReadAs(world, OWJsonValue::String("U"), R"({"rung": "public"})").cut == Counts{{"types", 1}}, "the public reader's too");
+    t.Ok(ReadAs(world, OWJsonValue::String("U"), R"({"rung": "owner"})").cut == Counts{{"anchor_not_visible", 1}},
+         "the owner's first reason, once");
+}
+
+OW_TEST(lens_a_note_goes_with_its_anchor_an_anchor_that_reaches_nothing_carries_it_onto_no_row) {
+    // A note goes with its anchor: an anchor that reaches nothing (a Language named under constructs) carries its note
+    // onto no row, even where another path (a child filter) keeps the element, for the owner and below it; and the
+    // note is not counted ignored. Guards what this reader already does. Kills: an unseen id among the anchors whose
+    // notes ride.
+    OWJsonValue world = Parse(R"({"elements": [
+        {"id": "U", "type": "construct", "name": "U", "supertype": "Lens", "constructs": ["e08", "L1"], "x_lens": {"notes": {"e08": "the old tongue"}}},
+        {"id": "L1", "type": "construct", "name": "L1", "supertype": "Lens", "x_lens": {}},
+        {"id": "e08", "type": "language", "name": "Old"}]})");
+    for (const char* reader : {R"({"rung": "owner"})", R"({"rung": "contributor"})"}) {
+        OWLensReading r = ReadAs(world, OWJsonValue::String("U"), reader);
+        t.Ok(r.kept == Ids{"e08"}, std::string(reader) + ": kept by the child");
+        t.Ok(r.rows.size() == 1 && r.rows[0].Find("note") == nullptr, std::string(reader) + ": no note rides");
+        t.Eq(r.notes_ignored, int64_t(0), std::string(reader) + ": a note on an anchor is never counted ignored");
+    }
+}
+
+OW_TEST(lens_an_unseen_anchor_is_counted_before_the_visited_check_the_lens_itself_included) {
+    // Visited never comes before visibility, for any anchor: a hidden lens in its own constructs, read as a body through
+    // a contributor's view, counts itself for the owner as anchor_not_visible; so does a child lens pointing back at its
+    // hidden umbrella, its own objects kept. Guards what this reader already does. Kills: an anchor already visited
+    // skipped before it is counted.
+    const char* as_contributor = R"({"rung": "owner", "as": {"rung": "contributor"}})";
+    OWJsonValue self = Parse(R"({"id": "L0", "type": "construct", "name": "L0", "supertype": "Lens", "hidden": true,
+        "constructs": ["L0"], "x_lens": {}})");
+    OWJsonValue alone = OWJsonValue::Object();
+    OWJsonValue list = OWJsonValue::Array();
+    list.Push(self);
+    alone.Set("elements", list);
+    t.Ok(ReadAs(alone, self, as_contributor).cut == Counts{{"anchor_not_visible", 1}}, "the lens's own id");
+    OWJsonValue umbrella = Parse(R"({"id": "U", "type": "construct", "name": "U", "supertype": "Lens", "hidden": true,
+        "constructs": ["C"], "x_lens": {"depth": 0}})");
+    OWJsonValue world = Parse(R"({"elements": [
+        {"id": "U", "type": "construct", "name": "U", "supertype": "Lens", "hidden": true, "constructs": ["C"], "x_lens": {"depth": 0}},
+        {"id": "C", "type": "construct", "name": "C", "supertype": "Lens", "constructs": ["U"], "objects": ["o1"], "x_lens": {"depth": 0}},
+        {"id": "o1", "type": "object", "name": "Cup"}]})");
+    OWLensReading r = ReadAs(world, umbrella, as_contributor);
+    t.Ok(r.kept == Ids{"o1"}, "the child's own objects");
+    t.Ok(r.cut == Counts{{"anchor_not_visible", 1}}, "the hidden umbrella, once");
+}

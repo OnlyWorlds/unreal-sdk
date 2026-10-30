@@ -591,6 +591,14 @@ struct View {
         return it->second;
     }
     Key KeyOf(size_t i) const { return {types[i], ids[i]}; }
+    // The element an anchor's key names, keyed as the cut counts it: resolution reads the field's type and the id, but
+    // the cut counts each element once under its first reason (the profile's line 51), so an id met under two types
+    // in an umbrella and its child is one element, and one kept under its own type is never also cut. Its own key when
+    // the id names an element of the world; a dangling id by the id alone.
+    Key Element(const Key& k) const {
+        auto it = by_id.find(k.second);
+        return it == by_id.end() ? Key{std::string(), k.second} : KeyOf(it->second);
+    }
     bool Whole(size_t i) const { return view[i] && !stub[i]; }
 
     // The fence (rule 8) on the element's own stored date, a stub's too, and undated.
@@ -696,19 +704,23 @@ std::set<std::string> AnchorIds(const OWJsonValue& body) {
     return out;
 }
 
-// The body this reader is served (keel's serialize): the owner reading as itself, the body as stored, `hidden: true`
-// on what the hidden mark keeps; any other reader, each link it cannot see left out (redact), a lens's notes on what it
-// cannot see dropped, the trimmed mark naming a Message's addressing or a lens's anchors that lost an id (never on the
-// public rung), and a known-of element as its stub. A stored x_served_trimmed is never served.
+// The body this reader is served (keel's serialize): the owner reading as itself, the body as stored; any other reader,
+// each link it cannot see left out (redact), a lens's notes on what it cannot see dropped, the trimmed mark naming a
+// Message's addressing or a lens's anchors that lost an id (never on the public rung), and a known-of element as its
+// stub. A stored x_served_trimmed is never served. For every reader, `hidden: true` on what the hidden mark keeps (the
+// world's list or the element's own key, one mark), and no `hidden` key on any other body, a stored false included
+// (keel #537): so a guest's row of its own hidden creation carries it too.
 const OWJsonValue& View::Served(size_t i) {
     auto hit = served.find(i);
     if (hit != served.end()) return hit->second;
     OWJsonValue out = *els[i];
     out.Erase(ServedTrimmed);
-    if (seen_rung == "owner") {
-        if (hidden[i]) out.Set("hidden", OWJsonValue::Bool(true));
-        return served.emplace(i, std::move(out)).first->second;
-    }
+    auto marked = [&](OWJsonValue&& body) -> const OWJsonValue& {
+        if (hidden[i]) body.Set("hidden", OWJsonValue::Bool(true));
+        else body.Erase("hidden");
+        return served.emplace(i, std::move(body)).first->second;
+    };
+    if (seen_rung == "owner") return marked(std::move(out));
     const std::string& type = types[i];
     if (seen_rung == "public") out.Erase("doors");  // keel's members_only
     // The addressing before the trim: a Message's characters and narrator, a lens's anchor fields (keel's
@@ -788,7 +800,7 @@ const OWJsonValue& View::Served(size_t i) {
     for (const std::string& f : trimmed)
         if (out.Has(f) || (f == "notes" && out.Has(Field))) mark.push_back(f);
     if (!mark.empty()) out.Set(ServedTrimmed, Strings(mark));
-    return served.emplace(i, std::move(out)).first->second;
+    return marked(std::move(out));
 }
 
 // -- resolution --------------------------------------------------------------------------------------------------------
@@ -833,11 +845,14 @@ struct Reader {
         }
     }
 
-    // A lens that names an anchor is never a filter: an anchor field with something in it, or the trimmed mark naming
-    // one (keel's _names_anchors).
+    // A lens that names an anchor is never a filter: an anchor field with an id in it, or the trimmed mark naming one
+    // (keel's _names_anchors). An empty string is no id, so a lens whose anchor fields hold only empty strings names no
+    // anchor and is a filter, as rule 7 reads a lens with empty lists (the profile's owner, ahead of its next serial).
     static bool NamesAnchors(const OWJsonValue& lens) {
         for (const std::string& f : Anchors)
-            if (Truthy(lens.Find(f))) return true;
+            if (const OWJsonValue* list = lens.Find(f); list && list->IsArray())
+                for (const OWJsonValue& id : list->Items())
+                    if (id.IsString() && !id.Text().empty()) return true;
         if (const OWJsonValue* mark = lens.Find(ServedTrimmed); mark && mark->IsArray())
             for (const OWJsonValue& f : mark->Items())
                 if (f.IsString() && Has(Anchors, f.Text())) return true;
@@ -901,7 +916,7 @@ struct Reader {
         std::vector<size_t> anchors, children;
         AnchorsOf(lens, p, anchors, children);
         if (v.owner_counts)
-            for (const Key& k : p.unseen) p.cut.emplace(k, "anchor_not_visible");
+            for (const Key& k : p.unseen) p.cut.emplace(v.Element(k), "anchor_not_visible");
         if (!NamesAnchors(lens)) {
             p.kept = Filter(r, visited, p.cut);
         } else {

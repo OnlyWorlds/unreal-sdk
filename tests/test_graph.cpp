@@ -278,3 +278,36 @@ OW_TEST(graph_a_nodes_type_is_as_stored) {
     OWWorldGraph padded = Read(R"({"elements": [{"id": "c1", "type": " character ", "name": "Ada"}]})", R"({"rung": "public"})");
     t.Ok(padded.nodes.size() == 1 && padded.nodes[0].type == " character ", "a public reader's node, padding kept");
 }
+
+OW_TEST(graph_an_edge_to_an_element_the_lens_cut_as_a_wrongly_typed_anchor_reads_the_lenss_reason) {
+    // The cut counts each element once, so an edge to an element the lens cut only as a wrongly typed anchor (a Location
+    // named under characters) reads the lens's reason, never outside_lens. Kills: the edge's target looked up by its
+    // own type and id.
+    OWGraphOptions o;
+    o.lens = Parse(R"({"id": "L", "type": "construct", "name": "L", "supertype": "Lens", "characters": ["x"], "objects": ["o"]})");
+    OWWorldGraph g = Read(R"({"elements": [
+        {"id": "o", "type": "object", "name": "Ledger", "location": "x"},
+        {"id": "x", "type": "location", "name": "Harbour"}]})", R"({"rung": "owner"})", o);
+    using Counts = std::vector<std::pair<std::string, int64_t>>;
+    t.Ok(g.nodes.size() == 1 && g.nodes[0].id == "o", "the Ledger alone");
+    t.Ok(g.cut == Counts{{"anchor_not_visible", 1}}, "the lens counts the Harbour once");
+    t.Ok(g.edges_cut == Counts{{"anchor_not_visible", 1}}, "and the edge to it carries the lens's reason");
+}
+
+OW_TEST(graph_below_the_owner_an_edge_to_an_unseen_anchor_a_cut_child_reaches_is_cut_by_the_childs_reason) {
+    // Counts are per reader, and an edge with them: below the owner an element whose owner-side reason was
+    // anchor_not_visible and which a child cuts by types is cut by the child's reason, so the edge to it is cut by that
+    // reason, never left uncounted. Guards what this reader already does. Kills: the unseen anchor recorded for every
+    // reader and dropped at the count.
+    OWGraphOptions o;
+    o.lens = OWJsonValue::String("U");
+    OWWorldGraph g = Read(R"({"elements": [
+        {"id": "U", "type": "construct", "name": "U", "supertype": "Lens", "characters": ["x"], "constructs": ["C"], "x_lens": {"depth": 0}},
+        {"id": "C", "type": "construct", "name": "C", "supertype": "Lens", "characters": ["y"], "x_lens": {"types": ["character"]}},
+        {"id": "y", "type": "character", "name": "Ysolde", "birthplace": "x"},
+        {"id": "x", "type": "location", "name": "Harbour"}]})", R"({"rung": "contributor"})", o);
+    using Counts = std::vector<std::pair<std::string, int64_t>>;
+    t.Ok(g.nodes.size() == 1 && g.nodes[0].id == "y", "Ysolde alone");
+    t.Ok(g.cut == Counts{{"types", 1}}, "the child's reason");
+    t.Ok(g.edges_cut == Counts{{"types", 1}}, "and the edge to the Harbour carries it");
+}
