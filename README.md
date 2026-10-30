@@ -29,6 +29,7 @@ The plugin is two layers:
 | `OWCalendar` | the calendar profile (`profiles/calendar.md`, version 2): `ReadValue` reads an `atlas_calendar` value (an object, or the same object as a strict JSON string) into an `OWCalendarConfig`, or refuses it (a tool then shows the bare step); `Breakdown` and `FormatStep` read a step aloud ("3 Frost, 12 AG"); `WorldCalendars` finds a world's calendars by the field, never by supertype. Numbers are read as JavaScript reads them (whole to 2^53 - 1, `1.0` is 1), as the profile's reference package does. Held to the profile's 76-case fixture |
 | `OWMessage` | the message profile (`profiles/message.md`): over element bodies as JSON, `IsMessage` and `IsNote` (the pair, trimmed and folded), addressing (`IsAddressedTo`, `IsToEveryone`, `HasUnseenRecipients` with the server's trimmed mark and a keyless reader), `SenderStatus` (verified, mismatch, unverifiable, unseen, against the world's members list), `EditedBy`, the read mark (`ReadMarkOf`: the reader's own hand, the newest), `UnreadFor`, `ThreadOf`, and a Character's line (`NoteOf`), each ordered by `created_at` as the profile orders. Held to the profile's 87-case fixture |
 | `OWLens` | the lens profile (`profiles/lens.md`): `Resolve(world, lens, reader, {as_of, clock})`, the profile's `resolveLens` over a world snapshot as JSON, as keel's reader resolves it: visibility first (the hidden mark, a guest's whole and known-of ids, a proposed element in no view), a hop both ways and on through a Relation, never through a room element, the reading aids, an umbrella entering each child once, the fence and the window on each element's own date, `changed_within`, `show`'s rows as keel serves that reader, notes, the owner's two counts, and the mail rule through `OWMessage`. Beside it `IsLens`, `IsTemplate`, `CheckKeys` (a number by its text, so `7.0` is refused), `LensesInUse`, `DateOf` and the room, reading-aid and review marks. Held to the fixture's 114 shape, keys, uses, resolve and invariant cases; its 39 graph cases come next |
+| `OWPresentation` | the presentation sidecar (schema-dist `presentation.json`), generated: the colour words in their order (`Order`), each type's colour word and icon (`FamilyOf`, `IconOf`) and the fields a known-of stub shows (`PublicOf`). A family word not in `colors.order` fails loudly: the generator refuses it, naming the word, and the table holds the rule as a `static_assert` |
 | `OWOpeners` | the Open with menu's rows (the tools list's README, "Open with"), as the npm SDK's `openersFor` and the Python package's `openers_for` give them: `OpenersFor(tools, kind, address, surface)` for a world or an element, the site's page first, then each listed tool with a door for that kind in the list's order, each with its word ("Sign in to Atlas first", "Opens in your browser", ...) or none. `OWTools::All()` is the OnlyWorlds tools list at the pinned commit (`codegen/tools-pin.json`), generated; `OpenersForJson` takes the list, the address and the surface as JSON. A refused address answers the address profile's `reason`; any other mistake an empty `reason` and a `message` naming the key. Held to the packages' shared 45-case fixture |
 
 An Open with menu in a game, which cannot see the browser's sign-in:
@@ -66,6 +67,7 @@ build\ow_tests.exe         # every test; exits 0 only when none failed (--filter
 python codegen/generate.py --check                    # the generated Unicode tables match the vendored files
 python codegen/generate_models.py --check             # the generated structs match schema.json
 python codegen/generate_tools.py --check              # the tools list's pin holds, OWTools.generated.cpp is current
+python codegen/generate_presentation.py --check       # the generated sidecar matches presentation.json
 python tests/check_writer.py build/out/pass-good-repacked.owworld   # the reference checker on what pack wrote
 ```
 
@@ -103,7 +105,8 @@ The core's runner and the world tests read two real worlds from this machine whe
 
 `codegen/schema-dist/` is vendored verbatim; never edit it, nor `codegen/tools/tools.json` (the tools list at the
 commit `codegen/tools-pin.json` names). Under `Plugin/OnlyWorlds/`, `Core/Private/OWUnicodeData.generated.cpp` is
-written by `codegen/generate.py`, `Core/Private/OWTools.generated.cpp` by `codegen/generate_tools.py`, and
+written by `codegen/generate.py`, `Core/Private/OWTools.generated.cpp` by `codegen/generate_tools.py`,
+`Core/Private/OWPresentation.generated.cpp` by `codegen/generate_presentation.py`, and
 `Source/OnlyWorlds/Public/OWModels.h`, `OWModelsJson.h` and `Private/OWModels.cpp` by `codegen/generate_models.py`;
 regenerate, never edit.
 

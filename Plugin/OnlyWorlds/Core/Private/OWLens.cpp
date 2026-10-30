@@ -1,6 +1,7 @@
 #include "OWLens.h"
 
 #include "OWMessage.h"
+#include "OWPresentation.h"
 
 #include <algorithm>
 #include <chrono>
@@ -251,9 +252,6 @@ const std::vector<std::string> Aids = {"law/charter", "construct/guide", "constr
 const std::vector<std::string> Reasons = {"budget", "types",  "window", "stale", "undated", "after_as_of",
                                           "anchor_not_visible", "not_visible", "hops_not_served"};
 const std::vector<std::string> OwnerOnly = {"anchor_not_visible", "not_visible"};
-// presentation.json's types.<type>.public (dist.91): only the Character has public fields.
-const std::vector<std::string> CharacterPublic = {"physicality", "height", "weight", "species", "reputation"};
-const std::vector<std::string> NoFields;
 // What a known-of stub keeps beside its type's public fields (keel's KNOWN_OF_BASE).
 const std::vector<std::string> StubBase = {"type", "id", "name", "description", "supertype", "subtype",
                                            "image_url", "created_at", "updated_at", "change_seq"};
@@ -1078,9 +1076,7 @@ std::vector<OWLensField> FieldsOf(std::string_view type) {
     return row ? std::vector<OWLensField>(row->fields, row->fields + row->count) : std::vector<OWLensField>();
 }
 
-const std::vector<std::string>& PublicFieldsOf(std::string_view type) {
-    return type == "character" ? CharacterPublic : NoFields;
-}
+const std::vector<std::string>& PublicFieldsOf(std::string_view type) { return OWPresentation::PublicOf(type); }
 
 bool IsLens(const OWJsonValue& element) {
     const OWJsonValue* t = Get(element, "type");
