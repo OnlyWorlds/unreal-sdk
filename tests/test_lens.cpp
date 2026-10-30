@@ -587,6 +587,33 @@ OW_TEST(lens_a_known_of_stub_is_shaped_as_keel_serves_it) {
     t.Ok(background && background->IsString() && background->Text().empty(), "a field outside the keeps reads unset");
 }
 
+OW_TEST(lens_an_empty_single_link_is_served_as_stored_and_never_marked_trimmed) {
+    // A single link stored as "" is served as stored to every reader below the owner: "", never null, and never named
+    // in x_served_trimmed, since no id was left out (keel's redact strips only an id the reader cannot see). A Message
+    // whose narrator is "" claims no hidden sender.
+    OWJsonValue world = Parse(R"({"elements": [
+        {"id": "o1", "type": "object", "name": "Cup", "language": ""},
+        {"id": "c1", "type": "character", "name": "Ada"},
+        {"id": "m1", "type": "narrative", "supertype": "Message", "name": "Hi", "narrator": "", "characters": ["c1"]},
+        {"id": "L", "type": "construct", "name": "L", "supertype": "Lens", "objects": ["o1"], "narratives": ["m1"],
+         "x_lens": {"depth": 0}}]})");
+    for (const char* reader : {R"({"rung": "contributor"})", R"({"rung": "guest", "whole": ["o1", "c1", "m1", "L"]})",
+                               R"({"rung": "public"})"}) {
+        OWLensReading r = OWLens::Resolve(world, OWJsonValue::String("L"), Parse(reader));
+        for (const auto& [id, field] : {std::pair<std::string, std::string>{"m1", "narrator"}, {"o1", "language"}}) {
+            const OWJsonValue* row = nullptr;
+            for (const OWJsonValue& each : r.rows)
+                if (const OWJsonValue* rid = each.Find("id"); rid && rid->IsString() && rid->Text() == id) row = &each;
+            std::string what = std::string(reader) + ": " + id;
+            t.Ok(row != nullptr, what + " is kept");
+            if (!row) continue;
+            const OWJsonValue* v = row->Find(field);
+            t.Ok(v && v->IsString() && v->Text().empty(), what + "." + field + " served as \"\"");
+            t.Ok(row->Find("x_served_trimmed") == nullptr, what + " carries no trimmed mark");
+        }
+    }
+}
+
 OW_TEST(lens_a_mail_tie_keeps_the_lists_order) {
     // Ruling 11, as the profile's owner reversed it (2026-10-30): two messages with one created_at keep the order of
     // the list they came in, as the message profile rules, never by id. A tie listed in reverse id order stays as listed.

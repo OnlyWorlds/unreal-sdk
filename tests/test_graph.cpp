@@ -255,4 +255,6 @@ OW_TEST(graph_a_nodes_type_is_as_stored) {
     t.Eq(g.nodes.size(), size_t(1), "one node");
     t.Ok(g.nodes.size() == 1 && g.nodes[0].type == "Character", "its type as stored");
     t.Ok(g.nodes.size() == 1 && g.nodes[0].family == "blue", "its colour word from the character's");
+    OWWorldGraph padded = Read(R"({"elements": [{"id": "c1", "type": " character ", "name": "Ada"}]})", R"({"rung": "public"})");
+    t.Ok(padded.nodes.size() == 1 && padded.nodes[0].type == " character ", "a public reader's node, padding kept");
 }
