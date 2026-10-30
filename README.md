@@ -67,6 +67,8 @@ The core alone (Windows, MSVC; no Unreal process):
 ```
 build.cmd                  # build\ow_tests.exe, linking the engine's zlib 1.3 (UE_ROOT, default UE_5.8), /MD
 build\ow_tests.exe         # every test; exits 0 only when none failed (--filter=<text>, --require-all)
+build.cmd twin             # build\twin_run.exe: tools/twin_run.cpp, the lens and graph readers over a JSON-lines file of
+                           # random worlds, answered in the npm SDK's twin-runner shape (twin_run <cases> <out>)
 python codegen/generate.py --check                    # the generated Unicode tables match the vendored files
 python codegen/generate_models.py --check             # the generated structs match schema.json
 python codegen/generate_tools.py --check              # the tools list's pin holds, OWTools.generated.cpp is current
