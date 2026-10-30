@@ -1,7 +1,7 @@
 // OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.91's copy, its sha256
-// held to MANIFEST.json): the pair and the template, the legal values of x_lens, where a seat's choice lives, the
-// resolve and invariant kinds' 79 cases and the graph kind's 39 are counted, not run: resolution and the graph section
-// are not read here yet. The profile's tables are held equal to the fixture's, the
+// held to MANIFEST.json): the pair and the template, the legal values of x_lens, where a seat's choice lives, every
+// resolution over the fixture's eight worlds and their readers, and the invariants. The graph kind's 39 cases are
+// counted, not run: the graph section is not read here yet. The profile's tables are held equal to the fixture's, the
 // field table to schema.json and the stub's public fields to presentation.json; then readings the fixture leaves open.
 
 #include "ow_test.h"
@@ -94,6 +94,124 @@ OWJsonValue Strings(const std::vector<std::string>& list) {
     return out;
 }
 
+const OWJsonValue& World(const std::string& name) {
+    static const OWJsonValue none;
+    const OWJsonValue* worlds = Fixture()->Find("worlds");
+    const OWJsonValue* w = worlds ? worlds->Find(name) : nullptr;
+    return w ? *w : none;
+}
+
+// A fixture reader by name: its rung, its character, a guest's lists; `as` (a reader's name in the fixture) is the
+// owner reading as that reader.
+OWJsonValue ReaderOf(const OWJsonValue& world, const std::string& name) {
+    const OWJsonValue* readers = world.Find("readers");
+    const OWJsonValue* r = readers ? readers->Find(name) : nullptr;
+    if (!r) return OWJsonValue::Null();
+    OWJsonValue out = *r;
+    if (const OWJsonValue* as = r->Find("as"); as && as->IsString()) out.Set("as", ReaderOf(world, as->Text()));
+    return out;
+}
+
+OWLensOptions OptionsOf(const OWJsonValue& c) {
+    OWLensOptions o;
+    if (const OWJsonValue* a = c.Find("as_of"); a && a->IsNumber()) o.as_of = int64_t(std::llround(a->AsDouble()));
+    if (const OWJsonValue* k = c.Find("clock"); k && k->IsString()) o.clock = k->Text();
+    return o;
+}
+
+OWLensReading ResolveCase(const OWJsonValue& world, const OWJsonValue& c, const OWJsonValue& reader) {
+    static const OWJsonValue none;
+    const OWJsonValue* lens = c.Find("lens");
+    return OWLens::Resolve(world, lens ? *lens : none, reader, OptionsOf(c));
+}
+
+std::string Names(const OWJsonValue& world, const OWJsonValue& ids) {
+    std::map<std::string, std::string> by;
+    if (const OWJsonValue* els = world.Find("elements"))
+        for (const OWJsonValue& e : els->Items()) by[Str(e, "id")] = Str(e, "name");
+    std::string out;
+    for (const OWJsonValue& i : ids.Items()) {
+        if (!out.empty()) out += ", ";
+        auto it = by.find(i.Text());
+        out += it != by.end() ? it->second : i.Text();
+    }
+    return out;
+}
+
+// The reading's keys the case names, compared as JSON values (mail: only its keys the case names).
+void Check(owtest::T& t, const OWLensReading& got, const OWJsonValue& c, const OWJsonValue& world) {
+    t.Eq(got.error, std::string(), "no caller's mistake");
+    t.Ok(!got.unreadable, "readable");
+    OWJsonValue all = got.ToJson();
+    if (const OWJsonValue* want = c.Find("kept")) {
+        OWJsonValue kept = *all.Find("kept");
+        t.Ok(Equal(kept, *want), "kept [" + Names(world, kept) + "], the case says [" + Names(world, *want) + "]");
+    }
+    for (const char* k : {"cut", "rows", "notes_ignored"})
+        if (const OWJsonValue* want = c.Find(k)) Same(t, *all.Find(k), want, k);
+    if (const OWJsonValue* want = c.Find("mail")) {
+        const OWJsonValue* mail = all.Find("mail");
+        if (want->IsNull() || !mail || mail->IsNull()) {
+            Same(t, mail ? *mail : OWJsonValue::Null(), want, "mail");
+        } else {
+            for (size_t i = 0; i < want->Size(); ++i) {
+                const OWJsonValue* part = mail->Find(want->Keys()[i]);
+                Same(t, part ? *part : OWJsonValue::Null(), &want->Items()[i], "mail." + want->Keys()[i]);
+            }
+        }
+    }
+}
+
+std::string Stringify(const OWJsonValue& v) { return OWJson::Stringify(v, true); }
+
+// The invariants: subset, same_without, unchanged.
+void Holds(owtest::T& t, const OWJsonValue& c) {
+    const OWJsonValue& world = World(Str(c, "world"));
+    std::string claim = Str(c, "claim");
+    const OWJsonValue* readers = c.Find("readers");
+    if (!readers || !readers->IsArray() || readers->Size() == 0) return t.Fail("no readers");
+    if (claim == "subset") {
+        OWLensReading owner = ResolveCase(world, c, ReaderOf(world, "owner"));
+        std::set<std::string> owner_kept(owner.kept.begin(), owner.kept.end());
+        std::vector<std::string> secrets;
+        for (const OWJsonValue& s : c.Find("secrets")->Items()) secrets.push_back(s.Text());
+        for (const OWJsonValue& e : world.Find("elements")->Items())
+            for (const OWJsonValue& s : c.Find("secrets")->Items())
+                if (Str(e, "id") == s.Text()) secrets.push_back(Str(e, "name"));
+        for (const OWJsonValue& r : readers->Items()) {
+            OWJsonValue reader = ReaderOf(world, r.Text());
+            OWLensReading got = ResolveCase(world, c, reader);
+            t.Eq(got.error, std::string(), r.Text() + ": no caller's mistake");
+            for (const std::string& i : got.kept)
+                t.Ok(owner_kept.count(i) > 0, r.Text() + " keeps " + i + ", which the owner does not");
+            if (Str(reader, "rung") == "owner") continue;
+            std::string text = Stringify(got.ToJson());
+            for (const std::string& s : secrets)
+                t.Ok(text.find(s) == std::string::npos, r.Text() + "'s reading names the secret " + s);
+            t.Ok(owner.cut.empty() || owner.cut != got.cut, r.Text() + "'s counts are the owner's");
+        }
+    } else if (claim == "same_without") {
+        std::set<std::string> without;
+        for (const OWJsonValue& s : c.Find("without")->Items()) without.insert(s.Text());
+        OWJsonValue less = world;
+        OWJsonValue kept = OWJsonValue::Array();
+        for (const OWJsonValue& e : world.Find("elements")->Items())
+            if (!without.count(Str(e, "id"))) kept.Push(e);
+        less.Set("elements", kept);
+        for (const OWJsonValue& r : readers->Items()) {
+            std::string a = Stringify(ResolveCase(world, c, ReaderOf(world, r.Text())).ToJson());
+            std::string b = Stringify(ResolveCase(less, c, ReaderOf(less, r.Text())).ToJson());
+            t.Eq(b, a, r.Text() + " reads the same without the ids");
+        }
+    } else if (claim == "unchanged") {
+        std::string before = Stringify(world);
+        for (const OWJsonValue& r : readers->Items()) ResolveCase(world, c, ReaderOf(world, r.Text()));
+        t.Eq(Stringify(world), before, "no reading moved the world");
+    } else {
+        t.Fail("an invariant of unknown claim " + claim);
+    }
+}
+
 // One case, by its kind. A text_only case holds for a reader that can see a number's text: this one can, so it runs.
 void Case(owtest::T& t, const OWJsonValue& c) {
     std::string kind = Str(c, "kind");
@@ -113,13 +231,20 @@ void Case(owtest::T& t, const OWJsonValue& c) {
     } else if (kind == "uses") {
         Same(t, Strings(OWLens::LensesInUse(c.Find("membership"), c.Find("x_lens_uses"))), c.Find("lenses"),
              "the lenses read");
+    } else if (kind == "resolve") {
+        const OWJsonValue& world = World(Str(c, "world"));
+        OWJsonValue reader = ReaderOf(world, Str(c, "reader"));
+        if (reader.IsNull()) return t.Fail("no reader " + Str(c, "reader"));
+        Check(t, ResolveCase(world, c, reader), c, world);
+    } else if (kind == "invariant") {
+        Holds(t, c);
     } else {
         t.Fail("a case of unknown kind " + kind);
     }
 }
 
 // The kinds this file runs, and the one it counts only.
-const char* const Run[] = {"shape", "keys", "uses"};
+const char* const Run[] = {"shape", "keys", "uses", "resolve", "invariant"};
 
 bool Runs(const std::string& kind) {
     for (const char* k : Run)
@@ -163,7 +288,7 @@ OW_TEST(lens_fixture_is_the_pinned_one) {
     }
     t.Eq(sum, size_t(153), "the six kinds are every case");
     t.Eq(kinds.size(), size_t(6), "and no other kind");
-    t.Eq(run, size_t(35), "35 run here, the 79 resolve and invariant and the 39 graph cases not yet");
+    t.Eq(run, size_t(114), "114 run here, the 39 graph cases not yet");
 }
 
 OW_TEST(lens_tables_are_the_fixtures) {
@@ -324,4 +449,27 @@ OW_TEST(lens_date_of_reads_the_table) {
     t.Eq(date(R"({"type": "object", "start_date": 7})"), std::string("none"), "a timeless type");
     t.Eq(date(R"({"type": "event", "start_date": 7, "known_of": true})"), std::string("7"),
          "it reads the body it is given");
+}
+
+OW_TEST(lens_a_callers_mistake_is_named) {
+    OWJsonValue world = Parse(R"({"elements": []})");
+    OWJsonValue lens = Parse(R"({"type": "construct", "supertype": "Lens"})");
+    t.Ok(!OWLens::Resolve(Parse(R"({"no": 1})"), lens, Parse(R"({"rung": "owner"})")).error.empty(), "no elements");
+    t.Ok(!OWLens::Resolve(world, lens, Parse(R"({"rung": "king"})")).error.empty(), "a rung outside the four");
+    t.Ok(!OWLens::Resolve(world, lens, Parse(R"({"rung": "owner", "as": {"rung": "x"}})")).error.empty(),
+         "an as outside the four");
+    OWLensOptions bad_clock;
+    bad_clock.clock = "yesterday";
+    t.Ok(!OWLens::Resolve(world, lens, Parse(R"({"rung": "owner"})"), bad_clock).error.empty(), "a clock");
+    t.Ok(!OWLens::Resolve(world, Parse("3"), Parse(R"({"rung": "owner"})")).error.empty(), "a lens neither body nor id");
+    t.Eq(OWLens::Resolve(world, lens, Parse(R"({"rung": "owner"})")).error, std::string(), "a good call");
+}
+
+OW_TEST(lens_an_unreadable_lens_names_its_key_and_resolves_nothing) {
+    const OWJsonValue& world = World("vale");
+    OWJsonValue lens = Parse(R"({"id": "L", "type": "construct", "supertype": "Lens",
+        "characters": ["019a7f00-0000-7000-8000-000000000001"], "x_lens": {"depth": 1.0}})");
+    OWLensReading r = OWLens::Resolve(world, lens, ReaderOf(world, "owner"));
+    t.Ok(r.unreadable && *r.unreadable == "depth", "unreadable names depth");
+    t.Ok(r.kept.empty() && r.cut.empty() && r.rows.empty(), "and nothing is resolved");
 }

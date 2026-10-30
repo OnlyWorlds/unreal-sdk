@@ -2,9 +2,10 @@
 // The lens profile (schema-dist profiles/lens.md, dist.91): a saved way of reading a world. A lens is a Construct with
 // supertype Lens; its links are its anchors, and the extension field x_lens is the recipe (how far, which types, how
 // far back, how recently changed, how much). The pair and the template, the legal values of x_lens, where a seat's
-// choice lives and an element's date by the profile's table, held to the profile's conformance fixture
-// (profiles/lens.fixture.json). keel's reader (elements/lens.py) is the rule this follows; resolution and the graph
-// section are not read here yet.
+// choice lives, an element's date by the profile's table, and the one resolution every reader agrees on
+// (resolveLens), held to the profile's conformance fixture (profiles/lens.fixture.json). keel's reader
+// (elements/lens.py, with the served bodies of elements/serialize.py) is the rule this follows; the graph section is
+// not read here yet.
 //
 // Element bodies are JSON objects (OWJsonValue), as the API serves them and a world folder keeps them. A parsed number
 // keeps its text, so x_lens refuses an integral float (7.0) as the profile asks of a reader that can see the text.
@@ -23,6 +24,54 @@ namespace OnlyWorlds {
 
 // The mail rule's part (rule 9): the messages addressed to the reader's Character and not its own, thirty days on
 // created_at before the reading's clock, the newest kept up to the lens's budget.
+struct OWLensMail {
+    std::vector<std::string> unread;  // ids, in created_at order
+    std::vector<std::string> read;
+    // Each kept message: unread ones (every one under `all`) as the reader is served them, read ones as their title
+    // ({id, name, narrator, created_at}); in created_at order.
+    std::vector<OWJsonValue> rows;
+    // The cut by reason ("window", "budget"); a reason with no count is absent.
+    std::vector<std::pair<std::string, int64_t>> cut;
+    // The unread and the read the reader may see, before the window and the cap.
+    int64_t total_unread = 0;
+    int64_t total_read = 0;
+};
+
+// What Resolve answers.
+struct OWLensReading {
+    // The kept elements' ids in the profile's order: anchors first in the lens's link order, then what the hop reached.
+    std::vector<std::string> kept;
+    // The kept elements as `show` makes them, in the same order; an anchor's row carries its `note`.
+    std::vector<OWJsonValue> rows;
+    // The cut counted by reason, in the profile's order; a reason with no count is absent, and a reader that is not the
+    // owner never carries the owner's two.
+    std::vector<std::pair<std::string, int64_t>> cut;
+    // Notes on ids that are not anchors of the lens read, counted only where the reader sees the id.
+    int64_t notes_ignored = 0;
+    // The mail part, when the lens names a mail rule.
+    std::optional<OWLensMail> mail;
+    // The first x_lens key outside the profile's table (x_lens itself when it is not an object): nothing resolved.
+    std::optional<std::string> unreadable;
+    // Empty unless the call was a mistake (a world with no elements list, a rung outside the four, an as_of or clock
+    // that does not read): it names the mistake and nothing is read.
+    std::string error;
+
+    // A reason's count (0 when absent).
+    int64_t Cut(std::string_view reason) const;
+    // The reading in the fixture's shape: {kept, rows, cut, notes_ignored, mail (null when none), unreadable}.
+    OWJsonValue ToJson() const;
+};
+
+struct OWLensOptions {
+    // The reading's date, a whole number in the world's unit. Absent: the world's now (`now`, else `time_current` as a
+    // folder spells it, else `time_range_current` as the API serves it); with neither, no fence, and the window cuts
+    // nothing.
+    std::optional<int64_t> as_of;
+    // The reading's wall clock, an RFC 3339 date-time, for the mail rule's thirty days and changed_within. Absent: the
+    // machine's clock.
+    std::optional<std::string> clock;
+};
+
 namespace OWLens {
 
 // The pair, the template's subtype, the recipe's field and a folder Character's list of the lenses it reads.
@@ -105,6 +154,17 @@ bool IsReadingAid(const OWJsonValue& element);
 // Proposed as a reader reads it (the review profile's rule 1): x_review_proposed present as a mark counts (any value
 // but null, a string only when something is left after trimming White_Space), and not an empty list or object.
 bool IsProposed(const OWJsonValue& element);
+
+// resolveLens(world, lens, reader, {asOf, clock}): the lens read for one reader over a world snapshot. Pure: it never
+// writes, and nothing in the world moves.
+//
+// `world` is a JSON object: `elements` (the bodies as the owner is served them), and optionally `hidden` (ids the
+// hidden mark keeps, beside each element's own `hidden`), `members` (the members list, which proves a message's
+// sender) and the world's now. `lens` is a lens body, or the id (a string) of a lens the reader is served whole.
+// `reader` is a JSON object: `rung` (owner, contributor, guest or public), `character` (for the mail rule), a guest's
+// `whole` and `known_of`, and on an owner `as` (another reader as an object: its view, the owner's two counts).
+OWLensReading Resolve(const OWJsonValue& world, const OWJsonValue& lens, const OWJsonValue& reader,
+                      const OWLensOptions& options = {});
 
 }  // namespace OWLens
 }  // namespace OnlyWorlds
