@@ -35,6 +35,10 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
 
 ### Added
 
+- The review profile's rule 1 held by the npm and Python packages' 24 shared cases (npm `test/review.test.mjs`
+  at 4.102.2, Python `tests/test_review.py` at 0.84.1), same names and order, against `OWLens::IsProposed`: whether
+  a reader leaves an element out as proposed, a doubt included. The reader is unchanged; three mutants of it (an
+  empty list or object counted, a null mark counted, a mark string untrimmed) each fail the cases.
 - The room profile's conformance fixture (schema-dist `profiles/room.fixture.json`, its sha256 held to
   `MANIFEST.json`) run against `OWLens::IsRoomElement`: all 32 cases, each in the room exactly when the pair and
   the mark both hold. The reader itself is unchanged; four mutants of it (the mark or the pair ignored, a mark
