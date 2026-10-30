@@ -2,5 +2,5 @@
 #   git -C <schema-dist clone> archive <tag> | tar -x -C codegen/schema-dist
 # The manifest hash is recorded here, on our side, because a tag can move and a moved tag brings its own agreeing
 # manifest. The codegen (and its --check) refuses to run when the vendored tree disagrees with this file.
-tag: v0.33.0-dist.98
-manifest_sha256: 0d7393711d1f2eebc615b9c40dd8ffc34e6266f4782d854aaf552fed3264a457
+tag: v0.33.0-dist.99
+manifest_sha256: cc7457288f92dcff0abd2d6828637c26c8be0ff5adeaf4ab7ee439622c1412ab
