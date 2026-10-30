@@ -1,4 +1,4 @@
-// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.91's copy, its sha256
+// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.92's copy, its sha256
 // held to MANIFEST.json): the pair and the template, the legal values of x_lens, where a seat's choice lives, every
 // resolution over the fixture's eight worlds and their readers, the invariants, and the graph kind's 39 cases (each its
 // own world, through OWGraph::WorldGraph, the want compared whole). The profile's tables are held equal to the
@@ -24,8 +24,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.91's MANIFEST.json records it.
-const char* const DistSha256 = "2ce92de4f07ccd4b289a881f749579c653358a37fc4ec9e219d84d13addb0cdd";
+// The fixture's sha256 as dist.92's MANIFEST.json records it.
+const char* const DistSha256 = "a54a7d434dc197e57b0f80c9050ee5f51ff619c2364de768884858b1c77fdf06";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/lens.fixture.json"; }
 

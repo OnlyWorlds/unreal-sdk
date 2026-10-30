@@ -7,6 +7,10 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to schema-dist serial 92: a Zone leaves map space in the lens profile's graph. A Zone is content that
+  gains spatial presence through its Markers, so `OWGraph::WorldGraph` carries Zones as nodes by default, for a
+  public reader too; Map, Pin and Marker stay out until `map_space`.
+
 Readings `OWLens` first took from keel, ruled by the lens profile's owner on 2026-10-30 to the npm and Python
 packages' reading (the fixture's cases for them come with serial 93):
 

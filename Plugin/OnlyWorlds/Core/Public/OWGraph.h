@@ -95,8 +95,8 @@ const std::vector<std::string>& OwnerOnlyEdgeReasons();
 
 // worldGraph(world, reader, options): `world` and `reader` are what OWLens::Resolve takes. Without a lens, the nodes
 // are every element the reader sees less what is out by default: room elements, hidden ones and (for the owner, who
-// sees them) proposed ones, and map space (Map, Pin, Marker, Zone), each back with its flag; and the reading aids,
-// counted reading_aid, which no flag brings back. With a lens, the nodes are its kept. The edges are the schema's
+// sees them) proposed ones, and map space (Map, Pin, Marker; a Zone is a node by default), each back with its flag;
+// and the reading aids, counted reading_aid, which no flag brings back. With a lens, the nodes are its kept. The edges are the schema's
 // single and list links and the declared extension links, between nodes only; a link to an id that is not in the world
 // (or not of the field's type) is dropped and not counted. Pure: it never writes.
 OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, const OWGraphOptions& options = {});

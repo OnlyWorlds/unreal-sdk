@@ -24,8 +24,9 @@ const std::vector<std::string> Reasons = {"room",   "hidden", "proposed", "map_s
                                           "not_visible", "outside_lens", "budget", "types", "window",
                                           "stale",  "undated", "after_as_of", "anchor_not_visible", "hops_not_served"};
 const std::vector<std::string> OwnerReasons = {"hidden", "not_visible", "anchor_not_visible"};
-// Map space: out by default for size, not for standing, so a node it brings back carries no mark.
-const std::vector<std::string> MapSpace = {"map", "pin", "marker", "zone"};
+// Map space: out by default for size, not for standing, so a node it brings back carries no mark. A Zone is content
+// that gains spatial presence through its Markers, so it is a node by default (serial 92).
+const std::vector<std::string> MapSpace = {"map", "pin", "marker"};
 
 bool Has(const std::vector<std::string>& list, std::string_view s) {
     return std::find(list.begin(), list.end(), s) != list.end();
