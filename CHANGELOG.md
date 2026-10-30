@@ -5,6 +5,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- The plugin in a packaged game: the host's game target built, cooked and staged by BuildCookRun (Win64 Development),
+  and run outside the editor with `-OWWorld=<folder or .owworld>`, `-nullrhi`. It opens the world through `UOWLibrary`,
+  logs the element count by type, an address written and read back, a step in the world's calendar, the Open with rows
+  online and offline, and exits 0 by itself; a refused or missing world logs its reason and exits 2. Run on Sikelia's
+  folder (20570 elements), the conformance set's `pass-good.owworld`, Moppetopia (its calendar) and two refusals.
+
 ### Changed (breaking)
 
 - A generated struct's integer is two members, `bool bHas<Field>` and `int64 <Field>` (`false` and `0` for null or a

@@ -132,6 +132,26 @@ The automation tests (`OnlyWorlds.*`):
 The core's runner and the world tests read two real worlds from this machine when present (`OW_SIKELIA`,
 `OW_MOPPETOPIA`). In the core's runner a missing world is a named skip; in the automation tests it fails.
 
+A packaged game: the host's game target, built, cooked and staged by the engine's own BuildCookRun (each step its own
+call; together `-build -cook -stage -pak`), staged to `Host/Saved/StagedBuilds/Windows/` (about 930 MB, the PDB
+included). The plugin's module is linked into `OWHost.exe`; its `.uplugin` is in the pak at
+`RemappedPlugins/OnlyWorlds/`, since the plugin lives outside the project folder:
+
+```
+"%UE_ROOT%\Engine\Build\BatchFiles\RunUAT.bat" BuildCookRun -project="%CD%\Host\OWHost.uproject" ^
+    -platform=Win64 -clientconfig=Development -target=OWHost -build -cook -stage -pak -nop4 -utf8output -unattended
+Host\Saved\StagedBuilds\Windows\OWHost.exe -OWWorld=<a world folder or an .owworld file> ^
+    -nullrhi -unattended -nosplash -nosound -stdout -FullStdOutLogOutput
+```
+
+Given `-OWWorld`, the game (`Host/Source/OWHost/OWBoot.cpp`, a game-instance subsystem made only when the switch is
+there) opens the world through `UOWLibrary` on its first tick and logs, each line starting `OWBoot:`, the plugin it
+found, the element count by type, one element's address written by `UOWAddresses::WriteAddress` and read back by
+`ParseAddress`, one step in the world's calendar (the first character's set birth date) when it holds one, that
+element's Open with rows for a member in a game online and offline, and `done, exit N`. It then quits by itself: 0
+when every reading held, 2 for a refused or missing world (the reader's reason logged), 3 for a reading that did not
+hold. The log is also in the staged folder's `OWHost/Saved/Logs/OWHost.log`.
+
 `codegen/schema-dist/` is vendored verbatim; never edit it, nor `codegen/tools/tools.json` (the tools list at the
 commit `codegen/tools-pin.json` names). Under `Plugin/OnlyWorlds/`, `Core/Private/OWUnicodeData.generated.cpp` is
 written by `codegen/generate.py`, `Core/Private/OWTools.generated.cpp` by `codegen/generate_tools.py`,
