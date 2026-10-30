@@ -565,3 +565,28 @@ OW_TEST(lens_lenses_in_use_reads_each_id_once_and_drops_the_empty_one) {
     t.Ok(uses(R"([""])", R"(["a"])").empty(), "a membership of only \"\" is a choice of nothing");
     t.Ok(uses("null", R"(["b", "a", "b"])") == Ids{"b", "a"}, "the order given, the first place kept");
 }
+
+OW_TEST(lens_a_known_of_stub_is_shaped_as_keel_serves_it) {
+    // Ruling 7 (keel's known_of, elements/visibility.py): a stub keeps the base and its type's public fields, every
+    // other field at its unset value, and no key that is not a field: `world` is none of keel's field kinds, so it
+    // goes with the extensions rather than reading "".
+    OWJsonValue world = Parse(R"({"elements": [
+        {"id": "a", "type": "character", "name": "A", "friends": ["b"]},
+        {"id": "b", "type": "character", "name": "B", "world": "w1", "physicality": "tall", "background": "a long story",
+         "x_note": "kept back"}]})");
+    OWLensReading r = OWLens::Resolve(world, Parse(R"({"id": "L", "type": "construct", "supertype": "Lens",
+        "characters": ["a"]})"), Parse(R"({"rung": "guest", "whole": ["a"], "known_of": ["b"]})"));
+    const OWJsonValue* stub = nullptr;
+    for (const OWJsonValue& row : r.rows)
+        if (const OWJsonValue* id = row.Find("id"); id && id->IsString() && id->Text() == "b") stub = &row;
+    t.Ok(stub != nullptr, "the stub is kept");
+    if (!stub) return;
+    const OWJsonValue* known = stub->Find("known_of");
+    t.Ok(known && known->IsBool() && known->AsBool(), "known_of: true");
+    t.Ok(stub->Find("world") == nullptr, "no world key");
+    t.Ok(stub->Find("x_note") == nullptr, "no extension key");
+    const OWJsonValue* phys = stub->Find("physicality");
+    t.Ok(phys && phys->IsString() && phys->Text() == "tall", "a public field is kept (a Character's physicality)");
+    const OWJsonValue* background = stub->Find("background");
+    t.Ok(background && background->IsString() && background->Text().empty(), "a field outside the keeps reads unset");
+}

@@ -256,8 +256,9 @@ const std::vector<std::string> OwnerOnly = {"anchor_not_visible", "not_visible"}
 // What a known-of stub keeps beside its type's public fields (keel's KNOWN_OF_BASE).
 const std::vector<std::string> StubBase = {"type", "id", "name", "description", "supertype", "subtype",
                                            "image_url", "created_at", "updated_at", "change_seq"};
-// The base fields of every type (schema.json's base, less id and name, which a stub keeps): text.
-const std::vector<std::string> BaseText = {"description", "supertype", "subtype", "image_url", "world"};
+// The base text fields of every type (keel's field kinds, less name, which a stub keeps). `world` is none of keel's
+// field kinds, so a stub drops it as it drops an extension key.
+const std::vector<std::string> BaseText = {"description", "supertype", "subtype", "image_url"};
 // The server's hands: a stub carries none (keel's _known_of_value).
 const std::vector<std::string> Hands = {"created_by", "changed_by", "changed_via", "changed_client"};
 const char* const ServedTrimmed = "x_served_trimmed";
