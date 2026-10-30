@@ -35,6 +35,10 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
 
 ### Added
 
+- The room profile's conformance fixture (schema-dist `profiles/room.fixture.json`, its sha256 held to
+  `MANIFEST.json`) run against `OWLens::IsRoomElement`: all 32 cases, each in the room exactly when the pair and
+  the mark both hold. The reader itself is unchanged; four mutants of it (the mark or the pair ignored, a mark
+  string untrimmed, the pair unfolded) each fail the cases.
 - `OWCharter` in the core, the charter profile's reader (schema-dist `profiles/charter.md`): `CharterOf(world, reader)`
   (the profile's `charterOf`: the packet `{charter, guide, domains}` as one reader sees the world, the Charter
   `{id, name, rules, skill}` and the Guide `{id, name}` the newest marked ones, the Domains `{id, name, sentence, hubs}`
