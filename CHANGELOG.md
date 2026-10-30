@@ -35,6 +35,13 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
 
 ### Added
 
+- `OWNames::TypeWord(world, type, supertype, many)`: a world's own word for a type, the names profile's `x_names`
+  on the World (schema-dist `profiles/names.md`), a port of the npm SDK's `typeWord` and the Python package's
+  `type_word`. The supertype's entry first, its key trimmed and folded as the room profile reads (`OWMessage::Trim`,
+  `Fold`), then the type's, else absent for the standard's name; a value that is not a names map is absent
+  everywhere. `version` is the number 1 in any spelling (`1.0`, `1e0`), never `true` or `"1"`; a `types` or
+  `supertypes` key present and null refuses the map, as npm reads it. Held to the profile's 23-case fixture (its
+  sha256 held to `MANIFEST.json`). Core only, no Blueprint function yet.
 - The review profile's rule 1 held by the npm and Python packages' 24 shared cases (npm `test/review.test.mjs`
   at 4.102.2, Python `tests/test_review.py` at 0.84.1), same names and order, against `OWLens::IsProposed`: whether
   a reader leaves an element out as proposed, a doubt included. The reader is unchanged; three mutants of it (an
