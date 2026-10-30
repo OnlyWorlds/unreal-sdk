@@ -7,6 +7,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWStrand::StrandOf(world, reader)` in the core (`OWStrand.h`): the strand profile's reader (schema-dist
+  `profiles/strand.md`, serial 98), a world's strand as one reader sees it through the lens reader's own view: the
+  story the World's `x_strand` names, one of its events, that event's place, the story's `protagonist`, where the hero
+  is now, and whether then and now are one place by id (`OWWorldStrand`, `ToJson()` the profile's six keys). A slot
+  holds only its own kind, no slot is filled from another, a list's order is never read, and a story the reader knows
+  only as a stub fills its own slot alone. A mark that is not an object of three strings is no mark; a member that is
+  an empty string is an empty slot (the page's words; the npm and Python readers read it as no mark). Held to the
+  profile's fixture (17 cases) by its sha256. Not yet in the plugin's Blueprint library.
 - The plugin in a packaged game: the host's game target built, cooked and staged by BuildCookRun (Win64 Development),
   and run outside the editor with `-OWWorld=<folder or .owworld>`, `-nullrhi`. It opens the world through `UOWLibrary`,
   logs the element count by type, an address written and read back, a step in the world's calendar, the Open with rows
