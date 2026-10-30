@@ -21,7 +21,7 @@ using owtest::P;
 namespace {
 
 // The fixture's sha256 as dist.92's MANIFEST.json records it.
-const char* const DistSha256 = "a3224ef265506869ca7aa0d4848ea6f62ce04b93d4b18588394be0d7982927af";
+const char* const DistSha256 = "7d012081b5df7bab3e2223333f87a347417c3061c62b38947fc952e8c4d2377a";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/names.fixture.json"; }
 
@@ -78,7 +78,7 @@ void Case(owtest::T& t, const OWJsonValue& c) {
 OW_TEST(names_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the names fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.92's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.94's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -97,9 +97,9 @@ OW_TEST(names_fixture_is_the_pinned_one) {
         const OWJsonValue* w = c.Find("word");
         if (w && w->IsNull()) ++standard;
     }
-    t.Eq(cases->Size(), size_t(23), "23 cases");
-    t.Eq(names.size(), size_t(23), "each name its own");
-    t.Eq(standard, size_t(10), "10 print the standard's name");
+    t.Eq(cases->Size(), size_t(29), "29 cases");
+    t.Eq(names.size(), size_t(29), "each name its own");
+    t.Eq(standard, size_t(14), "14 print the standard's name");
 }
 
 OW_CASES(names_fixture_cases) {

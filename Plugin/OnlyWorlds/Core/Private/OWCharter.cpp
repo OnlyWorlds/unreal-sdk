@@ -110,14 +110,18 @@ std::vector<std::string> Skill(const OWLensView::Sight& s, const std::string& te
 }
 
 // keel's _hubs: the distinct targets of a served Domain's link fields, itself excluded, in the schema's field order
-// (each list in its served order). A known-of stub serves no links.
-std::vector<OWCharterHub> Hubs(const std::string& id, const OWJsonValue& body) {
+// (each list in its served order), each an element of the field's type the reader sees: the owner's body keeps a link
+// to a proposed element as stored, and a proposed Object is in no reader's view, the owner's included, so it is no
+// hub. A known-of stub serves no links.
+std::vector<OWCharterHub> Hubs(const OWLensView::Sight& s, const std::string& id, const OWJsonValue& body) {
     std::vector<OWCharterHub> out;
     const OWJsonValue* stub = Get(body, "known_of");
     if (stub && stub->IsBool() && stub->AsBool()) return out;
     std::set<std::pair<std::string, std::string>> seen = {{"construct", id}};
     auto add = [&](const std::string& type, const OWJsonValue& v) {
-        if (v.IsString() && !v.Text().empty() && seen.insert({type, v.Text()}).second) out.push_back({type, v.Text()});
+        if (!v.IsString() || v.Text().empty()) return;
+        std::optional<size_t> j = s.Find(type, v.Text());
+        if (j && s.view[*j] && seen.insert({type, v.Text()}).second) out.push_back({type, v.Text()});
     };
     for (const auto& [field, type] : OWCharter::HubFields()) {
         const OWJsonValue* v = Get(body, field);
@@ -258,7 +262,7 @@ OWReadingAids CharterOf(const OWJsonValue& world, const OWJsonValue& reader) {
     for (size_t d : order) {
         const OWJsonValue& body = s.served(d);
         out.domains.push_back(
-            {s.ids[d], Text(Get(body, "name")), FirstLine(Text(Get(body, "description"))), Hubs(s.ids[d], body)});
+            {s.ids[d], Text(Get(body, "name")), FirstLine(Text(Get(body, "description"))), Hubs(s, s.ids[d], body)});
     }
     return out;
 }

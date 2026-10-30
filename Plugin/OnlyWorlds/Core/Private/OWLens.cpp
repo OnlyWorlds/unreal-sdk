@@ -709,14 +709,14 @@ std::set<std::string> AnchorIds(const OWJsonValue& body) {
 // Message's addressing or a lens's anchors that lost an id (never on the public rung), and a known-of element as its
 // stub. A stored x_served_trimmed is never served. For every reader, `hidden: true` on what the hidden mark keeps (the
 // world's list or the element's own key, one mark), and no `hidden` key on any other body, a stored false included
-// (keel #537): so a guest's row of its own hidden creation carries it too.
+// (keel #537): below the owner only a guest's own creation carries it, a body it sees whole, never a known-of stub.
 const OWJsonValue& View::Served(size_t i) {
     auto hit = served.find(i);
     if (hit != served.end()) return hit->second;
     OWJsonValue out = *els[i];
     out.Erase(ServedTrimmed);
     auto marked = [&](OWJsonValue&& body) -> const OWJsonValue& {
-        if (hidden[i]) body.Set("hidden", OWJsonValue::Bool(true));
+        if (hidden[i] && !stub[i]) body.Set("hidden", OWJsonValue::Bool(true));
         else body.Erase("hidden");
         return served.emplace(i, std::move(body)).first->second;
     };
@@ -829,7 +829,7 @@ struct Reader {
             for (const OWLensField& lf : fields)
                 if (f == lf.name) target = lf.target;
             for (const OWJsonValue& id : list->Items()) {
-                if (!id.IsString() || id.Text().empty() || !met.insert(id.Text()).second) continue;
+                if (!IsId(id) || !met.insert(id.Text()).second) continue;
                 Key key{target, id.Text()};
                 std::optional<size_t> i = v.Find(key);
                 if (f == "constructs" && i && v.scoped[*i] && IsLens(*v.els[*i])) {
@@ -845,14 +845,17 @@ struct Reader {
         }
     }
 
+    // An anchor list's entry that is an id: a string with something in it besides White_Space (rule 7).
+    static bool IsId(const OWJsonValue& id) { return id.IsString() && !OWMessage::Trim(id.Text()).empty(); }
+
     // A lens that names an anchor is never a filter: an anchor field with an id in it, or the trimmed mark naming one
-    // (keel's _names_anchors). An empty string is no id, so a lens whose anchor fields hold only empty strings names no
-    // anchor and is a filter, as rule 7 reads a lens with empty lists (the profile's owner, ahead of its next serial).
+    // (keel's _names_anchors). An empty string, or one of White_Space alone, is no id, so a lens whose anchor fields
+    // hold only such strings names no anchor and is a filter, as rule 7 reads a lens with empty lists.
     static bool NamesAnchors(const OWJsonValue& lens) {
         for (const std::string& f : Anchors)
             if (const OWJsonValue* list = lens.Find(f); list && list->IsArray())
                 for (const OWJsonValue& id : list->Items())
-                    if (id.IsString() && !id.Text().empty()) return true;
+                    if (IsId(id)) return true;
         if (const OWJsonValue* mark = lens.Find(ServedTrimmed); mark && mark->IsArray())
             for (const OWJsonValue& f : mark->Items())
                 if (f.IsString() && Has(Anchors, f.Text())) return true;

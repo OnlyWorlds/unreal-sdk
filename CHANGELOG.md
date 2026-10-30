@@ -10,6 +10,13 @@ Nothing is released yet; the history before this file is in the git log.
 - Schema pin to schema-dist serial 92: a Zone leaves map space in the lens profile's graph. A Zone is content that
   gains spatial presence through its Markers, so `OWGraph::WorldGraph` carries Zones as nodes by default, for a
   public reader too; Map, Pin and Marker stay out until `map_space`.
+- Schema pin to schema-dist serial 94: the charter, lens and names fixtures' twenty-four new cases (lens 186: 99
+  resolve, 47 graph; names 29; charter 26). `OWLens::Resolve` reads an anchor list's empty or White_Space-only string
+  as no id, so a lens holding only such strings is a filter; an anchor resolves by its field's type and the id while
+  the cut counts each element once, so a kept element is never also cut; a served body carries `hidden: true` where
+  the hidden mark keeps the element (the owner's body, and below the owner a guest's own creation, never a stub), and
+  no `hidden` key otherwise, a stored `false` dropped. `OWCharter`'s Domain hubs leave out an element the reader does
+  not see as the field's type, so a proposed Object is no hub, the owner's view included.
 - Schema pin to schema-dist serial 93: the lens fixture carries a case for each of the readings below, nineteen new
   cases over a ninth world (171 in all: 86 resolve, 45 graph, 5 uses), and `profiles/lens.md` states each reading.
   The text_only keys case `keys-an-integral-float-is-refused-where-the-text-shows` is retired for

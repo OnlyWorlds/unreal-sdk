@@ -1,5 +1,5 @@
-// OWCharter on the charter profile's conformance fixture (schema-dist profiles/charter.fixture.json, dist.92's copy, its
-// sha256 held to MANIFEST.json): the pair-and-mark test, and the packet over the fixture's seven worlds, their readers
+// OWCharter on the charter profile's conformance fixture (schema-dist profiles/charter.fixture.json, dist.94's copy, its
+// sha256 held to MANIFEST.json): the pair-and-mark test, and the packet over the fixture's nine worlds, their readers
 // and the cases that bring a world of their own. The profile's tables are held equal to the fixture's, the hub fields
 // to the Construct's link fields; then readings the fixture leaves open.
 
@@ -22,7 +22,7 @@ using owtest::P;
 namespace {
 
 // The fixture's sha256 as dist.92's MANIFEST.json records it.
-const char* const DistSha256 = "566204bdaebab8d3ac15be7b6ea5ab8b83ed393436c21c3a7ad4d3b7314980c6";
+const char* const DistSha256 = "42843f634c8510eb8ed65645222c354e5c7e0f70b0441f9dcb2759ae4790ed95";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/charter.fixture.json"; }
 
@@ -149,7 +149,7 @@ OWJsonValue WorldWith(std::string_view elements, std::string_view extra = "") {
 OW_TEST(charter_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the charter fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.92's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.94's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -169,14 +169,14 @@ OW_TEST(charter_fixture_is_the_pinned_one) {
         names.insert(Str(c, "name"));
         if (Runs(Str(c, "kind"))) ++run;
     }
-    t.Eq(cases->Size(), size_t(23), "23 cases");
-    t.Eq(names.size(), size_t(23), "each name its own");
-    t.Eq(kinds["charter"], size_t(18), "kind charter");
+    t.Eq(cases->Size(), size_t(26), "26 cases");
+    t.Eq(names.size(), size_t(26), "each name its own");
+    t.Eq(kinds["charter"], size_t(21), "kind charter");
     t.Eq(kinds["element"], size_t(5), "kind element");
     t.Eq(kinds.size(), size_t(2), "and no other kind");
-    t.Eq(run, size_t(23), "every case runs here");
+    t.Eq(run, size_t(26), "every case runs here");
     const OWJsonValue* worlds = doc->Find("worlds");
-    t.Eq(worlds ? worlds->Size() : size_t(0), size_t(7), "seven worlds");
+    t.Eq(worlds ? worlds->Size() : size_t(0), size_t(9), "nine worlds");
 }
 
 OW_TEST(charter_tables_are_the_fixtures) {

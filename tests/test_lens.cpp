@@ -1,4 +1,4 @@
-// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.93's copy, its sha256
+// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.94's copy, its sha256
 // held to MANIFEST.json): the pair and the template, the legal values of x_lens, where a seat's choice lives, every
 // resolution over the fixture's nine worlds and their readers, the invariants, and the graph kind's 45 cases (each its
 // own world, through OWGraph::WorldGraph, the want compared whole). The profile's tables are held equal to the
@@ -24,8 +24,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.93's MANIFEST.json records it.
-const char* const DistSha256 = "49e16262b5320bc922f23382fe17e5d5d73a9c78a4dd75059f334dc0b4516bd3";
+// The fixture's sha256 as dist.94's MANIFEST.json records it.
+const char* const DistSha256 = "a7520d6470e5ac5b4ef87d8c6fa73a53dcf7b9fa4fbf3065eca9fe16865e4f09";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/lens.fixture.json"; }
 
@@ -277,7 +277,7 @@ bool Runs(const std::string& kind) {
 OW_TEST(lens_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the lens fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.93's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.94's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -297,18 +297,18 @@ OW_TEST(lens_fixture_is_the_pinned_one) {
         names.insert(Str(c, "name"));
         if (Runs(Str(c, "kind"))) ++run;
     }
-    t.Eq(cases->Size(), size_t(171), "171 cases");
-    t.Eq(names.size(), size_t(171), "each name its own");
+    t.Eq(cases->Size(), size_t(186), "186 cases");
+    t.Eq(names.size(), size_t(186), "each name its own");
     const std::pair<const char*, size_t> want[] = {{"shape", 6},   {"keys", 25},      {"uses", 5},
-                                                   {"resolve", 86}, {"invariant", 4}, {"graph", 45}};
+                                                   {"resolve", 99}, {"invariant", 4}, {"graph", 47}};
     size_t sum = 0;
     for (const auto& [kind, n] : want) {
         t.Eq(kinds[kind], n, std::string("kind ") + kind);
         sum += n;
     }
-    t.Eq(sum, size_t(171), "the six kinds are every case");
+    t.Eq(sum, size_t(186), "the six kinds are every case");
     t.Eq(kinds.size(), size_t(6), "and no other kind");
-    t.Eq(run, size_t(171), "every case runs here, the 45 graph cases among them");
+    t.Eq(run, size_t(186), "every case runs here, the 47 graph cases among them");
 }
 
 OW_TEST(lens_tables_are_the_fixtures) {
@@ -672,8 +672,9 @@ OW_TEST(lens_a_lens_whose_anchor_fields_hold_only_empty_strings_names_no_anchor_
 
 OW_TEST(lens_an_owners_full_row_of_a_hidden_element_carries_hidden_true_as_served) {
     // A row is the body as the wire serves it to that reader, and a served body of an element under the hidden mark
-    // carries hidden: true: the owner's full row of a hidden element, by the world's list or by its own key; a guest's
-    // row of its own hidden creation. A name row never carries it. Kills: the row as stored, a guest's row unmarked.
+    // carries hidden: true: the owner's full row of a hidden element, by the world's list or by its own key; below the
+    // owner only a guest's row of its own hidden creation, never a stub. A name row never carries it. Kills: the row as
+    // stored, a guest's row unmarked.
     const char* elements = R"("elements": [
         {"id": "e05", "type": "collective", "name": "Guild"},
         {"id": "e06", "type": "collective", "name": "Choir", "hidden": true},
@@ -693,6 +694,10 @@ OW_TEST(lens_an_owners_full_row_of_a_hidden_element_carries_hidden_true_as_serve
     t.Ok(guest.rows.size() == 1 &&
              Equal(guest.rows[0], Parse(R"({"id": "e05", "type": "collective", "name": "Guild", "hidden": true})")),
          "a guest's own hidden creation: " + RowsOf(guest));
+    // Below the owner only a guest's own creation, which it sees whole, carries the mark: a stub never does.
+    OWLensReading stub = ReadAs(full, OWJsonValue::String("L"), R"({"rung": "guest", "whole": ["L"], "known_of": ["e05"]})");
+    t.Ok(stub.rows.size() == 1 && stub.rows[0].Find("known_of") && stub.rows[0].Find("hidden") == nullptr,
+         "a guest's known-of stub of a hidden element carries no hidden key: " + RowsOf(stub));
     OWLensReading named = ReadAs(world(R"({"show": "name"})"), OWJsonValue::String("L"), R"({"rung": "owner"})");
     t.Ok(named.rows.size() == 2 && named.rows[0].Find("hidden") == nullptr, "a name row: " + RowsOf(named));
 }
