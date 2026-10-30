@@ -7,8 +7,8 @@
 // (elements/lens.py, with the served bodies of elements/serialize.py) is the rule this follows; the graph section is
 // OWGraph's (OWGraph.h), which reads through this resolution.
 //
-// Element bodies are JSON objects (OWJsonValue), as the API serves them and a world folder keeps them. A parsed number
-// keeps its text, so x_lens refuses an integral float (7.0) as the profile asks of a reader that can see the text.
+// Element bodies are JSON objects (OWJsonValue), as the API serves them and a world folder keeps them. A whole float in
+// x_lens (7.0) reads whole, as in every reader; only a fraction is refused.
 // Every function is total: a value of the wrong kind reads as the profile's "no".
 
 #include "OWJson.h"
@@ -131,8 +131,8 @@ bool IsTemplate(const OWJsonValue& element);
 // Null when x_lens is legal, else the first key refused in the profile's order (depth, types, window, from, to,
 // undated, changed_within, show, budget, mail, notes), or "x_lens" for a value that is not an object. nullptr and null
 // are legal; a key whose value is null is absent; a key the page does not name is ignored; an empty string is present
-// and outside every table. A whole-number key takes an integer's text only: a fraction and an integral float (7.0,
-// 1e1) are refused, and so is an integer past 64 bits (a platform limit).
+// and outside every table. A whole-number key takes a whole number, a whole float included (7.0 and 1e1 read as 7 and
+// 10); a fraction is refused, and so is a number past 64 bits (a platform limit).
 std::optional<std::string> CheckKeys(const OWJsonValue* x_lens);
 
 // The lenses a seat reads, by id: its membership's choice when it made one (a list; an empty list is a choice), else

@@ -295,8 +295,7 @@ bool Truthy(const OWJsonValue* v) {
     }
 }
 
-// A whole number as keel reads one in x_lens (`isinstance(v, int)`): an integer's text, -?(0|[1-9][0-9]*), inside 64
-// bits. An integral float (7.0, 1e1) is a float to Python's json and refused; past 64 bits is a platform limit.
+// An integer's text, -?(0|[1-9][0-9]*), inside 64 bits.
 std::optional<int64_t> IntegerText(const OWJsonValue* v) {
     if (!v || !v->IsNumber()) return std::nullopt;
     const std::string& s = v->Text();
@@ -314,7 +313,9 @@ std::optional<int64_t> IntegerText(const OWJsonValue* v) {
     return negative ? int64_t(0 - n) : int64_t(n);
 }
 
-// A whole number as a stored date reads: an integer's text, or a number with no fraction inside 64 bits (7.0 as 7).
+// A whole number, as a stored date and an x_lens key read one: an integer's text, or a number with no fraction inside
+// 64 bits (7.0 as 7). A whole float reads whole in x_lens too (the profile's owner, 2026-10-30, retiring serial 83's
+// refusal where a reader can see the text; keel refused it); past 64 bits is a platform limit.
 std::optional<int64_t> Integral(const OWJsonValue* v) {
     if (std::optional<int64_t> n = IntegerText(v)) return n;
     if (!v || !v->IsNumber()) return std::nullopt;
@@ -386,7 +387,7 @@ std::optional<std::string> ReadRecipe(const OWJsonValue* raw, Recipe* out) {
     };
     Recipe r;
     if (const OWJsonValue* v = at("depth")) {
-        std::optional<int64_t> n = IntegerText(v);
+        std::optional<int64_t> n = Integral(v);
         if (!n || *n < 0 || *n > 2) return std::string("depth");
         r.depth = *n;
     }
@@ -398,16 +399,16 @@ std::optional<std::string> ReadRecipe(const OWJsonValue* raw, Recipe* out) {
         }
     }
     if (const OWJsonValue* v = at("window")) {
-        r.window = IntegerText(v);
+        r.window = Integral(v);
         if (!r.window || *r.window < 0) return std::string("window");
         if (at("from") || at("to")) return std::string("window");
     }
     if (const OWJsonValue* v = at("from")) {
-        r.from = IntegerText(v);
+        r.from = Integral(v);
         if (!r.from) return std::string("from");
     }
     if (const OWJsonValue* v = at("to")) {
-        r.to = IntegerText(v);
+        r.to = Integral(v);
         if (!r.to || !r.from || !(*r.from < *r.to)) return std::string("to");
     }
     if (const OWJsonValue* v = at("undated")) {
@@ -415,7 +416,7 @@ std::optional<std::string> ReadRecipe(const OWJsonValue* raw, Recipe* out) {
         r.undated = v->Text();
     }
     if (const OWJsonValue* v = at("changed_within")) {
-        r.changed_within = IntegerText(v);
+        r.changed_within = Integral(v);
         if (!r.changed_within || *r.changed_within < 1) return std::string("changed_within");
     }
     if (const OWJsonValue* v = at("show")) {
@@ -423,7 +424,7 @@ std::optional<std::string> ReadRecipe(const OWJsonValue* raw, Recipe* out) {
         r.show = v->Text();
     }
     if (const OWJsonValue* v = at("budget")) {
-        std::optional<int64_t> n = IntegerText(v);
+        std::optional<int64_t> n = Integral(v);
         if (!n || *n < 1 || *n > MaxBudget) return std::string("budget");
         r.budget = *n;
     }

@@ -229,6 +229,10 @@ OWGraphOptions GraphOptionsOf(const OWJsonValue& c) {
 }
 
 // One case, by its kind. A text_only case holds for a reader that can see a number's text: this one can, so it runs.
+// Expected to change at serial 93: keys-an-integral-float-is-refused-where-the-text-shows. The profile's owner ruled on
+// 2026-10-30 that a whole float reads whole in every reader, retiring the refusal the case was written for; its want
+// (depth refused) still holds, now because 7.0 reads as 7, past depth's table, so it runs as written until serial 93
+// replaces it.
 void Case(owtest::T& t, const OWJsonValue& c) {
     std::string kind = Str(c, "kind");
     static const OWJsonValue none;
@@ -429,7 +433,9 @@ OW_CASES(lens_fixture_cases) {
 
 // -- readings the fixture leaves open ---------------------------------------------------------------------------------
 
-OW_TEST(lens_x_lens_reads_a_numbers_text) {
+OW_TEST(lens_x_lens_reads_a_whole_float_whole) {
+    // The profile's owner, 2026-10-30 (serial 83's text-only refusal retired; fixture cases with serial 93): a whole
+    // float reads whole in every reader, so depth 2.0 is 2; only a fraction stays refused.
     auto bad = [](const char* json) {
         OWJsonValue v = Parse(json);
         std::optional<std::string> b = OWLens::CheckKeys(&v);
@@ -437,11 +443,20 @@ OW_TEST(lens_x_lens_reads_a_numbers_text) {
     };
     t.Eq(bad(R"({"depth": 2})"), std::string(), "an integer");
     t.Eq(bad(R"({"depth": -0})"), std::string(), "-0 is an integer (0)");
-    t.Eq(bad(R"({"depth": 2.0})"), std::string("depth"), "an integral float");
-    t.Eq(bad(R"({"depth": 2e0})"), std::string("depth"), "an exponent");
+    t.Eq(bad(R"({"depth": 2.0})"), std::string(), "a whole float reads whole");
+    t.Eq(bad(R"({"depth": 2e0})"), std::string(), "an exponent that is whole");
+    t.Eq(bad(R"({"depth": 1e1})"), std::string("depth"), "a whole 10 is past depth's table");
+    t.Eq(bad(R"({"budget": 7.0, "window": 0.0, "changed_within": 3.0})"), std::string(), "budget, window, changed_within");
+    t.Eq(bad(R"({"from": -5.0, "to": 4.0})"), std::string(), "from and to");
     t.Eq(bad(R"({"budget": 7.5})"), std::string("budget"), "a fraction");
+    t.Eq(bad(R"({"depth": 1.5})"), std::string("depth"), "a fraction of depth");
     t.Eq(bad(R"({"window": 9223372036854775807})"), std::string(), "the largest 64-bit window");
     t.Eq(bad(R"({"window": 9223372036854775808})"), std::string("window"), "past 64 bits: a platform limit");
+    OWJsonValue world = Parse(R"({"elements": [{"id": "a", "type": "character", "name": "A", "friends": ["b"]},
+        {"id": "b", "type": "character", "name": "B"}]})");
+    OWLensReading r = OWLens::Resolve(world, Parse(R"({"id": "L", "type": "construct", "supertype": "Lens",
+        "characters": ["a"], "x_lens": {"depth": 0.0, "budget": 5.0}})"), Parse(R"({"rung": "owner"})"));
+    t.Ok(!r.unreadable && r.kept == std::vector<std::string>{"a"}, "a lens of depth 0.0 reads as depth 0");
     t.Eq(bad(R"({"from": -5, "to": -4})"), std::string(), "a range below zero");
     t.Eq(bad(R"({"types": [" Narrative/Message "]})"), std::string(), "a pair word trimmed and folded");
     t.Eq(bad(R"({"types": ["narrative / message"]})"), std::string("types"), "a pair word with inner spaces");
@@ -488,7 +503,7 @@ OW_TEST(lens_a_callers_mistake_is_named) {
 OW_TEST(lens_an_unreadable_lens_names_its_key_and_resolves_nothing) {
     const OWJsonValue& world = World("vale");
     OWJsonValue lens = Parse(R"({"id": "L", "type": "construct", "supertype": "Lens",
-        "characters": ["019a7f00-0000-7000-8000-000000000001"], "x_lens": {"depth": 1.0}})");
+        "characters": ["019a7f00-0000-7000-8000-000000000001"], "x_lens": {"depth": 1.5}})");
     OWLensReading r = OWLens::Resolve(world, lens, ReaderOf(world, "owner"));
     t.Ok(r.unreadable && *r.unreadable == "depth", "unreadable names depth");
     t.Ok(r.kept.empty() && r.cut.empty() && r.rows.empty(), "and nothing is resolved");

@@ -15,6 +15,10 @@ packages' reading (the fixture's cases for them come with serial 93):
 - Under rule 5's order an element with no `updated_at` sorts after every element of its type that has one, never
   as the reading's now; two without one by id. A budget cuts them first.
 - `LensesInUse` reads each id once, in the order given, and drops `""`; the membership still wins whole.
+- A whole float as an `x_lens` key value reads whole (`depth: 2.0` is 2, `budget: 7.0` is 7); only a fraction is
+  refused. Serial 83's refusal of `7.0` where a reader can see the number's text is retired. The fixture's text_only
+  case (`keys-an-integral-float-is-refused-where-the-text-shows`) is expected to change at serial 93; it still passes
+  as written, since `7.0` now reads as 7, past `depth`'s table.
 
 ### Added
 
@@ -37,7 +41,7 @@ packages' reading (the fixture's cases for them come with serial 93):
   (where a seat's choice lives), `DateOf` (the profile's date table), `IsRoomElement`, `IsReadingAid`, `IsProposed`
   and the profile's tables. keel's reader (`elements/lens.py`, with the bodies `elements/serialize.py` serves each
   reader) is the rule followed; the mail rule reads through `OWMessage`. Tested by the fixture's 114 shape, keys, uses,
-  resolve and invariant cases (the integral-float case runs: a parsed number keeps its text), the tables held to the
+  resolve and invariant cases, the tables held to the
   fixture, the field table to `schema.json` and the stub's public fields to `presentation.json`.
 - `OWOpeners::OpenersFor(tools, kind, address, surface)` in the core: the rows of an "Open with" menu for a world
   (`"world"`) or one of its elements (`"element"`), a port of the npm SDK's `openersFor` and the Python package's
