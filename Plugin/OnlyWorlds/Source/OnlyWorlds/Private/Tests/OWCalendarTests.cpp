@@ -248,13 +248,13 @@ bool FOWCalendarFormatStepTest::RunTest(const FString& Parameters)
 	int32 Dates = 0, Same = 0;
 	for (const FOWCharacter& C : UOWElements::GetAllCharacters(World))
 	{
-		if (!C.BirthDate.IsSet()) continue;
+		if (!C.bHasBirthDate) continue;
 		++Dates;
-		const FString Words = CallFormatStep(*this, World, TreatyId, C.BirthDate.GetValue());
-		const FString Core = Str(OnlyWorlds::OWCalendar::FormatStep(*Cal, C.BirthDate.GetValue()));
+		const FString Words = CallFormatStep(*this, World, TreatyId, C.BirthDate);
+		const FString Core = Str(OnlyWorlds::OWCalendar::FormatStep(*Cal, C.BirthDate));
 		if (Words == Core && !Words.IsEmpty()) ++Same;
 		else if (Dates - Same <= 3) AddError(FString::Printf(TEXT("%s born %lld: \"%s\", the core \"%s\""), *C.Name,
-			C.BirthDate.GetValue(), *Words, *Core));
+			C.BirthDate, *Words, *Core));
 	}
 	TestTrue(TEXT("characters with a birth date"), Dates > 0);
 	TestEqual(TEXT("every birth date as the core reads it"), Same, Dates);

@@ -116,13 +116,13 @@ bool FOWFrameTest::RunTest(const FString& Parameters)
 		if (M.ParentMap.IsEmpty()) Map = M;
 	}
 	if (!TestFalse(TEXT("a root map (no parent_map)"), Map.Id.IsEmpty())) return false;
-	const double W = static_cast<double>(Map.Width.Get(0));
-	const double H = static_cast<double>(Map.Height.Get(0));
+	const double W = static_cast<double>(Map.Width);
+	const double H = static_cast<double>(Map.Height);
 	if (!TestTrue(TEXT("the map has a width and a height"), W > 0 && H > 0)) return false;
 	TArray<FOWPin> Pins;
 	for (const FOWPin& P : UOWElements::GetAllPins(OW))
 	{
-		if (P.Map == Map.Id && P.X.IsSet() && P.Y.IsSet()) Pins.Add(P);
+		if (P.Map == Map.Id && P.bHasX && P.bHasY) Pins.Add(P);
 	}
 	TestTrue(TEXT("the root map has pins"), Pins.Num() > 0);
 
@@ -151,7 +151,7 @@ bool FOWFrameTest::RunTest(const FString& Parameters)
 	const double Radius = W / 80.0;
 	for (const FOWPin& P : Pins)
 	{
-		const FVector At(static_cast<double>(P.Y.GetValue()) - H / 2.0, static_cast<double>(P.X.GetValue()) - W / 2.0, 0.0);
+		const FVector At(static_cast<double>(P.Y) - H / 2.0, static_cast<double>(P.X) - W / 2.0, 0.0);
 		Spawn(World, Sphere, At, FRotator::ZeroRotator, FVector(Radius / 50.0), Marker);
 	}
 
@@ -213,12 +213,12 @@ bool FOWFrameTest::RunTest(const FString& Parameters)
 		int32 Found = 0;
 		for (const FOWPin& P : Pins)
 		{
-			const int32 X = FMath::RoundToInt32(P.X.GetValue() / W * FrameW);
-			const int32 Y = FMath::RoundToInt32((1.0 - P.Y.GetValue() / H) * FrameH);
+			const int32 X = FMath::RoundToInt32(P.X / W * FrameW);
+			const int32 Y = FMath::RoundToInt32((1.0 - P.Y / H) * FrameH);
 			const FColor C = At(X, Y);
 			if (C.R > 150 && C.G < 90 && C.B < 90) ++Found;
 			else AddError(FString::Printf(TEXT("pin %s at (%lld, %lld): frame pixel (%d, %d) is %s, not a marker"), *P.Id,
-				P.X.GetValue(), P.Y.GetValue(), X, Y, *C.ToString()));
+				P.X, P.Y, X, Y, *C.ToString()));
 		}
 		TestEqual(TEXT("every pin's marker in the frame"), Found, Pins.Num());
 		// The plane carries the map: many colours, not one.

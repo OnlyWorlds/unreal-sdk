@@ -29,6 +29,10 @@ namespace OWModelRead
 		return TOptional<int64>();
 	}
 
+	bool HasInt(const OnlyWorlds::OWJsonValue& Body, const char* Key) { return Int(Body, Key).IsSet(); }
+
+	int64 IntValue(const OnlyWorlds::OWJsonValue& Body, const char* Key) { return Int(Body, Key).Get(0); }
+
 	bool Bool(const OnlyWorlds::OWJsonValue& Body, const char* Key)
 	{
 		const OnlyWorlds::OWJsonValue* V = Body.Find(Key);

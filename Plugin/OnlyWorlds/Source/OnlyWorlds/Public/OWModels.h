@@ -47,17 +47,29 @@ struct ONLYWORLDS_API FOWAbility
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Ability")
 	FString Activation;
 
-	/** duration: Length of time the ability remains active or its effects persist, measured in TIME units */
+	/** duration: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Ability")
-	TOptional<int64> Duration;
+	bool bHasDuration = false;
 
-	/** potency: Relative measure of the ability's inherent potency or force, used for scaling or comparison purposes */
+	/** duration: Length of time the ability remains active or its effects persist, measured in TIME units (0 when not bHasDuration) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Ability")
-	TOptional<int64> Potency;
+	int64 Duration = 0;
 
-	/** range: Effective reach or distance at which the ability can be used, in the world's distance unit (World distance_unit) */
+	/** potency: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Ability")
-	TOptional<int64> Range;
+	bool bHasPotency = false;
+
+	/** potency: Relative measure of the ability's inherent potency or force, used for scaling or comparison purposes (0 when not bHasPotency) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Ability")
+	int64 Potency = 0;
+
+	/** range: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Ability")
+	bool bHasRange = false;
+
+	/** range: Effective reach or distance at which the ability can be used, in the world's distance unit (World distance_unit) (0 when not bHasRange) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Ability")
+	int64 Range = 0;
 
 	/** effects: Phenomena that result from the ability's use, such as environmental changes or sensory effects */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Ability")
@@ -138,13 +150,21 @@ struct ONLYWORLDS_API FOWCollective
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Collective")
 	FString Composition;
 
-	/** count: Number of members in the collective (approximate or exact) */
+	/** count: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Collective")
-	TOptional<int64> Count;
+	bool bHasCount = false;
 
-	/** formation_date: Date the collective was formed, using world TIME units */
+	/** count: Number of members in the collective (approximate or exact) (0 when not bHasCount) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Collective")
-	TOptional<int64> FormationDate;
+	int64 Count = 0;
+
+	/** formation_date: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Collective")
+	bool bHasFormationDate = false;
+
+	/** formation_date: Date the collective was formed, using world TIME units (0 when not bHasFormationDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Collective")
+	int64 FormationDate = 0;
 
 	/** operator: Institution that manages or directs the collective */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Collective")
@@ -233,13 +253,21 @@ struct ONLYWORLDS_API FOWCharacter
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
 	FString Mentality;
 
-	/** height: The character's approximate or exact height, in the world's length unit (World length_unit) */
+	/** height: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Height;
+	bool bHasHeight = false;
 
-	/** weight: The character's approximate or exact weight, in the world's mass unit (World mass_unit) */
+	/** height: The character's approximate or exact height, in the world's length unit (World length_unit) (0 when not bHasHeight) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Weight;
+	int64 Height = 0;
+
+	/** weight: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	bool bHasWeight = false;
+
+	/** weight: The character's approximate or exact weight, in the world's mass unit (World mass_unit) (0 when not bHasWeight) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	int64 Weight = 0;
 
 	/** species: Species the character might belong to */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
@@ -261,9 +289,13 @@ struct ONLYWORLDS_API FOWCharacter
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
 	FString Motivations;
 
-	/** birth_date: Moment of birth, expressed in the world's TIME units */
+	/** birth_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> BirthDate;
+	bool bHasBirthDate = false;
+
+	/** birth_date: Moment of birth, expressed in the world's TIME units (0 when not bHasBirthDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	int64 BirthDate = 0;
 
 	/** birthplace: Location where the character was born */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
@@ -289,29 +321,53 @@ struct ONLYWORLDS_API FOWCharacter
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
 	TArray<FString> Institutions;
 
-	/** charisma: Ability to attract, inspire, and influence others */
+	/** charisma: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Charisma;
+	bool bHasCharisma = false;
 
-	/** coercion: Capacity to dominate, intimidate, or apply force to shape outcomes */
+	/** charisma: Ability to attract, inspire, and influence others (0 when not bHasCharisma) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Coercion;
+	int64 Charisma = 0;
 
-	/** competence: Skill in planning, understanding, and managing complex systems or situations */
+	/** coercion: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Competence;
+	bool bHasCoercion = false;
 
-	/** compassion: Willingness to empathize with and care for others */
+	/** coercion: Capacity to dominate, intimidate, or apply force to shape outcomes (0 when not bHasCoercion) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Compassion;
+	int64 Coercion = 0;
 
-	/** creativity: Ability to generate novel ideas, perspectives, or solutions */
+	/** competence: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Creativity;
+	bool bHasCompetence = false;
 
-	/** courage: Readiness to face danger, risk, or adversity */
+	/** competence: Skill in planning, understanding, and managing complex systems or situations (0 when not bHasCompetence) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Courage;
+	int64 Competence = 0;
+
+	/** compassion: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	bool bHasCompassion = false;
+
+	/** compassion: Willingness to empathize with and care for others (0 when not bHasCompassion) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	int64 Compassion = 0;
+
+	/** creativity: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	bool bHasCreativity = false;
+
+	/** creativity: Ability to generate novel ideas, perspectives, or solutions (0 when not bHasCreativity) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	int64 Creativity = 0;
+
+	/** courage: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	bool bHasCourage = false;
+
+	/** courage: Readiness to face danger, risk, or adversity (0 when not bHasCourage) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	int64 Courage = 0;
 
 	/** family: Families the character belongs to by blood or adoption */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
@@ -325,37 +381,69 @@ struct ONLYWORLDS_API FOWCharacter
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
 	TArray<FString> Rivals;
 
-	/** level: Progression rank of the character in a game system */
+	/** level: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Level;
+	bool bHasLevel = false;
 
-	/** hit_points: Total health available to the character */
+	/** level: Progression rank of the character in a game system (0 when not bHasLevel) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> HitPoints;
+	int64 Level = 0;
 
-	/** STR: Physical force and carrying capacity */
+	/** hit_points: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Str;
+	bool bHasHitPoints = false;
 
-	/** DEX: Agility, coordination, and reflexes */
+	/** hit_points: Total health available to the character (0 when not bHasHitPoints) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Dex;
+	int64 HitPoints = 0;
 
-	/** CON: Endurance and resistance to strain */
+	/** STR: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Con;
+	bool bHasStr = false;
 
-	/** INT: Reasoning, memory, and learning */
+	/** STR: Physical force and carrying capacity (0 when not bHasStr) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Int;
+	int64 Str = 0;
 
-	/** WIS: Intuition, awareness, and judgment */
+	/** DEX: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Wis;
+	bool bHasDex = false;
 
-	/** CHA: Persuasiveness and personal magnetism */
+	/** DEX: Agility, coordination, and reflexes (0 when not bHasDex) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
-	TOptional<int64> Cha;
+	int64 Dex = 0;
+
+	/** CON: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	bool bHasCon = false;
+
+	/** CON: Endurance and resistance to strain (0 when not bHasCon) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	int64 Con = 0;
+
+	/** INT: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	bool bHasInt = false;
+
+	/** INT: Reasoning, memory, and learning (0 when not bHasInt) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	int64 Int = 0;
+
+	/** WIS: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	bool bHasWis = false;
+
+	/** WIS: Intuition, awareness, and judgment (0 when not bHasWis) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	int64 Wis = 0;
+
+	/** CHA: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	bool bHasCha = false;
+
+	/** CHA: Persuasiveness and personal magnetism (0 when not bHasCha) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Character")
+	int64 Cha = 0;
 };
 
 /** Construct: an element of type `construct`. */
@@ -408,13 +496,21 @@ struct ONLYWORLDS_API FOWConstruct
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Construct")
 	FString Reach;
 
-	/** start_date: The point in time when the construct began or was first established (uses world's TIME definition) */
+	/** start_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Construct")
-	TOptional<int64> StartDate;
+	bool bHasStartDate = false;
 
-	/** end_date: The point in time when the construct ceased to function or lost its meaning */
+	/** start_date: The point in time when the construct began or was first established (uses world's TIME definition) (0 when not bHasStartDate) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Construct")
-	TOptional<int64> EndDate;
+	int64 StartDate = 0;
+
+	/** end_date: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Construct")
+	bool bHasEndDate = false;
+
+	/** end_date: The point in time when the construct ceased to function or lost its meaning (0 when not bHasEndDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Construct")
+	int64 EndDate = 0;
 
 	/** founder: Character who conceived or initiated the construct */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Construct")
@@ -535,13 +631,21 @@ struct ONLYWORLDS_API FOWCreature
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
 	FString Appearance;
 
-	/** weight: Approximate or exact weight of the creature, in the world's mass unit (World mass_unit) */
+	/** weight: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
-	TOptional<int64> Weight;
+	bool bHasWeight = false;
 
-	/** height: Approximate height of the creature, in the world's length unit (World length_unit) */
+	/** weight: Approximate or exact weight of the creature, in the world's mass unit (World mass_unit) (0 when not bHasWeight) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
-	TOptional<int64> Height;
+	int64 Weight = 0;
+
+	/** height: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
+	bool bHasHeight = false;
+
+	/** height: Approximate height of the creature, in the world's length unit (World length_unit) (0 when not bHasHeight) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
+	int64 Height = 0;
 
 	/** species: Species this creature belongs to */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
@@ -571,9 +675,13 @@ struct ONLYWORLDS_API FOWCreature
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
 	FString Status;
 
-	/** birth_date: The time of the creature's birth, recorded in the world's defined TIME unit */
+	/** birth_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
-	TOptional<int64> BirthDate;
+	bool bHasBirthDate = false;
+
+	/** birth_date: The time of the creature's birth, recorded in the world's defined TIME unit (0 when not bHasBirthDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
+	int64 BirthDate = 0;
 
 	/** location: Specific location where the creature is currently found or most associated with */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
@@ -583,21 +691,37 @@ struct ONLYWORLDS_API FOWCreature
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
 	FString Zone;
 
-	/** challenge_rating: Difficulty or threat level of the creature in a gameplay context */
+	/** challenge_rating: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
-	TOptional<int64> ChallengeRating;
+	bool bHasChallengeRating = false;
 
-	/** hit_points: Total health or durability value in combat */
+	/** challenge_rating: Difficulty or threat level of the creature in a gameplay context (0 when not bHasChallengeRating) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
-	TOptional<int64> HitPoints;
+	int64 ChallengeRating = 0;
 
-	/** armor_class: Defense rating against physical attacks or effects */
+	/** hit_points: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
-	TOptional<int64> ArmorClass;
+	bool bHasHitPoints = false;
 
-	/** speed: Typical movement speed, in the world's distance unit (World distance_unit) per round */
+	/** hit_points: Total health or durability value in combat (0 when not bHasHitPoints) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
-	TOptional<int64> Speed;
+	int64 HitPoints = 0;
+
+	/** armor_class: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
+	bool bHasArmorClass = false;
+
+	/** armor_class: Defense rating against physical attacks or effects (0 when not bHasArmorClass) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
+	int64 ArmorClass = 0;
+
+	/** speed: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
+	bool bHasSpeed = false;
+
+	/** speed: Typical movement speed, in the world's distance unit (World distance_unit) per round (0 when not bHasSpeed) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
+	int64 Speed = 0;
 
 	/** actions: Combat or tactical abilities the creature can perform or use */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Creature")
@@ -650,13 +774,21 @@ struct ONLYWORLDS_API FOWEvent
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Event")
 	FString Consequences;
 
-	/** start_date: Date on which the event began */
+	/** start_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Event")
-	TOptional<int64> StartDate;
+	bool bHasStartDate = false;
 
-	/** end_date: Date on which the event concluded */
+	/** start_date: Date on which the event began (0 when not bHasStartDate) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Event")
-	TOptional<int64> EndDate;
+	int64 StartDate = 0;
+
+	/** end_date: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Event")
+	bool bHasEndDate = false;
+
+	/** end_date: Date on which the event concluded (0 when not bHasEndDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Event")
+	int64 EndDate = 0;
 
 	/** triggers: Events that precipitated this event */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Event")
@@ -848,9 +980,13 @@ struct ONLYWORLDS_API FOWInstitution
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Institution")
 	FString Doctrine;
 
-	/** founding_date: Date when the institution was established, in the world's TIME format */
+	/** founding_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Institution")
-	TOptional<int64> FoundingDate;
+	bool bHasFoundingDate = false;
+
+	/** founding_date: Date when the institution was established, in the world's TIME format (0 when not bHasFoundingDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Institution")
+	int64 FoundingDate = 0;
 
 	/** parent_institution: Institution that governs, embodies, or originated this one */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Institution")
@@ -994,9 +1130,13 @@ struct ONLYWORLDS_API FOWLaw
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Law")
 	FString Purpose;
 
-	/** date: Date the law was formally established, in world TIME units */
+	/** date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Law")
-	TOptional<int64> Date;
+	bool bHasDate = false;
+
+	/** date: Date the law was formally established, in world TIME units (0 when not bHasDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Law")
+	int64 Date = 0;
 
 	/** parent_law: A law that this law derives from, modifies, or enhances */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Law")
@@ -1073,9 +1213,13 @@ struct ONLYWORLDS_API FOWLocation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Location")
 	FString Function;
 
-	/** founding_date: Date on which the location was founded, established, or designated */
+	/** founding_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Location")
-	TOptional<int64> FoundingDate;
+	bool bHasFoundingDate = false;
+
+	/** founding_date: Date on which the location was founded, established, or designated (0 when not bHasFoundingDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Location")
+	int64 FoundingDate = 0;
 
 	/** parent_location: Wider location that this location is part of */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Location")
@@ -1177,9 +1321,13 @@ struct ONLYWORLDS_API FOWLocation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Location")
 	FString Defensibility;
 
-	/** elevation: Height or elevation of the location relative to surrounding terrain, in the world's distance unit (World distance_unit) */
+	/** elevation: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Location")
-	TOptional<int64> Elevation;
+	bool bHasElevation = false;
+
+	/** elevation: Height or elevation of the location relative to surrounding terrain, in the world's distance unit (World distance_unit) (0 when not bHasElevation) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Location")
+	int64 Elevation = 0;
 
 	/** fighters: Military units or forces responsible for defending the location */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Location")
@@ -1228,21 +1376,37 @@ struct ONLYWORLDS_API FOWMap
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Map")
 	FString BackgroundColor;
 
-	/** hierarchy: To associate or differentiate between maps with a common parent */
+	/** hierarchy: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Map")
-	TOptional<int64> Hierarchy;
+	bool bHasHierarchy = false;
 
-	/** width: In pixels */
+	/** hierarchy: To associate or differentiate between maps with a common parent (0 when not bHasHierarchy) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Map")
-	TOptional<int64> Width;
+	int64 Hierarchy = 0;
 
-	/** height: In pixels */
+	/** width: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Map")
-	TOptional<int64> Height;
+	bool bHasWidth = false;
 
-	/** depth: In pixels */
+	/** width: In pixels (0 when not bHasWidth) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Map")
-	TOptional<int64> Depth;
+	int64 Width = 0;
+
+	/** height: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Map")
+	bool bHasHeight = false;
+
+	/** height: In pixels (0 when not bHasHeight) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Map")
+	int64 Height = 0;
+
+	/** depth: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Map")
+	bool bHasDepth = false;
+
+	/** depth: In pixels (0 when not bHasDepth) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Map")
+	int64 Depth = 0;
 
 	/** parent_map: Map within which this map is contained */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Map")
@@ -1295,21 +1459,37 @@ struct ONLYWORLDS_API FOWMarker
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Marker")
 	FString Zone;
 
-	/** x: x coordinate, from bottom left of the map */
+	/** x: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Marker")
-	TOptional<int64> X;
+	bool bHasX = false;
 
-	/** y: y coordinate, from bottom left of the map */
+	/** x: x coordinate, from bottom left of the map (0 when not bHasX) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Marker")
-	TOptional<int64> Y;
+	int64 X = 0;
 
-	/** z: z coordinate, in case of depth */
+	/** y: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Marker")
-	TOptional<int64> Z;
+	bool bHasY = false;
 
-	/** order: Sequence position when markers define a polygon or line (0 = first point); without it, markers keep the order they were made in */
+	/** y: y coordinate, from bottom left of the map (0 when not bHasY) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Marker")
-	TOptional<int64> Order;
+	int64 Y = 0;
+
+	/** z: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Marker")
+	bool bHasZ = false;
+
+	/** z: z coordinate, in case of depth (0 when not bHasZ) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Marker")
+	int64 Z = 0;
+
+	/** order: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Marker")
+	bool bHasOrder = false;
+
+	/** order: Sequence position when markers define a polygon or line (0 = first point); without it, markers keep the order they were made in (0 when not bHasOrder) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Marker")
+	int64 Order = 0;
 };
 
 /** Narrative: an element of type `narrative`. */
@@ -1354,17 +1534,29 @@ struct ONLYWORLDS_API FOWNarrative
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Narrative")
 	FString Consequences;
 
-	/** start_date: Date when the narrative is first told or recorded, measured in world TIME units; the span it recounts lives on its events */
+	/** start_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Narrative")
-	TOptional<int64> StartDate;
+	bool bHasStartDate = false;
 
-	/** end_date: Date when the narrative stops being told, measured in world TIME units; empty while it is still told */
+	/** start_date: Date when the narrative is first told or recorded, measured in world TIME units; the span it recounts lives on its events (0 when not bHasStartDate) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Narrative")
-	TOptional<int64> EndDate;
+	int64 StartDate = 0;
 
-	/** order: Position of this narrative within a parent narrative's sequence */
+	/** end_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Narrative")
-	TOptional<int64> Order;
+	bool bHasEndDate = false;
+
+	/** end_date: Date when the narrative stops being told, measured in world TIME units; empty while it is still told (0 when not bHasEndDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Narrative")
+	int64 EndDate = 0;
+
+	/** order: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Narrative")
+	bool bHasOrder = false;
+
+	/** order: Position of this narrative within a parent narrative's sequence (0 when not bHasOrder) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Narrative")
+	int64 Order = 0;
 
 	/** parent_narrative: Larger narrative that this narrative takes place in */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Narrative")
@@ -1497,13 +1689,21 @@ struct ONLYWORLDS_API FOWObject
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Object")
 	FString Aesthetics;
 
-	/** weight: Approximate or exact mass of the object, in the world's mass unit (World mass_unit) */
+	/** weight: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Object")
-	TOptional<int64> Weight;
+	bool bHasWeight = false;
 
-	/** amount: The number of identical units in this object entry */
+	/** weight: Approximate or exact mass of the object, in the world's mass unit (World mass_unit) (0 when not bHasWeight) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Object")
-	TOptional<int64> Amount;
+	int64 Weight = 0;
+
+	/** amount: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Object")
+	bool bHasAmount = false;
+
+	/** amount: The number of identical units in this object entry (0 when not bHasAmount) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Object")
+	int64 Amount = 0;
 
 	/** parent_object: Larger object that this one is part of or contained within */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Object")
@@ -1592,9 +1792,13 @@ struct ONLYWORLDS_API FOWPhenomenon
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Phenomenon")
 	FString Effects;
 
-	/** duration: The amount of time the phenomenon lasts, measured in world TIME units */
+	/** duration: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Phenomenon")
-	TOptional<int64> Duration;
+	bool bHasDuration = false;
+
+	/** duration: The amount of time the phenomenon lasts, measured in world TIME units (0 when not bHasDuration) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Phenomenon")
+	int64 Duration = 0;
 
 	/** catalysts: Objects or materials that initiate or enhance the phenomenon */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Phenomenon")
@@ -1671,17 +1875,29 @@ struct ONLYWORLDS_API FOWPin
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Pin")
 	FString ElementId;
 
-	/** x: x coordinate, from bottom left of the map */
+	/** x: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Pin")
-	TOptional<int64> X;
+	bool bHasX = false;
 
-	/** y: y coordinate, from bottom left of the map */
+	/** x: x coordinate, from bottom left of the map (0 when not bHasX) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Pin")
-	TOptional<int64> Y;
+	int64 X = 0;
 
-	/** z: z coordinate, in case of depth (optional) */
+	/** y: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Pin")
-	TOptional<int64> Z;
+	bool bHasY = false;
+
+	/** y: y coordinate, from bottom left of the map (0 when not bHasY) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Pin")
+	int64 Y = 0;
+
+	/** z: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Pin")
+	bool bHasZ = false;
+
+	/** z: z coordinate, in case of depth (optional) (0 when not bHasZ) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Pin")
+	int64 Z = 0;
 };
 
 /** Relation: an element of type `relation`. */
@@ -1722,17 +1938,29 @@ struct ONLYWORLDS_API FOWRelation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Relation")
 	FString Background;
 
-	/** start_date: Date when the relation began, defined in world TIME units */
+	/** start_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Relation")
-	TOptional<int64> StartDate;
+	bool bHasStartDate = false;
 
-	/** end_date: Date when the relation ended if any, defined in world TIME units */
+	/** start_date: Date when the relation began, defined in world TIME units (0 when not bHasStartDate) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Relation")
-	TOptional<int64> EndDate;
+	int64 StartDate = 0;
 
-	/** intensity: Significance of the relation, on a relative scale of 0 to 100 */
+	/** end_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Relation")
-	TOptional<int64> Intensity;
+	bool bHasEndDate = false;
+
+	/** end_date: Date when the relation ended if any, defined in world TIME units (0 when not bHasEndDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Relation")
+	int64 EndDate = 0;
+
+	/** intensity: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Relation")
+	bool bHasIntensity = false;
+
+	/** intensity: Significance of the relation, on a relative scale of 0 to 100 (0 when not bHasIntensity) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Relation")
+	int64 Intensity = 0;
 
 	/** actor: Primary character defining the relation */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Relation")
@@ -1845,13 +2073,21 @@ struct ONLYWORLDS_API FOWSpecies
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Species")
 	FString Appearance;
 
-	/** life_span: Average or typical life expectancy of an individual, defined in world TIME units */
+	/** life_span: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Species")
-	TOptional<int64> LifeSpan;
+	bool bHasLifeSpan = false;
 
-	/** weight: Average or typical adult weight, in the world's mass unit (World mass_unit) */
+	/** life_span: Average or typical life expectancy of an individual, defined in world TIME units (0 when not bHasLifeSpan) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Species")
-	TOptional<int64> Weight;
+	int64 LifeSpan = 0;
+
+	/** weight: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Species")
+	bool bHasWeight = false;
+
+	/** weight: Average or typical adult weight, in the world's mass unit (World mass_unit) (0 when not bHasWeight) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Species")
+	int64 Weight = 0;
 
 	/** nourishment: Other species consumed as food sources */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Species")
@@ -1881,9 +2117,13 @@ struct ONLYWORLDS_API FOWSpecies
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Species")
 	FString Communication;
 
-	/** aggression: General aggressiveness level, on relative scale of 0 to 100 */
+	/** aggression: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Species")
-	TOptional<int64> Aggression;
+	bool bHasAggression = false;
+
+	/** aggression: General aggressiveness level, on relative scale of 0 to 100 (0 when not bHasAggression) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Species")
+	int64 Aggression = 0;
 
 	/** traits: Behavioral patterns associated with the species */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Species")
@@ -1952,13 +2192,21 @@ struct ONLYWORLDS_API FOWTitle
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Title")
 	FString Eligibility;
 
-	/** grant_date: Date on which the title was created or first granted, defined in world TIME units; a holder's own span is a Relation, not this field */
+	/** grant_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Title")
-	TOptional<int64> GrantDate;
+	bool bHasGrantDate = false;
 
-	/** revoke_date: Date on which the title ended or was abolished, defined in world TIME units; a holder's own span is a Relation, not this field */
+	/** grant_date: Date on which the title was created or first granted, defined in world TIME units; a holder's own span is a Relation, not this field (0 when not bHasGrantDate) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Title")
-	TOptional<int64> RevokeDate;
+	int64 GrantDate = 0;
+
+	/** revoke_date: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Title")
+	bool bHasRevokeDate = false;
+
+	/** revoke_date: Date on which the title ended or was abolished, defined in world TIME units; a holder's own span is a Relation, not this field (0 when not bHasRevokeDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Title")
+	int64 RevokeDate = 0;
 
 	/** issuer: Institution that formally created or granted the title */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Title")
@@ -2095,29 +2343,53 @@ struct ONLYWORLDS_API FOWTrait
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
 	FString BehaviourEffects;
 
-	/** charisma: Affecting a character's charisma score */
+	/** charisma: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
-	TOptional<int64> Charisma;
+	bool bHasCharisma = false;
 
-	/** coercion: Affecting a character's coercion score */
+	/** charisma: Affecting a character's charisma score (0 when not bHasCharisma) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
-	TOptional<int64> Coercion;
+	int64 Charisma = 0;
 
-	/** competence: Affecting a character's competence score */
+	/** coercion: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
-	TOptional<int64> Competence;
+	bool bHasCoercion = false;
 
-	/** compassion: Affecting a character's compassion score */
+	/** coercion: Affecting a character's coercion score (0 when not bHasCoercion) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
-	TOptional<int64> Compassion;
+	int64 Coercion = 0;
 
-	/** creativity: Affecting a character's creativity score */
+	/** competence: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
-	TOptional<int64> Creativity;
+	bool bHasCompetence = false;
 
-	/** courage: Affecting a character's courage score */
+	/** competence: Affecting a character's competence score (0 when not bHasCompetence) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
-	TOptional<int64> Courage;
+	int64 Competence = 0;
+
+	/** compassion: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
+	bool bHasCompassion = false;
+
+	/** compassion: Affecting a character's compassion score (0 when not bHasCompassion) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
+	int64 Compassion = 0;
+
+	/** creativity: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
+	bool bHasCreativity = false;
+
+	/** creativity: Affecting a character's creativity score (0 when not bHasCreativity) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
+	int64 Creativity = 0;
+
+	/** courage: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
+	bool bHasCourage = false;
+
+	/** courage: Affecting a character's courage score (0 when not bHasCourage) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
+	int64 Courage = 0;
 
 	/** significance: Describes the trait's societal, symbolic, or systemic presence */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Trait")
@@ -2174,13 +2446,21 @@ struct ONLYWORLDS_API FOWZone
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Zone")
 	FString Shape;
 
-	/** start_date: Date when the zone becomes extant or relevant, defined in world TIME units */
+	/** start_date: whether it is set (false for null or a missing key) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Zone")
-	TOptional<int64> StartDate;
+	bool bHasStartDate = false;
 
-	/** end_date: Date when the zone ceases to be meaningful or enforced, defined in world TIME units */
+	/** start_date: Date when the zone becomes extant or relevant, defined in world TIME units (0 when not bHasStartDate) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Zone")
-	TOptional<int64> EndDate;
+	int64 StartDate = 0;
+
+	/** end_date: whether it is set (false for null or a missing key) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Zone")
+	bool bHasEndDate = false;
+
+	/** end_date: Date when the zone ceases to be meaningful or enforced, defined in world TIME units (0 when not bHasEndDate) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Zone")
+	int64 EndDate = 0;
 
 	/** phenomena: Phenomena that affect, define, or occur within the zone */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Zone")

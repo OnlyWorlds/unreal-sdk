@@ -167,10 +167,10 @@ bool FOWModelsTest::RunTest(const FString& Parameters)
 	int32 Checked = 0;
 	for (const FOWPin& Pin : Pins)
 	{
-		if (!Pin.X.IsSet() || Pin.Map.IsEmpty()) continue;
+		if (!Pin.bHasX || Pin.Map.IsEmpty()) continue;
 		const OnlyWorlds::OWElement* E = World->Native()->Get(OWConvert::Utf8(Pin.Id));
 		const OnlyWorlds::OWJsonValue* X = E ? E->body.Find("x") : nullptr;
-		TestTrue(TEXT("the pin's x is the file's"), X && X->IsNumber() && static_cast<int64>(X->AsDouble()) == Pin.X.GetValue());
+		TestTrue(TEXT("the pin's x is the file's"), X && X->IsNumber() && static_cast<int64>(X->AsDouble()) == Pin.X);
 		FOWMap Map;
 		TestTrue(TEXT("the pin's map is found by its id"), UOWElements::FindMap(World, Pin.Map, Map) && Map.Id == Pin.Map);
 		FOWPin Again;
@@ -192,7 +192,7 @@ bool FOWModelsTest::RunTest(const FString& Parameters)
 	const TArray<FString> Written = Tree(Out);
 	TestEqual(TEXT("one file written"), Written.Num(), 1);
 	FOWPin Edited;
-	TestTrue(TEXT("the struct reads the new x"), UOWElements::FindPin(World, First.Id, Edited) && Edited.X.Get(-1) == 12);
+	TestTrue(TEXT("the struct reads the new x"), UOWElements::FindPin(World, First.Id, Edited) && Edited.bHasX && Edited.X == 12);
 	IFileManager::Get().DeleteDirectory(*Out, false, true);
 	return true;
 }

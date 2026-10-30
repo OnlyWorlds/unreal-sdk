@@ -59,11 +59,11 @@ for (const OWOpener& row : menu.rows) AddItem(row.name, row.href, row.state.valu
 | `FOW<Type>`, `UOWElements` | one `USTRUCT(BlueprintType)` per element type (`FOWCharacter`, `FOWPin`, ...), and the library that reads them out of a world: `GetAll<Types>(World)`, `Find<Type>(World, Id, Out)`. Generated from schema-dist's `schema.json` |
 
 Members are PascalCase (`birth_date` -> `BirthDate`, `STR` -> `Str`). A string field is an `FString` (`""` for unset),
-an integer a `TOptional<int64>` (unset for null), a link the linked element's id (an `FString`, or a `TArray<FString>`
-for a list), and the Pin's generic link two strings, `ElementType` and `ElementId`. The JSON key and the schema's
-description are each member's tooltip. **An integer member has no pin in a Blueprint graph** (5.8's K2 schema converts
-no `TOptional`: `OnlyWorlds.Graph.Pins` lists the 70 members, all 22 structs' integers and dates): C++ reads them, a
-graph cannot yet, and a Make node leaves them unset.
+an integer two members, `bool bHas<Field>` and `int64 <Field>` (`false` and `0` for null or a missing key, so a set
+`0` is told from an unset one: `bHasBirthDate`, `BirthDate`), a link the linked element's id (an `FString`, or a
+`TArray<FString>` for a list), and the Pin's generic link two strings, `ElementType` and `ElementId`. The JSON key and
+the schema's description are each member's tooltip. An integer is not a `TOptional<int64>`: 5.8's K2 schema gives a
+`TOptional` member no pin on a Break or a Make node, while the pair has both (`OnlyWorlds.Graph.Pins`).
 
 ## Build and test
 
@@ -101,6 +101,9 @@ The automation tests (`OnlyWorlds.*`):
   the set itself.
 - `OnlyWorlds.World.WriteBack.<world>`: a real world folder opened, written unedited to `Host/Saved/OWTests/`, and
   compared file by file with the folder read. `OnlyWorlds.World.Models`: the structs against their files, and one edit.
+  `OnlyWorlds.World.Integers`: every element of both worlds read through `UOWElements::Find<Type>` as a Blueprint
+  calls it, every integer pair held to its file (null unset, `0` set to 0), the readings written out to
+  `Host/Saved/OWTests/integers-<world>.txt`.
 - `OnlyWorlds.Calendar.GetWorldCalendars`, `.FormatStep`, `.BreakdownStep`: each `UOWCalendars` function called as a
   Blueprint calls it (found by name, its parameters marshalled by property, `ProcessEvent` on the class default
   object, the answer and the struct's members read back by property), on Moppetopia's calendar (Sikelia holds none).
@@ -113,12 +116,15 @@ The automation tests (`OnlyWorlds.*`):
   in the three spellings and read back, and its Open with rows and type words as the core gives them; the openers
   fixture's (`tests/data/`) 27 row cases (the core's rows for the baked list, the fixture's first row) and 6 address
   refusals; the names fixture's 29 cases placed on Moppetopia's World.
-- `OnlyWorlds.Graph.Pins`, `.Run` (editor only): Blueprints built in code. `Pins` places a Break and a Make node on
-  each of the plugin's 28 structs and lists which member got a pin, of which category. `Run` builds one function graph
+- `OnlyWorlds.Graph.Pins`, `.Run`, `.Integers` (editor only): Blueprints built in code. `Pins` places a Break and a
+  Make node on each of the plugin's 28 structs: every member gets a pin, the 70 integer pairs a bool and an Integer64
+  on both. `Run` builds one function graph
   of real K2 nodes (`ParseAddress` -> Break -> Make -> `WriteAddress` and `OpenersForAddress`, `FormatStep`,
   `TypeWord`), compiles it with the Kismet compiler (no error, no warning), and calls it once per element of Sikelia
   and twice per element of Moppetopia, every answer the core's; three mutant graphs (a pin wired past the schema, two
-  pins swapped, a node left out) are each caught, by the compiler or by the answers.
+  pins swapped, a node left out) are each caught, by the compiler or by the answers. `Integers` makes an
+  `FOWCharacter` setting `bHasLevel` and `Level` and breaks them back, and breaks `FindCharacter`'s struct for every
+  Sikelia character's birth date, as its file says.
 - `OnlyWorlds.Frame.MoppetopiaRootMap` needs a renderer (`-RenderOffscreen` instead of `-nullrhi`; a `-nullrhi`
   run leaves it out): the world's root Map as a plane carrying its image, the Pins as markers, captured from above to
   `Host/Saved/OWFrames/moppetopia-root-map.png`.
@@ -138,7 +144,6 @@ regenerate, never edit.
 - A runtime actor that lays a Map out in a level: the frame is built by a test, in the editor, with a material made
   in code. A packaged game would need a material asset (the plugin ships no content yet).
 - Writing a struct back into an element (edits go through `UOWWorld`'s field setters for now).
-- The generated structs' integers in a Blueprint graph: a `TOptional<int64>` member gets no pin (above).
 - A Blueprint graph saved as an asset, or one built in the editor's UI: the graphs that run are built in code by the
   tests; the calendar's `GetWorldCalendars` and `BreakdownStep` and the openers' `OpenersFor` are held through
   reflection only, not in a graph.

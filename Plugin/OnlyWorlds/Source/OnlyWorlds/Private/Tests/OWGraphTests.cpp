@@ -1,9 +1,9 @@
 // Blueprint graphs made of real K2 nodes, in the editor: a transient Blueprint built in code (as the engine's own tests
 // build one, BlueprintGraph's TypePromotionTests.cpp:110-124), its nodes placed by FGraphNodeCreator, wired by the K2
-// schema, compiled by the Kismet compiler (FKismetEditorUtilities::CompileBlueprint) and its function run. Two tests:
-// which struct members a Break and a Make node give a pin (the TOptional question, asked of the editor itself), and a
-// graph calling every door (the address, the calendar, the Open with rows, the names) on real worlds, its answers the
-// core's. Editor only: the whole file is under WITH_EDITOR, and the module links UnrealEd and BlueprintGraph only in an
+// schema, compiled by the Kismet compiler (FKismetEditorUtilities::CompileBlueprint) and its function run. Three tests:
+// which struct members a Break and a Make node give a pin (every one, the integers' flag and value included), a graph
+// calling every door (the address, the calendar, the Open with rows, the names) on real worlds, its answers the
+// core's, and a graph making and breaking a character's integers. Editor only: the whole file is under WITH_EDITOR, and the module links UnrealEd and BlueprintGraph only in an
 // editor target (OnlyWorlds.Build.cs).
 
 #include "CoreMinimal.h"
@@ -128,7 +128,7 @@ bool FOWGraphPinsTest::RunTest(const FString& Parameters)
 	// The 22 generated, and FOWArchiveVerdict, FOWWorldCalendar, FOWStepBreakdown, FOWAddress, FOWOpenerSurface, FOWOpener.
 	TestEqual(TEXT("the plugin's structs"), Structs.Num(), 22 + 6);
 
-	int32 Optionals = 0, OptionalBreakPins = 0, OptionalMakePins = 0, Members = 0;
+	int32 Optionals = 0, OptionalBreakPins = 0, OptionalMakePins = 0, Members = 0, Pairs = 0, PairsWithPins = 0;
 	TArray<FString> OptionalMembers;
 	for (UScriptStruct* Struct : Structs)
 	{
@@ -168,6 +168,20 @@ bool FOWGraphPinsTest::RunTest(const FString& Parameters)
 					TestNotNull(Struct->GetName() + TEXT(".") + P->GetName() + TEXT(": a Make pin"), In);
 				else TestNull(Struct->GetName() + TEXT(".") + P->GetName() + TEXT(": read-only, no Make pin"), In);
 			}
+			// A generated integer: an int64 beside its bool bHas<Member> (gaming/DECISIONS.md 14), each with both pins. A
+			// generated struct is one UOWElements finds (FOWAddress's Moment has the same shape, and is the door's own).
+			const bool bGenerated = UOWElements::StaticClass()->FindFunctionByName(*(TEXT("Find") + Struct->GetName().Mid(2))) != nullptr;
+			const FBoolProperty* Flag = bGenerated && CastField<FInt64Property>(P)
+				? CastField<FBoolProperty>(Struct->FindPropertyByName(*(TEXT("bHas") + P->GetName()))) : nullptr;
+			if (Flag)
+			{
+				++Pairs;
+				const UEdGraphPin* FlagOut = PinOf(Break, Flag->GetFName(), EGPD_Output);
+				const UEdGraphPin* FlagIn = PinOf(Make, Flag->GetFName(), EGPD_Input);
+				const FName Int64 = UEdGraphSchema_K2::PC_Int64, Bool = UEdGraphSchema_K2::PC_Boolean;
+				PairsWithPins += Out && In && FlagOut && FlagIn && Out->PinType.PinCategory == Int64 && In->PinType.PinCategory == Int64
+					&& FlagOut->PinType.PinCategory == Bool && FlagIn->PinType.PinCategory == Bool;
+			}
 			if (!Out) NoBreak.Add(P->GetName());
 			if (bDetail)
 				Rows.Add(FString::Printf(TEXT("  %s | %s | break %s | make %s | schema %s"), *P->GetName(), *PropertyText(P),
@@ -179,32 +193,31 @@ bool FOWGraphPinsTest::RunTest(const FString& Parameters)
 	}
 	AddInfo(FString::Printf(TEXT("PINS TOptional: %d members across the plugin's structs, %d with a Break pin, %d with a Make pin: %s"),
 		Optionals, OptionalBreakPins, OptionalMakePins, *FString::Join(OptionalMembers, TEXT(", "))));
-	// The finding, held: in 5.8 no TOptional member gets a pin, on a Break or a Make (the K2 schema converts no
-	// FOptionalProperty). Red when the engine or the generator changes it, so the README's member rule is read again.
-	TestEqual(TEXT("the generated structs' TOptional<int64> members"), Optionals, 70);
-	TestEqual(TEXT("TOptional members with a Break pin"), OptionalBreakPins, 0);
-	TestEqual(TEXT("TOptional members with a Make pin"), OptionalMakePins, 0);
+	AddInfo(FString::Printf(TEXT("PINS integers: %d bHas<Field> + int64 <Field> pairs, %d with a bool and an Integer64 pin on both nodes"),
+		Pairs, PairsWithPins));
+	// In 5.8 a TOptional member gets no pin on a Break or a Make (the K2 schema converts no FOptionalProperty, 70
+	// members measured at unreal-sdk 94d56a6), so the generator writes each integer as a flag and a value
+	// (gaming/DECISIONS.md 14): the 70 are pairs now, every one with both pins, and no TOptional is left.
+	TestEqual(TEXT("the generated structs' TOptional members"), Optionals, 0);
+	TestEqual(TEXT("the generated structs' integers as bHas<Field> + int64 <Field>"), Pairs, 70);
+	TestEqual(TEXT("the integer pairs with a bool and an Integer64 pin on a Break and on a Make"), PairsWithPins, 70);
 
 	// The doors' own types, by the category a pin carries.
-	auto Category = [](UEdGraphNode* Node, const TCHAR* Name, EEdGraphPinDirection Dir) {
-		const UEdGraphPin* Pin = PinOf(Node, Name, Dir);
-		return Pin ? Pin : nullptr;
-	};
 	UK2Node_MakeStruct* Address = PlaceStructNode<UK2Node_MakeStruct>(*Graph, FOWAddress::StaticStruct());
-	const UEdGraphPin* Moment = Category(Address, TEXT("Moment"), EGPD_Input);
+	const UEdGraphPin* Moment = PinOf(Address, TEXT("Moment"), EGPD_Input);
 	TestTrue(TEXT("FOWAddress.Moment: an Integer64 pin"), Moment && Moment->PinType.PinCategory == UEdGraphSchema_K2::PC_Int64);
 	UK2Node_MakeStruct* Surface = PlaceStructNode<UK2Node_MakeStruct>(*Graph, FOWOpenerSurface::StaticStruct());
 	for (const TPair<const TCHAR*, UEnum*>& E : { TPair<const TCHAR*, UEnum*>(TEXT("Audience"), StaticEnum<EOWAudience>()),
 		TPair<const TCHAR*, UEnum*>(TEXT("SignIn"), StaticEnum<EOWSignIn>()) })
 	{
-		const UEdGraphPin* Pin = Category(Surface, E.Key, EGPD_Input);
+		const UEdGraphPin* Pin = PinOf(Surface, E.Key, EGPD_Input);
 		TestTrue(FString::Printf(TEXT("FOWOpenerSurface.%s: a byte pin of its enum (%s)"), E.Key, *PinTypeText(Pin)),
 			Pin && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Byte && Pin->PinType.PinSubCategoryObject == E.Value);
 	}
 	UK2Node_BreakStruct* Breakdown = PlaceStructNode<UK2Node_BreakStruct>(*Graph, FOWStepBreakdown::StaticStruct());
 	for (const TCHAR* Name : { TEXT("Step"), TEXT("AbsYear"), TEXT("Year"), TEXT("Day") })
 	{
-		const UEdGraphPin* Pin = Category(Breakdown, Name, EGPD_Output);
+		const UEdGraphPin* Pin = PinOf(Breakdown, Name, EGPD_Output);
 		TestTrue(FString::Printf(TEXT("FOWStepBreakdown.%s: an Integer64 pin"), Name), Pin && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Int64);
 	}
 	return true;
@@ -634,6 +647,153 @@ bool FOWGraphRunTest::RunTest(const FString& Parameters)
 			Sample.Num()), Differ > 0);
 		AddInfo(FString::Printf(TEXT("GRAPH mutant %d: %d of %d answers differ from the core's"), static_cast<int32>(M), Differ, Sample.Num()));
 	}
+	return true;
+}
+
+namespace
+{
+	// Pair(World, Id, bHas, Level) -> bMadeHas, MadeLevel, bFound, bHasBirthDate, BirthDate: a Make of FOWCharacter
+	// setting bHasLevel and Level, a Break reading them back; and FindCharacter's struct broken for its birth date.
+	FBuiltGraph BuildIntegersGraph()
+	{
+		FBuiltGraph Out;
+		UBlueprint* BP = NewBlueprint(TEXT("OWIntegersGraph"));
+		Out.Blueprint.Reset(BP);
+		UEdGraph* G = FBlueprintEditorUtils::CreateNewGraph(BP, TEXT("Pair"), UEdGraph::StaticClass(), UEdGraphSchema_K2::StaticClass());
+		FBlueprintEditorUtils::AddFunctionGraph<UClass>(BP, G, /*bIsUserCreated=*/true, nullptr);
+		TArray<UK2Node_FunctionEntry*> Entries;
+		G->GetNodesOfClass(Entries);
+		UK2Node_FunctionEntry* Entry = Entries.Num() == 1 ? Entries[0] : nullptr;
+		if (!Entry) return Out;
+		UK2Node_FunctionResult* Result = FBlueprintEditorUtils::FindOrCreateFunctionResultNode(Entry);
+		const FName B = UEdGraphSchema_K2::PC_Boolean, I = UEdGraphSchema_K2::PC_Int64;
+		UEdGraphPin* InWorld = Entry->CreateUserDefinedPin(TEXT("World"), PinType(UEdGraphSchema_K2::PC_Object, UOWWorld::StaticClass()), EGPD_Output);
+		UEdGraphPin* InId = Entry->CreateUserDefinedPin(TEXT("Id"), PinType(UEdGraphSchema_K2::PC_String), EGPD_Output);
+		UEdGraphPin* InHas = Entry->CreateUserDefinedPin(TEXT("bHas"), PinType(B), EGPD_Output);
+		UEdGraphPin* InLevel = Entry->CreateUserDefinedPin(TEXT("Level"), PinType(I), EGPD_Output);
+		UEdGraphPin* OutMadeHas = Result->CreateUserDefinedPin(TEXT("bMadeHas"), PinType(B), EGPD_Input);
+		UEdGraphPin* OutMadeLevel = Result->CreateUserDefinedPin(TEXT("MadeLevel"), PinType(I), EGPD_Input);
+		UEdGraphPin* OutFound = Result->CreateUserDefinedPin(TEXT("bFound"), PinType(B), EGPD_Input);
+		UEdGraphPin* OutHasBirth = Result->CreateUserDefinedPin(TEXT("bHasBirthDate"), PinType(B), EGPD_Input);
+		UEdGraphPin* OutBirth = Result->CreateUserDefinedPin(TEXT("BirthDate"), PinType(I), EGPD_Input);
+		auto Link = [&Out](UEdGraphPin* A, UEdGraphPin* Bp)
+		{
+			++Out.Links;
+			if (!A || !Bp || !K2()->TryCreateConnection(A, Bp)) ++Out.Refused;
+		};
+		Link(Entry->GetThenPin(), Result->GetExecPin());
+
+		UScriptStruct* Character = FOWCharacter::StaticStruct();
+		UK2Node_MakeStruct* Make = PlaceStructNode<UK2Node_MakeStruct>(*G, Character);
+		UK2Node_BreakStruct* Break = PlaceStructNode<UK2Node_BreakStruct>(*G, Character);
+		Link(InHas, Make->FindPin(TEXT("bHasLevel"), EGPD_Input));
+		Link(InLevel, Make->FindPin(TEXT("Level"), EGPD_Input));
+		Link(Make->FindPin(Character->GetFName(), EGPD_Output), Break->FindPin(Character->GetFName(), EGPD_Input));
+		Link(Break->FindPin(TEXT("bHasLevel"), EGPD_Output), OutMadeHas);
+		Link(Break->FindPin(TEXT("Level"), EGPD_Output), OutMadeLevel);
+
+		UK2Node_CallFunction* Find = PlaceCall(*G, UOWElements::StaticClass(), TEXT("FindCharacter"));
+		Link(InWorld, Find->FindPin(TEXT("World")));
+		Link(InId, Find->FindPin(TEXT("Id")));
+		Link(Find->FindPin(UEdGraphSchema_K2::PN_ReturnValue), OutFound);
+		UK2Node_BreakStruct* Found = PlaceStructNode<UK2Node_BreakStruct>(*G, Character);
+		Link(Find->FindPin(TEXT("Character")), Found->FindPin(Character->GetFName(), EGPD_Input));
+		Link(Found->FindPin(TEXT("bHasBirthDate"), EGPD_Output), OutHasBirth);
+		Link(Found->FindPin(TEXT("BirthDate"), EGPD_Output), OutBirth);
+
+		FCompilerResultsLog Results;
+		Results.bSilentMode = true;
+		FKismetEditorUtilities::CompileBlueprint(BP, EBlueprintCompileOptions::SkipGarbageCollection, &Results);
+		Out.Errors = Results.NumErrors;
+		Out.Warnings = Results.NumWarnings;
+		for (const TSharedRef<FTokenizedMessage>& M : Results.Messages)
+		{
+			if (M->GetSeverity() < EMessageSeverity::Info) Out.Messages.Add(M->ToText().ToString());
+		}
+		Out.bCompiled = BP->Status == BS_UpToDate && BP->GeneratedClass != nullptr;
+		return Out;
+	}
+
+	struct FPairAnswer
+	{
+		bool bMadeHas = false, bFound = false, bHasBirthDate = false;
+		int64 MadeLevel = 0, BirthDate = 0;
+	};
+
+	FPairAnswer RunPair(FAutomationTestBase& Test, UObject* Instance, const UOWWorld* World, const FString& Id, bool bHas, int64 Level)
+	{
+		FPairAnswer A;
+		UFunction* Fn = Instance->GetClass()->FindFunctionByName(TEXT("Pair"));
+		if (!Fn)
+		{
+			Test.AddError(TEXT("the generated class has no Pair"));
+			return A;
+		}
+		// Parameters only (ScriptCore.cpp:1432-1442), as RunGraph does.
+		uint8* Frame = static_cast<uint8*>(FMemory::Malloc(FMath::Max<int32>(Fn->ParmsSize, 1), Fn->GetMinAlignment()));
+		FMemory::Memzero(Frame, Fn->ParmsSize);
+		for (TFieldIterator<FProperty> It(Fn); It && It->HasAnyPropertyFlags(CPF_Parm); ++It) It->InitializeValue_InContainer(Frame);
+		CastField<FObjectProperty>(Fn->FindPropertyByName(TEXT("World")))->SetObjectPropertyValue_InContainer(Frame, const_cast<UOWWorld*>(World));
+		CastField<FStrProperty>(Fn->FindPropertyByName(TEXT("Id")))->SetPropertyValue_InContainer(Frame, Id);
+		CastField<FBoolProperty>(Fn->FindPropertyByName(TEXT("bHas")))->SetPropertyValue_InContainer(Frame, bHas);
+		CastField<FInt64Property>(Fn->FindPropertyByName(TEXT("Level")))->SetPropertyValue_InContainer(Frame, Level);
+		Instance->ProcessEvent(Fn, Frame);
+		A.bMadeHas = CastField<FBoolProperty>(Fn->FindPropertyByName(TEXT("bMadeHas")))->GetPropertyValue_InContainer(Frame);
+		A.MadeLevel = CastField<FInt64Property>(Fn->FindPropertyByName(TEXT("MadeLevel")))->GetPropertyValue_InContainer(Frame);
+		A.bFound = CastField<FBoolProperty>(Fn->FindPropertyByName(TEXT("bFound")))->GetPropertyValue_InContainer(Frame);
+		A.bHasBirthDate = CastField<FBoolProperty>(Fn->FindPropertyByName(TEXT("bHasBirthDate")))->GetPropertyValue_InContainer(Frame);
+		A.BirthDate = CastField<FInt64Property>(Fn->FindPropertyByName(TEXT("BirthDate")))->GetPropertyValue_InContainer(Frame);
+		for (TFieldIterator<FProperty> It(Fn); It && It->HasAnyPropertyFlags(CPF_Parm); ++It) It->DestroyValue_InContainer(Frame);
+		FMemory::Free(Frame);
+		return A;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWGraphIntegersTest, "OnlyWorlds.Graph.Integers", OWTestFlags)
+
+bool FOWGraphIntegersTest::RunTest(const FString& Parameters)
+{
+	UOWWorld* Sikelia = OWTestPaths::OpenWorld(*this, OWTestPaths::Sikelia(), TEXT("OW_SIKELIA"));
+	if (!Sikelia) return false;
+	TStrongObjectPtr<UOWWorld> KeepSikelia(Sikelia);
+
+	const FBuiltGraph Graph = BuildIntegersGraph();
+	TestEqual(TEXT("every link the schema accepts (the pairs have pins)"), Graph.Refused, 0);
+	TestEqual(TEXT("the compile's errors"), Graph.Errors, 0);
+	TestEqual(TEXT("the compile's warnings"), Graph.Warnings, 0);
+	for (const FString& M : Graph.Messages) AddError(TEXT("compiler: ") + M);
+	if (!TestTrue(TEXT("compiled, up to date, a generated class"), Graph.bCompiled)) return false;
+	TStrongObjectPtr<UObject> Instance(NewObject<UObject>(GetTransientPackage(), Graph.Blueprint->GeneratedClass));
+
+	// The Make sets both members and the Break reads both back, whatever they hold (0 set is not unset).
+	const struct { bool bHas; int64 Level; } Made[] = { { true, 7 }, { false, 0 }, { true, 0 }, { true, -5000000000LL }, { false, 12 } };
+	for (const auto& M : Made)
+	{
+		const FPairAnswer A = RunPair(*this, Instance.Get(), Sikelia, FString(), M.bHas, M.Level);
+		TestTrue(FString::Printf(TEXT("Make (bHasLevel %d, Level %lld) -> Break (%d, %lld)"), M.bHas, M.Level, A.bMadeHas, A.MadeLevel),
+			A.bMadeHas == M.bHas && A.MadeLevel == M.Level);
+		TestFalse(TEXT("no character with id \"\""), A.bFound);
+	}
+
+	// Every character of Sikelia found through the graph, its birth date broken out: the file's (null or missing is unset).
+	int32 Characters = 0, Same = 0, Dated = 0;
+	for (const OnlyWorlds::OWElement& E : Sikelia->Native()->elements)
+	{
+		if (E.Type() != "character") continue;
+		++Characters;
+		const OWJsonValue* V = E.body.Find("birth_date");
+		const bool bWant = V && V->IsNumber();
+		const int64 Want = bWant ? static_cast<int64>(std::stoll(V->Text())) : 0;
+		Dated += bWant;
+		const FPairAnswer A = RunPair(*this, Instance.Get(), Sikelia, Str(E.Id()), false, 0);
+		if (A.bFound && A.bHasBirthDate == bWant && A.BirthDate == Want) ++Same;
+		else if (Characters - Same <= 3) AddError(FString::Printf(TEXT("%s: found %d, birth date %d %lld; the file %d %lld"), *Str(E.Id()),
+			A.bFound, A.bHasBirthDate, A.BirthDate, bWant, Want));
+	}
+	TestTrue(TEXT("Sikelia has characters with a birth date"), Dated > 0);
+	TestEqual(TEXT("every character's birth date through the graph, as its file says"), Same, Characters);
+	AddInfo(FString::Printf(TEXT("GRAPH Integers: %d links, compiled with %d errors and %d warnings; %d characters (%d with a birth "
+		"date) through FindCharacter and a Break"), Graph.Links, Graph.Errors, Graph.Warnings, Characters, Dated));
 	return true;
 }
 

@@ -5,6 +5,15 @@ Nothing is released yet; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Changed (breaking)
+
+- A generated struct's integer is two members, `bool bHas<Field>` and `int64 <Field>` (`false` and `0` for null or a
+  missing key), not a `TOptional<int64>`: the editor gave a `TOptional` member no pin on a Break or a Make node, so a
+  graph could not read a single integer or date and a Make left them unset. C++ callers change: `C.BirthDate.IsSet()` is
+  `C.bHasBirthDate`, `C.BirthDate.GetValue()` is `C.BirthDate`. Every integer of Sikelia's and Moppetopia's elements
+  reads as before (the two readings written out and compared byte for byte); `codegen/generate_models.py` refuses a
+  struct whose members would share a name.
+
 ### Changed
 
 - Schema pin to schema-dist serial 97: the address profile's four format cases on an empty string, one per part (an

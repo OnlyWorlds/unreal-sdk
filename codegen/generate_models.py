@@ -17,7 +17,9 @@ written). What it reads and writes:
 The mapping (the recon's gen_ue.py, with the Unity generator's names):
 
   scalar_str   FString                ("" when the key is missing or not a string)
-  scalar_int   TOptional<int64>       (unset for null; an integral number written N.0 reads as N)
+  scalar_int   bool bHas<Field> and int64 <Field>  (false and 0 for null or a missing key; an integral number written
+                                      N.0 reads as N). Not a TOptional<int64>: the editor gives one no pin on a Break or
+                                      a Make node (gaming/DECISIONS.md 14)
   scalar_bool  bool
   single       FString                (the linked element's id; "" for null)
   multi        TArray<FString>        (the linked elements' ids)
@@ -72,7 +74,7 @@ def members(field: dict) -> list[tuple[str, str, str, str]]:
     if kind == "scalar_str":
         return [("FString", pascal(name), name, "Str")]
     if kind == "scalar_int":
-        return [("TOptional<int64>", pascal(name), name, "Int")]
+        return [("bool", "bHas" + pascal(name), name, "HasInt"), ("int64", pascal(name), name, "IntValue")]
     if kind == "scalar_bool":
         return [("bool", "b" + pascal(name), name, "Bool")]
     if kind == "single":
@@ -98,11 +100,20 @@ def emit_h(schema: dict, tag: str) -> str:
         s = struct_name(slug)
         out += [f"/** {pascal(slug)}: an element of type `{slug}`. */", "USTRUCT(BlueprintType)",
                 f"struct ONLYWORLDS_API {s}", "{", "\tGENERATED_BODY()", ""]
+        seen: set[str] = set()
         for f in schema["base"] + fields:
-            for ctype, member, key, _ in members(f):
-                out += [f"\t/** {key}: {doc(f.get('desc', ''))} */",
+            for ctype, member, key, read in members(f):
+                if member in seen:
+                    raise SystemExit(f"{s}: two members named {member} (the field {key!r}): rename one before generating")
+                seen.add(member)
+                if read == "HasInt":
+                    text = f"{key}: whether it is set (false for null or a missing key)"
+                else:
+                    text = f"{key}: {doc(f.get('desc', ''))}" + (f" (0 when not bHas{member})" if read == "IntValue" else "")
+                default = {"bool": " = false", "int64": " = 0"}.get(ctype, "")
+                out += [f"\t/** {text} */",
                         f'\tUPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|{pascal(slug)}")',
-                        f"\t{ctype} {member}{' = false' if ctype == 'bool' else ''};", ""]
+                        f"\t{ctype} {member}{default};", ""]
         out[-1:] = ["};", ""]
     out += ["/** The elements of a world as structs, by type. */", "UCLASS()",
             "class ONLYWORLDS_API UOWElements : public UBlueprintFunctionLibrary", "{", "\tGENERATED_BODY()", "",

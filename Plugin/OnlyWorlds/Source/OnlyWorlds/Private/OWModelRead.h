@@ -14,6 +14,9 @@ namespace OWModelRead
 	FString Str(const OnlyWorlds::OWJsonValue& Body, const char* Key);
 	/** An integer field; unset for null or a missing key. An integral number spelled N.0 or 1e3 reads as its value. */
 	TOptional<int64> Int(const OnlyWorlds::OWJsonValue& Body, const char* Key);
+	/** A generated struct's integer as its two members: whether it is set, and its value (0 when unset). */
+	bool HasInt(const OnlyWorlds::OWJsonValue& Body, const char* Key);
+	int64 IntValue(const OnlyWorlds::OWJsonValue& Body, const char* Key);
 	bool Bool(const OnlyWorlds::OWJsonValue& Body, const char* Key);
 	/** A multi link: the string ids of an array, in order. */
 	TArray<FString> Ids(const OnlyWorlds::OWJsonValue& Body, const char* Key);
