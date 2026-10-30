@@ -230,3 +230,29 @@ OW_TEST(graph_the_lenss_reason_wins_over_not_visible) {
         {"id": "c2", "type": "character", "name": "Ghost", "hidden": true}]})", R"({"rung": "contributor"})", lens);
     t.Ok(c.cut.empty() && c.edges_cut.empty(), "a contributor carries neither count");
 }
+
+OW_TEST(graph_an_index_is_the_place_in_the_list_as_served) {
+    // The profile's owner (G5): an edge's index is the target's place in the link list as that reader is served it.
+    // keel serves a proposed id in every rung's lists but the public's (elements/visibility.py), so a contributor's
+    // index counts it; the public's does not. A proposed element is still no node for either.
+    const char* world = R"({"elements": [
+        {"id": "c1", "type": "character", "name": "Ada", "friends": ["p", "v"]},
+        {"id": "p", "type": "character", "name": "Pending", "x_review_proposed": "a seat's proposal"},
+        {"id": "v", "type": "character", "name": "Vera"}]})";
+    OWWorldGraph c = Read(world, R"({"rung": "contributor"})");
+    t.Eq(c.edges.size(), size_t(1), "a contributor: one edge, to Vera");
+    t.Ok(c.edges.size() == 1 && c.edges[0].target == "v" && c.edges[0].index == 1,
+         "at index 1: the proposed id before her is served");
+    OWWorldGraph pub = Read(world, R"({"rung": "public"})");
+    t.Ok(pub.edges.size() == 1 && pub.edges[0].target == "v" && pub.edges[0].index == 0,
+         "the public: index 0, the proposed id is not served");
+}
+
+OW_TEST(graph_a_nodes_type_is_as_stored) {
+    // The profile's owner (G4): a node's type is the element's type as stored, never folded; a non-slug type is a data
+    // fault for the lint. Its colour word and icon still come from the type it names.
+    OWWorldGraph g = Read(R"({"elements": [{"id": "c1", "type": "Character", "name": "Ada"}]})", R"({"rung": "owner"})");
+    t.Eq(g.nodes.size(), size_t(1), "one node");
+    t.Ok(g.nodes.size() == 1 && g.nodes[0].type == "Character", "its type as stored");
+    t.Ok(g.nodes.size() == 1 && g.nodes[0].family == "blue", "its colour word from the character's");
+}

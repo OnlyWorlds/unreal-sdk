@@ -1224,6 +1224,7 @@ std::string See(const OWJsonValue& world, const OWJsonValue& reader, const OWJso
     out.hidden = v.hidden;
     out.proposed = v.proposed;
     out.view = v.view;
+    out.scoped = v.scoped;
     out.stub = v.stub;
     out.aid.clear();
     for (const std::string& pair : v.aid) out.aid.push_back(!pair.empty());

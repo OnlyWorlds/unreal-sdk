@@ -32,7 +32,8 @@ struct OWGraphNode {
 };
 
 // One link: one element, one field, one target. `index` is the target's place in the field's list as the reader is
-// served it (0 for a single link): the owner's as stored, any other reader's less the ids outside its view.
+// served it (0 for a single link): the owner's as stored, any other reader's as keel serves it (a proposed id kept
+// below the public rung).
 struct OWGraphEdge {
     std::string source;
     std::string field;

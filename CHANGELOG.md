@@ -20,6 +20,13 @@ packages' reading (the fixture's cases for them come with serial 93):
   case (`keys-an-integral-float-is-refused-where-the-text-shows`) is expected to change at serial 93; it still passes
   as written, since `7.0` now reads as 7, past `depth`'s table.
 
+Two readings of `OWGraph`, ruled the same day to keel's reading:
+
+- An edge's `index` is the target's place in the link list as keel serves that reader: a proposed id stays in every
+  rung's list but the public's, so a contributor's index counts it (it is still no node).
+- A node's `type` is the element's type as stored, never folded; its colour word and icon still come from the type it
+  names.
+
 ### Added
 
 - `OWGraph` in the core, the lens profile's graph section: `WorldGraph(world, reader, options)` (the profile's

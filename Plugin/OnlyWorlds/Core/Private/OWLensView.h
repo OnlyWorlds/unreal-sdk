@@ -26,6 +26,9 @@ struct Sight {
     // Per element: a room element, under the hidden mark, proposed, a reading aid; in the reader's view (whole or a
     // known-of stub; never proposed); a known-of stub.
     std::vector<char> room, hidden, proposed, aid, view, stub;
+    // Per element: a link to it is served to this reader (keel's scoped: the view, and a proposed one below the public
+    // rung), which places an edge's index in the list as served.
+    std::vector<char> scoped;
     // The owner, reading as itself or as another (the owner's counts), and the rung the reading is judged by.
     bool owner_counts = false;
     std::string seen_rung;

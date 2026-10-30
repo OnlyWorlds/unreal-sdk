@@ -144,11 +144,13 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
     for (size_t i : order) {
         OWGraphNode out;
         out.id = r.ids[i];
-        out.type = r.types[i];
+        // The type as stored, never folded (a non-slug type is the lint's to flag); the folded slug finds its colour.
+        const OWJsonValue* stored = r.els[i]->Find("type");
+        out.type = stored && stored->IsString() ? stored->Text() : r.types[i];
         const OWJsonValue* name = r.els[i]->Find("name");
         out.name = name ? *name : OWJsonValue::Null();
-        out.family = OWPresentation::FamilyOf(out.type);
-        out.icon = OWPresentation::IconOf(out.type);
+        out.family = OWPresentation::FamilyOf(r.types[i]);
+        out.icon = OWPresentation::IconOf(r.types[i]);
         // Every mark that applies, lens-kept or not.
         for (const std::string& k : kinds(i))
             if (k != "map_space" && k != "reading_aid") out.marks.push_back(k);
@@ -171,7 +173,8 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
         const OWJsonValue& el = *r.els[source];
         // A schema link (keel's link registry: the single and list links, a Pin's generic pair apart), typed by its
         // field's target as the lens reader keys it. The owner reading as itself is served the list as stored; any
-        // other view the list less the ids outside that view, so a hidden target is never a gap.
+        // other reader the list as keel serves it (less what it hides; a proposed id kept below the public rung), so a
+        // hidden target is never a gap.
         for (const OWLens::OWLensField& f : OWLens::FieldsOf(r.types[source])) {
             if (f.kind != OWLens::OWFieldKind::Single && f.kind != OWLens::OWFieldKind::Multi) continue;
             const OWJsonValue* v = el.Find(f.name);
@@ -186,7 +189,7 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
             for (size_t i = 0; i < list.size(); ++i) {
                 std::optional<size_t> t = list[i]->IsString() ? r.Find(f.target, list[i]->Text()) : std::nullopt;
                 visit(source, f.name, t, seen_owner ? int64_t(i) : served);
-                if (seen_owner || (t && r.view[*t])) ++served;
+                if (seen_owner || (t && r.scoped[*t])) ++served;  // as served: a proposed id below the public rung too
             }
         }
         // A declared extension link names any element by id, and is served as stored to every reader.
