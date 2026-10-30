@@ -248,6 +248,26 @@ OW_TEST(graph_an_index_is_the_place_in_the_list_as_served) {
          "the public: index 0, the proposed id is not served");
 }
 
+OW_TEST(graph_a_public_readers_served_list_leaves_a_proposed_id_out_and_its_index_has_no_gap) {
+    // A public reader's served link lists leave a proposed id out, as keel's wire serves the public rung, so the index
+    // has no gap: a visible target after a proposed one is at 0. The served list is read off the lens's row for Ada.
+    OWJsonValue world = Parse(R"({"elements": [
+        {"id": "a", "type": "character", "name": "Ada", "friends": ["px", "b"]},
+        {"id": "px", "type": "character", "name": "Pax", "x_review_proposed": {"by": "m1"}},
+        {"id": "b", "type": "character", "name": "Brin"},
+        {"id": "L", "type": "construct", "name": "L", "supertype": "Lens", "characters": ["a"], "x_lens": {"depth": 0}}]})");
+    OWLensReading r = OWLens::Resolve(world, OWJsonValue::String("L"), Parse(R"({"rung": "public"})"));
+    const OWJsonValue* friends = r.rows.size() == 1 ? r.rows[0].Find("friends") : nullptr;
+    t.Ok(friends && friends->IsArray() && friends->Size() == 1 && friends->Items()[0].IsString() &&
+             friends->Items()[0].Text() == "b",
+         "the public rung is served [Brin]");
+    OWWorldGraph g = OWGraph::WorldGraph(world, Parse(R"({"rung": "public"})"));
+    std::vector<const OWGraphEdge*> from_ada;  // the lens's own edge to Ada aside
+    for (const OWGraphEdge& e : g.edges)
+        if (e.source == "a") from_ada.push_back(&e);
+    t.Ok(from_ada.size() == 1 && from_ada[0]->target == "b" && from_ada[0]->index == 0, "Brin at 0");
+}
+
 OW_TEST(graph_a_nodes_type_is_as_stored) {
     // The profile's owner (G4): a node's type is the element's type as stored, never folded; a non-slug type is a data
     // fault for the lint. Its colour word and icon still come from the type it names.
