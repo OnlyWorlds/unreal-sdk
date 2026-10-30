@@ -673,8 +673,8 @@ OW_TEST(lens_a_lens_whose_anchor_fields_hold_only_empty_strings_names_no_anchor_
 OW_TEST(lens_an_owners_full_row_of_a_hidden_element_carries_hidden_true_as_served) {
     // A row is the body as the wire serves it to that reader, and a served body of an element under the hidden mark
     // carries hidden: true: the owner's full row of a hidden element, by the world's list or by its own key; below the
-    // owner only a guest's row of its own hidden creation, never a stub. A name row never carries it. Kills: the row as
-    // stored, a guest's row unmarked.
+    // owner only a guest's row of its own hidden creation. A name row never carries it. Kills: the row as stored, a
+    // guest's row unmarked.
     const char* elements = R"("elements": [
         {"id": "e05", "type": "collective", "name": "Guild"},
         {"id": "e06", "type": "collective", "name": "Choir", "hidden": true},
@@ -694,10 +694,6 @@ OW_TEST(lens_an_owners_full_row_of_a_hidden_element_carries_hidden_true_as_serve
     t.Ok(guest.rows.size() == 1 &&
              Equal(guest.rows[0], Parse(R"({"id": "e05", "type": "collective", "name": "Guild", "hidden": true})")),
          "a guest's own hidden creation: " + RowsOf(guest));
-    // Below the owner only a guest's own creation, which it sees whole, carries the mark: a stub never does.
-    OWLensReading stub = ReadAs(full, OWJsonValue::String("L"), R"({"rung": "guest", "whole": ["L"], "known_of": ["e05"]})");
-    t.Ok(stub.rows.size() == 1 && stub.rows[0].Find("known_of") && stub.rows[0].Find("hidden") == nullptr,
-         "a guest's known-of stub of a hidden element carries no hidden key: " + RowsOf(stub));
     OWLensReading named = ReadAs(world(R"({"show": "name"})"), OWJsonValue::String("L"), R"({"rung": "owner"})");
     t.Ok(named.rows.size() == 2 && named.rows[0].Find("hidden") == nullptr, "a name row: " + RowsOf(named));
 }
@@ -793,4 +789,33 @@ OW_TEST(lens_an_unseen_anchor_is_counted_before_the_visited_check_the_lens_itsel
     OWLensReading r = ReadAs(world, umbrella, as_contributor);
     t.Ok(r.kept == Ids{"o1"}, "the child's own objects");
     t.Ok(r.cut == Counts{{"anchor_not_visible", 1}}, "the hidden umbrella, once");
+}
+
+OW_TEST(lens_a_hidden_element_in_a_guests_known_of_is_not_in_its_view_no_stub_no_row_no_count_no_mark) {
+    // Hidden beats known_of: a hidden element named in a guest's known_of that is not its own creation is not in that
+    // guest's view, so no stub, no row, no count and no mark; a hidden id in whole stays its own creation. A filter
+    // keeps nothing of it; an anchor on it is one the guest cannot see, counted only for the owner reading as that
+    // guest; a link to it is left out of the guest's served list (no gap). Kills: the hidden element kept as a stub.
+    OWJsonValue world = Parse(R"({"elements": [
+        {"id": "e05", "type": "character", "name": "Heir", "hidden": true},
+        {"id": "c1", "type": "character", "name": "Ada", "friends": ["e05", "e06"]},
+        {"id": "e06", "type": "character", "name": "Brin"},
+        {"id": "F", "type": "construct", "name": "F", "supertype": "Lens", "x_lens": {"types": ["character"]}},
+        {"id": "A", "type": "construct", "name": "A", "supertype": "Lens", "characters": ["e05"], "x_lens": {"depth": 0}}]})");
+    const char* guest = R"({"rung": "guest", "whole": ["F", "A", "c1", "e06"], "known_of": ["e05"]})";
+    OWLensReading filter = ReadAs(world, OWJsonValue::String("F"), guest);
+    t.Ok(filter.kept == Ids{"c1", "e06"} && filter.cut.empty(), "a filter keeps no stub of it: " + RowsOf(filter));
+    const OWJsonValue* friends = nullptr;
+    for (const OWJsonValue& row : filter.rows)
+        if (Str(row, "id") == "c1") friends = row.Find("friends");
+    t.Ok(friends && friends->IsArray() && friends->Size() == 1 && Str(&friends->Items()[0]) == "e06",
+         "left out of the guest's served list");
+    OWLensReading anchored = ReadAs(world, OWJsonValue::String("A"), guest);
+    t.Ok(anchored.kept.empty() && anchored.cut.empty(), "no stub row, nothing counted for the guest");
+    OWLensReading as_guest = ReadAs(world, OWJsonValue::String("A"),
+                                    R"({"rung": "owner", "as": {"rung": "guest", "whole": ["F", "A", "c1", "e06"], "known_of": ["e05"]}})");
+    t.Ok(as_guest.cut == Counts{{"anchor_not_visible", 1}}, "the owner reading as the guest counts the anchor");
+    OWLensReading own = ReadAs(world, OWJsonValue::String("F"), R"({"rung": "guest", "whole": ["F", "e05"]})");
+    const OWJsonValue* mark = own.rows.size() == 1 ? own.rows[0].Find("hidden") : nullptr;
+    t.Ok(mark && mark->IsBool() && mark->AsBool(), "a hidden id in whole stays its own creation, marked");
 }

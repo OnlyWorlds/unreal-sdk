@@ -7,6 +7,11 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Hidden beats `known_of`: a hidden element named in a guest's `known_of` that is not its own creation is not in that
+  guest's view (`OWLens::Resolve`, `OWGraph::WorldGraph`, and the owner reading as that guest): no stub, no row, no
+  node, no count and no mark; a link to it is left out of the guest's served lists, and the owner reading as the guest
+  counts an edge to it `not_visible` and an anchor on it `anchor_not_visible`. A hidden id in a guest's `whole` stays
+  its own creation, served whole and marked.
 - Schema pin to schema-dist serial 92: a Zone leaves map space in the lens profile's graph. A Zone is content that
   gains spatial presence through its Markers, so `OWGraph::WorldGraph` carries Zones as nodes by default, for a
   public reader too; Map, Pin and Marker stay out until `map_space`.

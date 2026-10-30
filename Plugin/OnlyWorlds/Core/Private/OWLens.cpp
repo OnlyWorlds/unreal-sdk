@@ -541,9 +541,12 @@ struct View {
             else if (seen_rung == "contributor") sees = !hidden[i];
             else if (seen_rung == "public") sees = !hidden[i] && !room[i];
             else {
-                // A guest: exactly the ids it holds whole and those it knows of (a stub).
-                sees = whole.count(ids[i]) || known_of.count(ids[i]);
-                stub[i] = !whole.count(ids[i]) && known_of.count(ids[i]);
+                // A guest: exactly the ids it holds whole and those it knows of (a stub). Hidden beats known_of: a hidden
+                // element the guest did not make is not in its view (no stub, no row, no count, no mark); a hidden id
+                // in whole is its own creation, served whole.
+                bool told = known_of.count(ids[i]) && !hidden[i];
+                sees = whole.count(ids[i]) || told;
+                stub[i] = !whole.count(ids[i]) && told;
             }
             if (proposed[i]) {
                 // A proposed element is in no reader's view; keel's scoped still serves the link to one below the
@@ -709,14 +712,14 @@ std::set<std::string> AnchorIds(const OWJsonValue& body) {
 // Message's addressing or a lens's anchors that lost an id (never on the public rung), and a known-of element as its
 // stub. A stored x_served_trimmed is never served. For every reader, `hidden: true` on what the hidden mark keeps (the
 // world's list or the element's own key, one mark), and no `hidden` key on any other body, a stored false included
-// (keel #537): below the owner only a guest's own creation carries it, a body it sees whole, never a known-of stub.
+// (keel #537): below the owner only a guest's own creation carries it, a body it sees whole.
 const OWJsonValue& View::Served(size_t i) {
     auto hit = served.find(i);
     if (hit != served.end()) return hit->second;
     OWJsonValue out = *els[i];
     out.Erase(ServedTrimmed);
     auto marked = [&](OWJsonValue&& body) -> const OWJsonValue& {
-        if (hidden[i] && !stub[i]) body.Set("hidden", OWJsonValue::Bool(true));
+        if (hidden[i]) body.Set("hidden", OWJsonValue::Bool(true));
         else body.Erase("hidden");
         return served.emplace(i, std::move(body)).first->second;
     };

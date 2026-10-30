@@ -311,3 +311,22 @@ OW_TEST(graph_below_the_owner_an_edge_to_an_unseen_anchor_a_cut_child_reaches_is
     t.Ok(g.cut == Counts{{"types", 1}}, "the child's reason");
     t.Ok(g.edges_cut == Counts{{"types", 1}}, "and the edge to the Harbour carries it");
 }
+
+OW_TEST(graph_a_hidden_element_in_a_guests_known_of_is_no_node_and_a_link_to_it_is_not_visible) {
+    // Hidden beats known_of: a hidden element named in a guest's known_of is no node, and a link to it is left out of
+    // the guest's served list, so the next edge's index has no gap; for the guest it is not counted, and for the owner
+    // reading as the guest it is not_visible, a target the reader does not see. Kills: the hidden element drawn as a
+    // known-of node.
+    const char* world = R"({"elements": [
+        {"id": "c1", "type": "character", "name": "Ada", "friends": ["h", "b"]},
+        {"id": "h", "type": "character", "name": "Hal", "hidden": true},
+        {"id": "b", "type": "character", "name": "Brin"}]})";
+    using Counts = std::vector<std::pair<std::string, int64_t>>;
+    OWWorldGraph g = Read(world, R"({"rung": "guest", "whole": ["c1", "b"], "known_of": ["h"]})");
+    t.Ok(g.nodes.size() == 2 && g.nodes[0].id == "b" && g.nodes[1].id == "c1", "Brin and Ada, no Hal");
+    t.Ok(g.edges.size() == 1 && g.edges[0].target == "b" && g.edges[0].index == 0, "Brin at 0, no gap");
+    t.Ok(g.edges_cut.empty(), "nothing counted for the guest");
+    OWWorldGraph as = Read(world, R"({"rung": "owner", "as": {"rung": "guest", "whole": ["c1", "b"], "known_of": ["h"]}})");
+    t.Ok(as.nodes.size() == 2, "the same nodes for the owner reading as the guest");
+    t.Ok(as.edges_cut == Counts{{"not_visible", 1}}, "and the link to Hal not_visible");
+}
