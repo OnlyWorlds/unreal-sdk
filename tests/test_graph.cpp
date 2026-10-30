@@ -208,3 +208,25 @@ OW_TEST(graph_a_link_names_an_element_of_its_fields_type) {
         {"id": "c", "type": "character", "name": "C"}]})", R"({"rung": "owner"})", map);
     t.Eq(pin.edges.size(), size_t(1), "the pin's map only");
 }
+
+OW_TEST(graph_the_lenss_reason_wins_over_not_visible) {
+    // The profile's "Edges cut": for a target the lens cut, the lens's own reason wins over not_visible ("an anchor the
+    // reader cannot see is the lens's anchor_not_visible"). keel's replay tests the view first; no fixture case holds
+    // an edge into such an anchor.
+    OWGraphOptions lens;
+    lens.lens = OWJsonValue::String("L1");
+    OWWorldGraph g = Read(R"({"elements": [
+        {"id": "L1", "type": "construct", "supertype": "Lens", "name": "Pair", "characters": ["c1", "c2"]},
+        {"id": "c1", "type": "character", "name": "Ada", "friends": ["c2"]},
+        {"id": "c2", "type": "character", "name": "Ghost", "hidden": true}]})",
+                          R"({"rung": "owner", "as": {"rung": "contributor"}})", lens);
+    t.Eq(g.nodes.size(), size_t(1), "Ada alone");
+    using Counts = std::vector<std::pair<std::string, int64_t>>;
+    t.Ok(g.cut == Counts{{"anchor_not_visible", 1}}, "the lens counts the Ghost for the owner");
+    t.Ok(g.edges_cut == Counts{{"anchor_not_visible", 1}}, "and the edge to it carries the lens's reason");
+    OWWorldGraph c = Read(R"({"elements": [
+        {"id": "L1", "type": "construct", "supertype": "Lens", "name": "Pair", "characters": ["c1", "c2"]},
+        {"id": "c1", "type": "character", "name": "Ada", "friends": ["c2"]},
+        {"id": "c2", "type": "character", "name": "Ghost", "hidden": true}]})", R"({"rung": "contributor"})", lens);
+    t.Ok(c.cut.empty() && c.edges_cut.empty(), "a contributor carries neither count");
+}
