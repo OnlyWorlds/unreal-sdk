@@ -7,6 +7,18 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWClient` in the core (`OWClient.h`): the first API client, so a game reads an onlyworlds.com world over keel's v2
+  API. The read calls: `Health`, `GetWorld`, `Me` (`OWCharter::Served` reads its `reading_aids`), `Members` (the rows
+  `OWMessage` takes), `List` with its typed options and single-link filters, `ListAll` (every page by `has_more`; a
+  page that hands back the cursor it was sent stops the walk), `Get`, `Changes` and `ChangesHead` (the tip read,
+  conditional on its ETag: a 304 hands back the last 200's tip). Elements are answered as their bodies (`OWJsonValue`),
+  errors as one `OWApiError` (keel's envelope, `Retry-After`, the read helpers). The credential rules are the Unity
+  SDK's: the PIN only on `GET /me` among the reads and on every request of a legacy key, an account token as a Bearer
+  with `world=`, no key reading a public world, and what a client may not send refused before sending. Requests go
+  through `OWTransport` (`OWTransport.h`), one call answered once through a callback, so Unreal's asynchronous HTTP and
+  a synchronous test fake both fit; a client may be destroyed with a request in flight. Held to keel's OpenAPI
+  document, vendored from the Unity SDK (`tests/data/keel-wire.json`). Not yet in the plugin: its Unreal HTTP
+  transport and its Blueprint calls come next.
 - `OWCharter::Served(answer)` in the core (`OWCharter.h`): the front door's packet as the server serves it,
   `reading_aids` in a `GET /me` answer or an agent's join answer, read as served for that key and never recomputed:
   the Charter, the Guide and the Domains as served, then the world's strand (serial 100) as `strand`, an

@@ -1,0 +1,558 @@
+#include "OWClient.h"
+
+#include "OWUnicode.h"
+
+#include <algorithm>
+#include <charconv>
+#include <cmath>
+#include <ctime>
+#include <utility>
+
+namespace OnlyWorlds {
+
+// The client's state, shared with every request in flight, so a client may go before its answers come.
+struct OWClient::State {
+    std::string error;
+    std::string api_key;
+    std::string api_pin;
+    std::string base_url;
+    int64_t page_size = 100;
+    OWKeyKind kind = OWKeyKind::None;
+    std::optional<std::string> world;
+    std::shared_ptr<OWTransport> transport;
+    // The last tip read's ETag ("" when it sent none) and the tip its 200 answered, which a 304 hands back.
+    std::string head_tag;
+    std::optional<OWChangesPage> head_held;
+};
+
+const char* const OWClient::DefaultBaseUrl = "https://www.onlyworlds.com/api/v2";
+
+namespace {
+
+using StatePtr = std::shared_ptr<OWClient::State>;
+using Query = std::vector<std::pair<std::string, std::string>>;
+
+// The reads that send world=<id>, as the refusals name them.
+const char* const WorldReads = "List, ListAll, Get and GetWorld";
+const char* const NothingSent = " Nothing was sent.";
+
+// RFC 3986's percent-encoding, as the Unity SDK's Uri.EscapeDataString: ASCII letters, digits and - _ . ~ kept, every
+// other byte of the UTF-8 escaped in capitals (a space is %20, never '+').
+std::string Escape(std::string_view s) {
+    static const char* const Hex = "0123456789ABCDEF";
+    std::string out;
+    out.reserve(s.size());
+    for (char ch : s) {
+        unsigned char c = static_cast<unsigned char>(ch);
+        bool keep = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' ||
+                    c == '_' || c == '.' || c == '~';
+        if (keep) {
+            out.push_back(ch);
+        } else {
+            out.push_back('%');
+            out.push_back(Hex[c >> 4]);
+            out.push_back(Hex[c & 15]);
+        }
+    }
+    return out;
+}
+
+std::string Joined(const std::vector<std::string>& names) {
+    std::string out;
+    for (size_t i = 0; i < names.size(); ++i) out += (i ? "," : "") + names[i];
+    return out;
+}
+
+// A schema field's shape (parent_location): a lowercase letter, then lowercase letters, digits and '_'.
+bool IsFieldName(const std::string& s) {
+    if (s.empty() || s[0] < 'a' || s[0] > 'z') return false;
+    for (char c : s)
+        if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_')) return false;
+    return true;
+}
+
+// The account routes, /account and under it, which an account token sends with or without a world.
+bool IsAccountRoute(const std::string& path) {
+    return path == "/account" || path.rfind("/account/", 0) == 0 || path.rfind("/account?", 0) == 0;
+}
+
+// A whole number keel serves (head, epoch, change_seq): an integer literal read whole, past 2^53 too; a number spelled
+// otherwise read when it is whole. Absent for anything else.
+std::optional<int64_t> IntOf(const OWJsonValue* v) {
+    if (!v || !v->IsNumber()) return std::nullopt;
+    const std::string& text = v->Text();
+    int64_t n = 0;
+    auto [end, ec] = std::from_chars(text.data(), text.data() + text.size(), n);
+    if (ec == std::errc() && end == text.data() + text.size()) return n;
+    double d = v->AsDouble();
+    if (std::isfinite(d) && d == std::floor(d) && std::fabs(d) < 9.2e18) return static_cast<int64_t>(d);
+    return std::nullopt;
+}
+
+// A text keel serves: a string's, or a number's source (a cursor keel sends as a number reads "17", never "17.0").
+// Absent for null, an absent member, or anything else.
+std::optional<std::string> TextOf(const OWJsonValue* v) {
+    if (!v || !(v->IsString() || v->IsNumber())) return std::nullopt;
+    return v->Text();
+}
+
+template <typename T>
+void Refuse(const OWHandler<T>& done, std::string why) {
+    OWReply<T> r;
+    r.error = OWApiError::Of(OWApiError::Kind::Refused, std::move(why));
+    done(std::move(r));
+}
+
+// A reply of one type turned into another's: its error and response kept, its value made by `make` when it succeeded
+// (which may answer an error instead).
+template <typename T, typename F>
+OWReply<T> Then(OWReply<OWJsonValue> r, F make) {
+    OWReply<T> out;
+    out.error = std::move(r.error);
+    out.response = std::move(r.response);
+    if (!out.error) make(r.value, out);
+    return out;
+}
+
+template <typename T>
+void Bad(OWReply<T>& r, const std::string& why) {
+    int status = r.response ? r.response->status : 0;
+    r.error = OWApiError::Of(OWApiError::Kind::Answer, why, status, r.response ? r.response->body : "");
+    r.value = T{};
+}
+
+// What a request asks of the client's rules beside its method and path.
+struct How {
+    // False for a route keel serves with no credential (the health pulse): no key, PIN or Bearer, no world=, and no
+    // client refused for the key it holds.
+    bool auth = true;
+    // A GET keel serves an account token, or no key, with world=<id> (an element list and get, the world GET).
+    bool world_read = false;
+    // A route keel declares the account token on beside the world key, naming the world with world=<id> (the roster).
+    bool token_world = false;
+    // A tag sent as If-None-Match exactly as given (the tip read).
+    std::string if_none_match;
+    // A 304 is answered, not an error (the tip read reads the status).
+    bool not_modified = false;
+};
+
+// Every call's request: the credential rules, then the send, then keel's envelope on a non-2xx, else the body parsed.
+// The rule is the Unity SDK's RequestWithResponseAsync and the TypeScript SDK's request(): what an account token or no
+// key may send is read from the request itself, and anything else, which keel answers such a client with a 401, is
+// refused here with nothing sent.
+void Request(const StatePtr& s, const std::string& method, const std::string& path, Query query, const How& how,
+             OWHandler<OWJsonValue> done) {
+    const std::string route = method + " " + path;
+    if (!s->error.empty()) return Refuse(done, "OWClient was not built: " + s->error + NothingSent);
+    bool keyless = s->kind == OWKeyKind::None;
+    bool reads = how.auth && how.world_read && method == "GET";
+    bool token_world = how.auth && s->kind == OWKeyKind::Account && how.token_world;
+    if (how.auth && keyless && !(reads && s->world)) {
+        return Refuse(done, route + " needs a key, and this client holds none: without one, only Health works, and " +
+                                WorldReads + " with a world set (OWClientConfig::world)." + NothingSent);
+    }
+    if (how.auth && s->kind == OWKeyKind::Account && !IsAccountRoute(path)) {
+        if (!reads && !token_world) {
+            return Refuse(done, route + " needs a world key: an account token sends Members, and with a world set reads "
+                                        "a world through " + WorldReads + " only." + NothingSent);
+        }
+        if (reads && !s->world) {
+            return Refuse(done, route + ": an account token reads a world only with a world set "
+                                        "(OWClientConfig::world), through " + WorldReads + "." + NothingSent);
+        }
+        if (token_world && !s->world) {
+            return Refuse(done, route + ": an account token names the world it sends to with a world set "
+                                        "(OWClientConfig::world)." + NothingSent);
+        }
+    }
+    if ((reads || token_world) && s->world) query.emplace_back("world", *s->world);
+
+    OWRequest request;
+    request.method = method;
+    request.url = s->base_url + path;
+    for (size_t i = 0; i < query.size(); ++i)
+        request.url += (i ? "&" : "?") + Escape(query[i].first) + "=" + Escape(query[i].second);
+    if (!how.auth || keyless) {
+        // The health pulse, or a keyless reader's world read: no credential at all.
+    } else if (s->kind == OWKeyKind::Account) {
+        request.headers.emplace_back("Authorization", "Bearer " + s->api_key);
+    } else {
+        request.headers.emplace_back("API-Key", s->api_key);
+        // The PIN only where keel checks it: keel verifies a PIN wherever it is sent (argon2, 64 MiB each), and reads
+        // sent with one exhausted a server's memory on a cold cache. On every write, on GET /me (the connection test),
+        // and on every request of a 10-digit legacy key, which needs it on reads of a world with a PIN.
+        bool me = path == "/me/" || path == "/me";
+        if (!s->api_pin.empty() && (method != "GET" || me || s->kind == OWKeyKind::Legacy))
+            request.headers.emplace_back("API-Pin", s->api_pin);
+    }
+    if (!how.if_none_match.empty()) request.headers.emplace_back("If-None-Match", how.if_none_match);
+
+    // The seam promises one answer; a second is dropped, so a walk never steps twice.
+    auto answered = std::make_shared<bool>(false);
+    bool not_modified = how.not_modified;
+    s->transport->Send(std::move(request), [s, route, not_modified, answered, done](OWResponse response) {
+        if (*answered) return;
+        *answered = true;
+        OWReply<OWJsonValue> r;
+        if (response.status == 0 || !response.failure.empty()) {
+            std::string why = response.failure.empty() ? "no answer" : response.failure;
+            r.error = OWApiError::Of(OWApiError::Kind::Transport, "OnlyWorlds request failed: " + route + ": " + why);
+        } else if (not_modified && response.status == 304) {
+            // A 304 has no body: the caller that sent a tag reads the status.
+        } else if (!response.IsSuccess()) {
+            r.error = OWApiError::FromResponse(response, static_cast<int64_t>(std::time(nullptr)));
+        } else {
+            OWJsonParseResult parsed = OWJson::Parse(response.body);
+            if (parsed.ok) {
+                r.value = std::move(parsed.value);
+            } else {
+                r.error = OWApiError::Of(OWApiError::Kind::Answer,
+                                         route + " answered " + std::to_string(response.status) +
+                                             " with a body that is not JSON",
+                                         response.status, response.body);
+            }
+        }
+        r.response = std::move(response);
+        done(std::move(r));
+    });
+}
+
+// A reply whose value must be a JSON object: any other answer is an error of kind Answer.
+OWReply<OWJsonValue> Object(OWReply<OWJsonValue> r, const std::string& route) {
+    if (r.Ok() && !r.value.IsObject()) Bad(r, route + " answered a body that is not a JSON object");
+    return r;
+}
+
+void ObjectRequest(const StatePtr& s, const std::string& path, const How& how, OWHandler<OWJsonValue> done) {
+    std::string route = "GET " + path;
+    Request(s, "GET", path, {}, how, [route, done](OWReply<OWJsonValue> r) { done(Object(std::move(r), route)); });
+}
+
+void ListOn(const StatePtr& s, const std::string& type, const OWListOptions& o, OWHandler<OWPage> done) {
+    if (!s->error.empty()) return Refuse(done, "OWClient was not built: " + s->error + NothingSent);
+    // Each typed parameter as (name, value), in order; an empty value is not sent.
+    const Query typed = {
+        {"limit", std::to_string(o.limit.value_or(s->page_size))},
+        {"cursor", o.cursor},
+        {"expand", Joined(o.expand)},
+        {"fields", Joined(o.fields)},
+        {"ids", Joined(o.ids)},
+        {"created_by", o.created_by},
+        {"name", o.name},
+        {"name__icontains", o.name_contains},
+        {"supertype", o.supertype},
+        {"subtype", o.subtype},
+    };
+    Query query;
+    for (const auto& p : typed)
+        if (!p.second.empty()) query.push_back(p);
+    // world is the client's, set when it is built: in a filter it would go out twice beside the config's world=, or to
+    // a world key that 422s it.
+    if (o.filter.count("world")) {
+        return Refuse(done, "List: world is not a filter; an account token or no key names its world with "
+                            "OWClientConfig::world." + std::string(NothingSent));
+    }
+    for (const auto& [field, value] : o.filter) {  // in field order (std::map's, byte order)
+        if (!IsFieldName(field))
+            return Refuse(done, "List: '" + field + "' is not a field name to filter on." + NothingSent);
+        // A key a typed member sends here would go out twice, and keel reads one of the two.
+        bool twice = (field == "as" && !o.view_as.empty()) ||
+                     std::any_of(query.begin(), query.end(), [&](const auto& p) { return p.first == field; });
+        if (twice) {
+            return Refuse(done, "List: '" + field + "' is sent by its own option in this request; give it there or in "
+                                "filter, not both." + NothingSent);
+        }
+        query.emplace_back(field, value);
+    }
+    if (!o.view_as.empty()) query.emplace_back("as", o.view_as);
+    std::string route = "GET /" + type + "/";
+    How how;
+    how.world_read = true;
+    Request(s, "GET", "/" + type + "/", std::move(query), how, [route, done](OWReply<OWJsonValue> raw) {
+        done(Then<OWPage>(Object(std::move(raw), route), [&](OWJsonValue& body, OWReply<OWPage>& r) {
+            if (const OWJsonValue* rows = body.Find("data"); rows && !rows->IsNull()) {
+                if (!rows->IsArray()) return Bad(r, route + " answered data that is not a list");
+                for (OWJsonValue& row : body.Find("data")->Items()) {
+                    if (!row.IsObject()) return Bad(r, route + " answered a row that is not an element");
+                    r.value.data.push_back(std::move(row));
+                }
+            }
+            const OWJsonValue* more = body.Find("has_more");
+            r.value.has_more = more && more->IsBool() && more->AsBool();
+            r.value.next_cursor = TextOf(body.Find("next_cursor")).value_or("");
+        }));
+    });
+}
+
+// The cursor walk: one page after another, each on the last page's cursor, by has_more. A transport that answers
+// before Send returns would make each page a deeper call; the walk notices (`sending`) and loops instead, so a long
+// world never deepens the stack.
+struct Walk : std::enable_shared_from_this<Walk> {
+    StatePtr state;
+    std::string type;
+    OWListOptions options;
+    OWHandler<std::vector<OWJsonValue>> done;
+    std::function<void(int, size_t)> on_page;
+    std::vector<OWJsonValue> all;
+    std::string cursor;
+    int pages = 0;
+    bool sending = false;
+    bool again = false;
+
+    void Run() {
+        do {
+            again = false;
+            sending = true;
+            options.cursor = cursor;
+            auto self = shared_from_this();
+            ListOn(state, type, options, [self](OWReply<OWPage> r) { self->Page(std::move(r)); });
+            sending = false;
+        } while (again);
+    }
+
+    void Page(OWReply<OWPage> r) {
+        OWReply<std::vector<OWJsonValue>> out;
+        out.response = r.response;
+        if (!r.Ok()) {
+            out.error = std::move(r.error);
+            return done(std::move(out));
+        }
+        for (OWJsonValue& e : r.value.data) all.push_back(std::move(e));
+        ++pages;
+        if (on_page) on_page(pages, all.size());
+        // has_more with no cursor is an end, rather than a loop.
+        if (!r.value.has_more || r.value.next_cursor.empty()) {
+            out.value = std::move(all);
+            return done(std::move(out));
+        }
+        // A page that hands back the cursor it was sent (the caller's starting cursor included) would be read again
+        // forever.
+        if (r.value.next_cursor == cursor) {
+            out.error = OWApiError::Of(OWApiError::Kind::Transport,
+                                       "ListAll: GET /" + type + "/ answered the cursor it was sent, with more to come; "
+                                       "the walk stopped rather than read the same page again",
+                                       r.response ? r.response->status : 0, r.response ? r.response->body : "");
+            return done(std::move(out));
+        }
+        cursor = r.value.next_cursor;
+        if (sending) again = true;
+        else Run();
+    }
+};
+
+void FeedPage(const OWJsonValue& body, OWReply<OWChangesPage>& r) {
+    OWChangesPage& page = r.value;
+    page.cursor = TextOf(body.Find("cursor")).value_or("");
+    const OWJsonValue* more = body.Find("has_more");
+    page.has_more = more && more->IsBool() && more->AsBool();
+    page.head = IntOf(body.Find("head")).value_or(0);
+    page.epoch = IntOf(body.Find("epoch"));
+    if (const OWJsonValue* why = body.Find("epoch_reason"); why && why->IsString()) page.epoch_reason = why->Text();
+    const OWJsonValue* rows = body.Find("changes");
+    if (!rows || rows->IsNull()) return;
+    if (!rows->IsArray()) return Bad(r, "GET /changes/ answered changes that are not a list");
+    for (const OWJsonValue& row : rows->Items()) {
+        if (!row.IsObject()) return Bad(r, "GET /changes/ answered a row that is not a change");
+        OWChange c;
+        c.op = TextOf(row.Find("op")).value_or("");
+        c.type = TextOf(row.Find("type")).value_or("");
+        c.id = TextOf(row.Find("id")).value_or("");
+        c.change_seq = IntOf(row.Find("change_seq")).value_or(0);
+        c.updated_at = TextOf(row.Find("updated_at"));
+        c.changed_at = TextOf(row.Find("changed_at"));
+        c.changed_by = TextOf(row.Find("changed_by"));
+        c.changed_via = TextOf(row.Find("changed_via"));
+        if (const OWJsonValue* e = row.Find("element"); e && e->IsObject()) c.element = *e;
+        c.deleted_at = TextOf(row.Find("deleted_at"));
+        c.deleted_by = TextOf(row.Find("deleted_by"));
+        c.deleted_via = TextOf(row.Find("deleted_via"));
+        c.deleted_client = TextOf(row.Find("deleted_client"));
+        c.reason = TextOf(row.Find("reason"));
+        page.changes.push_back(std::move(c));
+    }
+}
+
+// A 409 resync_required from a feed read drops the tip read's tag, so the next tip read is a full 200.
+void DropOnResync(const StatePtr& s, const OWReply<OWJsonValue>& r) {
+    if (r.error && r.error->IsResyncRequired()) {
+        s->head_tag.clear();
+        s->head_held.reset();
+    }
+}
+
+}  // namespace
+
+const std::vector<std::string>& OWPage::Keys() {
+    static const std::vector<std::string> keys = {"data", "has_more", "next_cursor"};
+    return keys;
+}
+const std::vector<std::string>& OWChange::Keys() {
+    static const std::vector<std::string> keys = {"op",         "type",        "id",          "change_seq",
+                                                  "updated_at", "changed_at",  "changed_by",  "changed_via",
+                                                  "element",    "deleted_at",  "deleted_by",  "deleted_via",
+                                                  "deleted_client", "reason"};
+    return keys;
+}
+const std::vector<std::string>& OWChangesPage::Keys() {
+    static const std::vector<std::string> keys = {"cursor", "changes", "has_more", "head", "epoch", "epoch_reason"};
+    return keys;
+}
+
+OWClient::OWClient(OWClientConfig config) : state_(std::make_shared<State>()) {
+    State& s = *state_;
+    s.kind = KindOf(config.api_key);
+    bool keyless = s.kind == OWKeyKind::None;
+    if (config.world) {
+        if (OWUnicode::StripWhite(*config.world).empty()) {
+            s.error = "world is a world's id, not empty or white space; got \"" + *config.world + "\". With it, an "
+                      "account token or no key reads that world through " + WorldReads + ".";
+        } else if (!keyless && s.kind != OWKeyKind::Account) {
+            s.error = std::string("A world key reads its own world; world is for an account token (ow_a_) or no key, "
+                                  "which read the world it names through ") + WorldReads + ".";
+        }
+    }
+    if (s.error.empty() && !config.transport)
+        s.error = "A transport is required: the core has no HTTP of its own (the plugin's sends through Unreal's).";
+    s.api_key = std::move(config.api_key);
+    s.api_pin = std::move(config.api_pin);
+    s.world = std::move(config.world);
+    s.base_url = std::move(config.base_url);
+    while (!s.base_url.empty() && s.base_url.back() == '/') s.base_url.pop_back();
+    s.page_size = config.page_size > 0 ? config.page_size : 100;
+    s.transport = std::move(config.transport);
+}
+
+OWClient::OWClient(OWClient&&) noexcept = default;
+OWClient& OWClient::operator=(OWClient&&) noexcept = default;
+OWClient::~OWClient() = default;
+
+const std::string& OWClient::Error() const { return state_->error; }
+const std::string& OWClient::BaseUrl() const { return state_->base_url; }
+int64_t OWClient::PageSize() const { return state_->page_size; }
+OWKeyKind OWClient::KeyKind() const { return state_->kind; }
+const std::optional<std::string>& OWClient::World() const { return state_->world; }
+
+OWKeyKind OWClient::KindOf(std::string_view key) {
+    if (key.empty()) return OWKeyKind::None;
+    if (key.rfind("ow_w_", 0) == 0) return OWKeyKind::Write;
+    if (key.rfind("ow_r_", 0) == 0) return OWKeyKind::Read;
+    if (key.rfind("ow_a_", 0) == 0) return OWKeyKind::Account;
+    if (key.size() == 10 && std::all_of(key.begin(), key.end(), [](char c) { return c >= '0' && c <= '9'; }))
+        return OWKeyKind::Legacy;
+    return OWKeyKind::Unknown;
+}
+
+void OWClient::Health(OWHandler<OWJsonValue> done) {
+    How how;
+    how.auth = false;
+    ObjectRequest(state_, "/health/", how, std::move(done));
+}
+
+void OWClient::GetWorld(OWHandler<OWJsonValue> done) {
+    How how;
+    how.world_read = true;
+    ObjectRequest(state_, "/world/", how, std::move(done));
+}
+
+void OWClient::Me(OWHandler<OWJsonValue> done) { ObjectRequest(state_, "/me/", How{}, std::move(done)); }
+
+void OWClient::Members(OWHandler<OWJsonValue> done) {
+    How how;
+    how.token_world = true;
+    ObjectRequest(state_, "/members/", how, [done](OWReply<OWJsonValue> r) {
+        if (r.Ok()) {
+            const OWJsonValue* rows = r.value.Find("data");
+            r.value = rows && rows->IsArray() ? *rows : OWJsonValue::Array();
+        }
+        done(std::move(r));
+    });
+}
+
+void OWClient::List(const std::string& type, const OWListOptions& options, OWHandler<OWPage> done) {
+    ListOn(state_, type, options, std::move(done));
+}
+
+void OWClient::ListAll(const std::string& type, const OWListOptions& options, OWHandler<std::vector<OWJsonValue>> done,
+                       std::function<void(int, size_t)> on_page) {
+    auto walk = std::make_shared<Walk>();
+    walk->state = state_;
+    walk->type = type;
+    walk->options = options;
+    walk->done = std::move(done);
+    walk->on_page = std::move(on_page);
+    walk->cursor = options.cursor;
+    walk->Run();
+}
+
+void OWClient::Get(const std::string& type, const std::string& id, const OWGetOptions& options,
+                   OWHandler<OWJsonValue> done) {
+    Query query;
+    if (!options.expand.empty()) query.emplace_back("expand", Joined(options.expand));
+    if (!options.fields.empty()) query.emplace_back("fields", Joined(options.fields));
+    if (!options.view_as.empty()) query.emplace_back("as", options.view_as);
+    // The id escaped: a path segment (keel's {id}), never a route or a query.
+    std::string path = "/" + type + "/" + Escape(id) + "/";
+    std::string route = "GET " + path;
+    How how;
+    how.world_read = true;
+    Request(state_, "GET", path, std::move(query), how,
+            [route, done](OWReply<OWJsonValue> r) { done(Object(std::move(r), route)); });
+}
+
+void OWClient::Changes(const OWChangesOptions& options, OWHandler<OWChangesPage> done) {
+    Query query;
+    if (!options.since.empty()) query.emplace_back("since", options.since);
+    query.emplace_back("limit", std::to_string(std::min(state_->page_size, MaxChangesLimit)));
+    if (!options.after.empty()) query.emplace_back("after", options.after);
+    StatePtr s = state_;
+    Request(s, "GET", "/changes/", std::move(query), How{}, [s, done](OWReply<OWJsonValue> raw) {
+        DropOnResync(s, raw);
+        done(Then<OWChangesPage>(Object(std::move(raw), "GET /changes/"),
+                                 [](OWJsonValue& body, OWReply<OWChangesPage>& r) { FeedPage(body, r); }));
+    });
+}
+
+void OWClient::ChangesHead(OWHandler<OWChangesPage> done) {
+    StatePtr s = state_;
+    // What was held when the read was sent: a 304 answers that tag's tip.
+    std::optional<OWChangesPage> held = s->head_held;
+    How how;
+    how.if_none_match = s->head_tag;
+    how.not_modified = true;
+    Request(s, "GET", "/changes/", {{"head", "true"}}, how, [s, held, done](OWReply<OWJsonValue> raw) {
+        if (raw.Ok() && raw.response && raw.response->status == 304) {
+            OWReply<OWChangesPage> r;
+            r.response = std::move(raw.response);
+            if (!held) {
+                r.error = OWApiError::Of(OWApiError::Kind::Api,
+                                         "GET /changes?head=true answered 304 Not Modified while nothing is held: no tip "
+                                         "read has answered 200 on this client, so there is no head to return",
+                                         304, r.response->body);
+                return done(std::move(r));
+            }
+            r.value.cursor = held->cursor;
+            r.value.head = held->head;
+            r.value.epoch = held->epoch;
+            r.value.unchanged = true;
+            return done(std::move(r));
+        }
+        DropOnResync(s, raw);
+        const OWResponse* response = raw.response ? &*raw.response : nullptr;
+        std::string tag = response && response->Header("ETag") ? *response->Header("ETag") : "";
+        OWReply<OWChangesPage> r = Then<OWChangesPage>(Object(std::move(raw), "GET /changes/?head=true"),
+                                                       [](OWJsonValue& body, OWReply<OWChangesPage>& out) {
+                                                           FeedPage(body, out);
+                                                       });
+        if (r.Ok()) {
+            s->head_tag = tag;
+            OWChangesPage keep;
+            keep.cursor = r.value.cursor;
+            keep.head = r.value.head;
+            keep.epoch = r.value.epoch;
+            s->head_held = std::move(keep);
+        }
+        done(std::move(r));
+    });
+}
+
+}  // namespace OnlyWorlds
