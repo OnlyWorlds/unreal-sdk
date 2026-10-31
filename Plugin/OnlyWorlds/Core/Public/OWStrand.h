@@ -73,5 +73,11 @@ const std::vector<std::string>& Members();  // narrative, event, location
 // not a list lists nothing, and a slot whose element has no name reads "", never null.
 OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader);
 
+// The six slots as a server serves them (reading_aids.strand on GET /me and an agent's join reply, read by
+// OWCharter::Served): read as served, never recomputed. A slot is {id, name} or empty (one that is not an object with a
+// string id reads empty, a name that is not a string ""), and same a bool or empty. Absent when `slots` is null or not
+// an object (the key absent).
+std::optional<OWWorldStrand> Served(const OWJsonValue* slots);
+
 }  // namespace OWStrand
 }  // namespace OnlyWorlds

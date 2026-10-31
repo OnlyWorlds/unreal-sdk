@@ -175,6 +175,7 @@ OWJsonValue OWReadingAids::ToJson() const {
         list.Push(std::move(row));
     }
     out.Set("domains", std::move(list));
+    if (strand) out.Set("strand", strand->ToJson());
     return out;
 }
 
@@ -269,6 +270,33 @@ OWReadingAids CharterOf(const OWJsonValue& world, const OWJsonValue& reader) {
 
 std::vector<OWCharterDomain> DomainsOf(const OWJsonValue& world, const OWJsonValue& reader) {
     return CharterOf(world, reader).domains;
+}
+
+std::optional<OWReadingAids> Served(const OWJsonValue& answer) {
+    const OWJsonValue* aids = Get(answer, "reading_aids");
+    if (!aids || !aids->IsObject()) return std::nullopt;
+    OWReadingAids out;
+    if (const OWJsonValue* c = Get(*aids, "charter"); c && c->IsObject()) {
+        OWCharterLaw law{Text(Get(*c, "id")), Text(Get(*c, "name"))};
+        if (const OWJsonValue* rules = Get(*c, "rules"); rules && !rules->IsNull()) law.rules = *rules;
+        if (const OWJsonValue* skill = Get(*c, "skill"); skill && skill->IsArray())
+            for (const OWJsonValue& id : skill->Items())
+                if (id.IsString()) law.skill.push_back(id.Text());
+        out.charter = std::move(law);
+    }
+    if (const OWJsonValue* g = Get(*aids, "guide"); g && g->IsObject())
+        out.guide = OWCharterGuide{Text(Get(*g, "id")), Text(Get(*g, "name"))};
+    if (const OWJsonValue* list = Get(*aids, "domains"); list && list->IsArray())
+        for (const OWJsonValue& d : list->Items()) {
+            if (!d.IsObject()) continue;
+            OWCharterDomain domain{Text(Get(d, "id")), Text(Get(d, "name")), Text(Get(d, "sentence")), {}};
+            if (const OWJsonValue* hubs = Get(d, "hubs"); hubs && hubs->IsArray())
+                for (const OWJsonValue& h : hubs->Items())
+                    if (h.IsObject()) domain.hubs.push_back({Text(Get(h, "type")), Text(Get(h, "id"))});
+            out.domains.push_back(std::move(domain));
+        }
+    out.strand = OWStrand::Served(Get(*aids, "strand"));
+    return out;
 }
 
 }  // namespace OWCharter

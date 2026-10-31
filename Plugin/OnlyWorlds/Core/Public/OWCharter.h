@@ -9,9 +9,10 @@
 // elements/charter.py (reading_aids, served beside front_door on GET /me and the join reply; charter_skill in
 // accounts/front_door.py) is the reading this follows. The world and the reader are OWLens::Resolve's, read through the
 // lens reader's own view, so a reader means one thing in both. Held to the profile's conformance fixture
-// (profiles/charter.fixture.json).
+// (profiles/charter.fixture.json). Served reads the packet a server's front door serves, the strand fourth (serial 100).
 
 #include "OWJson.h"
+#include "OWStrand.h"
 
 #include <cstdint>
 #include <optional>
@@ -56,16 +57,20 @@ struct OWCharterDomain {
     std::vector<OWCharterHub> hubs;
 };
 
-// What CharterOf answers.
+// What CharterOf answers, and what Served reads from a front door.
 struct OWReadingAids {
     std::optional<OWCharterLaw> charter;  // absent when the reader sees no marked Charter
     std::optional<OWCharterGuide> guide;  // absent when the reader sees no marked Guide
     std::vector<OWCharterDomain> domains;  // the profile's order; empty when there is none
+    // The world's strand as the key reads it, fourth at the door (serial 100), read by Served from a front door's
+    // packet: six empty slots when the world has none or its story is out of the key's view. Absent when the packet
+    // carries no strand (a server from before serial 100), and from CharterOf, which reads the three aids alone.
+    std::optional<OWWorldStrand> strand;
     // Empty unless the call was a mistake (a world with no elements list, a rung outside the four): it names the
     // mistake and nothing is read.
     std::string error;
 
-    // The packet in the profile's shape: {charter, guide, domains}, an absent aid null.
+    // The packet in the profile's shape: {charter, guide, domains}, an absent aid null, then strand when it was read.
     OWJsonValue ToJson() const;
 };
 
@@ -114,6 +119,13 @@ std::string FirstLine(std::string_view text);
 OWReadingAids CharterOf(const OWJsonValue& world, const OWJsonValue& reader);
 // The Domains alone, as CharterOf lists them for `reader` (the profile's domainsOf); empty on a caller's mistake.
 std::vector<OWCharterDomain> DomainsOf(const OWJsonValue& world, const OWJsonValue& reader);
+
+// A front door's packet as the server serves it: reading_aids in a GET /me answer or an agent's join answer (`answer`,
+// the parsed body), read as served and never recomputed (who sees what is the server's reading for the key). The
+// Charter {id, name, rules, skill} (rules null or absent an empty list), the Guide {id, name} and the Domains {id,
+// name, sentence, hubs} as served, a text that is not a string "", an aid that is not an object absent; strand read by
+// OWStrand::Served. Absent when the answer carries no packet (a player's join answer, an older server).
+std::optional<OWReadingAids> Served(const OWJsonValue& answer);
 
 }  // namespace OWCharter
 }  // namespace OnlyWorlds

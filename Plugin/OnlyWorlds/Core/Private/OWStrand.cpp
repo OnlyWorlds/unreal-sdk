@@ -104,5 +104,24 @@ OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader) {
     return out;
 }
 
+std::optional<OWWorldStrand> Served(const OWJsonValue* slots) {
+    if (!slots || !slots->IsObject()) return std::nullopt;
+    auto slot = [&](const char* key) -> std::optional<OWStrandSlot> {
+        const OWJsonValue* body = Get(*slots, key);
+        const OWJsonValue* id = body ? Get(*body, "id") : nullptr;
+        if (!id || !id->IsString()) return std::nullopt;
+        const OWJsonValue* name = Get(*body, "name");
+        return OWStrandSlot{id->Text(), name && name->IsString() ? name->Text() : std::string()};
+    };
+    OWWorldStrand out;
+    out.narrative = slot("narrative");
+    out.event = slot("event");
+    out.location = slot("location");
+    out.character = slot("character");
+    out.now = slot("now");
+    if (const OWJsonValue* same = Get(*slots, "same"); same && same->IsBool()) out.same = same->AsBool();
+    return out;
+}
+
 }  // namespace OWStrand
 }  // namespace OnlyWorlds

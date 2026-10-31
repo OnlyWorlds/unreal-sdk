@@ -7,6 +7,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWCharter::Served(answer)` in the core (`OWCharter.h`): the front door's packet as the server serves it,
+  `reading_aids` in a `GET /me` answer or an agent's join answer, read as served for that key and never recomputed:
+  the Charter, the Guide and the Domains as served, then the world's strand (serial 100) as `strand`, an
+  `OWWorldStrand` read by `OWStrand::Served` (each slot `{id, name}` or empty, `same` as served). Six null slots read
+  as an empty strand, the world having none or its story being out of the key's view; a packet with no `strand` (a
+  server from before serial 100) leaves `strand` absent; an answer with no packet (a player's join answer) reads
+  none. `ToJson` writes the packet in the charter profile's order, the strand fourth, and only when it was served.
+  `CharterOf` still reads the three aids alone.
 - `OWStrand::StrandOf(world, reader)` in the core (`OWStrand.h`): the strand profile's reader (schema-dist
   `profiles/strand.md`, serial 98), a world's strand as one reader sees it through the lens reader's own view: the
   story the World's `x_strand` names, one of its events, that event's place, the story's `protagonist`, where the hero
