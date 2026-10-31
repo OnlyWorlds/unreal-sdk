@@ -21,8 +21,8 @@ namespace {
 
 // The npm SDK's test/fixtures/openers.fixture.json at 538c8ac (4.118.0: the offline row), the Python package's at
 // 223b5be the same bytes.
-const char* const FixtureSha256 = "5a9ebbc8604d2fc87078fef25156dd2e767605a1b08cb2bec43e37c6bc2fd9db";
-const size_t CaseCount = 54;
+const char* const FixtureSha256 = "351ddec25f3af8cf8ec2c9c901d6ed4719355286467ada091e45d6012f8ed05b";
+const size_t CaseCount = 57;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";

@@ -118,7 +118,9 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
     auto offline = [&surface](const std::string& href) { return !surface.online && IsWeb(href); };
     const std::string site_href = element ? page : OWAddress::Write(site).address;
     std::optional<std::string> site_state;
-    if (offline(site_href)) site_state = NeedsAConnection;
+    // The site itself as the surface (its tool `onlyworlds`): its own row is where the reader is.
+    if (surface.tool && *surface.tool == SiteId) site_state = YouAreHere;
+    else if (offline(site_href)) site_state = NeedsAConnection;
     out.rows.push_back({SiteId, SiteName, site_href, site_state});
     for (const OWTool& r : tools) {
         if (!r.open) continue;

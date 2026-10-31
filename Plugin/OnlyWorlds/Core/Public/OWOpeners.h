@@ -8,7 +8,8 @@
 // (tests/data/openers.fixture.json), so every package gives the same rows.
 //
 // OpenersFor gives, in order: first the site's own row (id "onlyworlds", name "onlyworlds.com", the world's or the
-// element's page on www.onlyworlds.com, for every audience, its one word "Needs a connection" when offline), then one
+// element's page on www.onlyworlds.com, for every audience, its one word "You are here" when surface.tool is
+// "onlyworlds" (the site itself), else "Needs a connection" when offline), then one
 // row per tools row, in the list's order, that is "listed" and has a door for this kind. A row with no open, or with
 // no door for this kind, is not there. On an element, a tool with only a world door is a row to its world door that
 // says "Opens the world". For the public audience only rows whose needs is absent are there: a row that needs anything
