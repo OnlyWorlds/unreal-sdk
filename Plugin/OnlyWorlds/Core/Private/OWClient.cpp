@@ -265,10 +265,12 @@ void ListOn(const StatePtr& s, const std::string& type, const OWListOptions& o, 
         query.emplace_back(field, value);
     }
     if (!o.view_as.empty()) query.emplace_back("as", o.view_as);
-    std::string route = "GET /" + type + "/";
+    // The type escaped: one path segment (keel's {type}), never a route or a query.
+    std::string path = "/" + Escape(type) + "/";
+    std::string route = "GET " + path;
     How how;
     how.world_read = true;
-    Request(s, "GET", "/" + type + "/", std::move(query), how, [route, done](OWReply<OWJsonValue> raw) {
+    Request(s, "GET", path, std::move(query), how, [route, done](OWReply<OWJsonValue> raw) {
         done(Then<OWPage>(Object(std::move(raw), route), [&](OWJsonValue& body, OWReply<OWPage>& r) {
             if (const OWJsonValue* rows = body.Find("data"); rows && !rows->IsNull()) {
                 if (!rows->IsArray()) return Bad(r, route + " answered data that is not a list");
@@ -329,8 +331,9 @@ struct Walk : std::enable_shared_from_this<Walk> {
         // forever.
         if (r.value.next_cursor == cursor) {
             out.error = OWApiError::Of(OWApiError::Kind::Transport,
-                                       "ListAll: GET /" + type + "/ answered the cursor it was sent, with more to come; "
-                                       "the walk stopped rather than read the same page again",
+                                       "ListAll: GET /" + Escape(type) +
+                                           "/ answered the cursor it was sent, with more to come; the walk stopped "
+                                           "rather than read the same page again",
                                        r.response ? r.response->status : 0, r.response ? r.response->body : "");
             return done(std::move(out));
         }
@@ -490,8 +493,8 @@ void OWClient::Get(const std::string& type, const std::string& id, const OWGetOp
     if (!options.expand.empty()) query.emplace_back("expand", Joined(options.expand));
     if (!options.fields.empty()) query.emplace_back("fields", Joined(options.fields));
     if (!options.view_as.empty()) query.emplace_back("as", options.view_as);
-    // The id escaped: a path segment (keel's {id}), never a route or a query.
-    std::string path = "/" + type + "/" + Escape(id) + "/";
+    // The type and the id escaped: each one path segment (keel's {type} and {id}), never a route or a query.
+    std::string path = "/" + Escape(type) + "/" + Escape(id) + "/";
     std::string route = "GET " + path;
     How how;
     how.world_read = true;

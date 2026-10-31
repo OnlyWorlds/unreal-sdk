@@ -14,7 +14,9 @@ Nothing is released yet; the history before this file is in the git log.
   conditional on its ETag: a 304 hands back the last 200's tip). Elements are answered as their bodies (`OWJsonValue`),
   errors as one `OWApiError` (keel's envelope, `Retry-After`, the read helpers). The credential rules are the Unity
   SDK's: the PIN only on `GET /me` among the reads and on every request of a legacy key, an account token as a Bearer
-  with `world=`, no key reading a public world, and what a client may not send refused before sending. Requests go
+  with `world=`, no key reading a public world, and what a client may not send refused before sending. Every value a
+  call puts in a request path, the element type and the id, is sent as one escaped segment, as the TypeScript SDK
+  sends it since 4.122.1: a string like `abc/hidden` never asks a different route. Requests go
   through `OWTransport` (`OWTransport.h`), one call answered once through a callback, so Unreal's asynchronous HTTP and
   a synchronous test fake both fit; a client may be destroyed with a request in flight. Held to keel's OpenAPI
   document, vendored from the Unity SDK (`tests/data/keel-wire.json`).
