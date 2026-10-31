@@ -58,6 +58,7 @@ for (const OWOpener& row : menu.rows) AddItem(row.name, row.href, row.state.valu
 | `UOWAddresses` | the address profile on Blueprints: `ParseAddress(Text, Address, Reason)` reads an `ow://` link or a site URL into an `FOWAddress` (form, world, type, id, lens, moment, and a reading's `bWorldIsSlug` and `bCanonical`), `WriteAddress(Address, Text, Reason)` writes one. A part is given when its string is not empty or its `bHas` flag is set, so an empty string can refuse as that part would; the moment is an `int64` given by `bHasMoment` alone, past 32 bits `bad_moment`. A refusal is `false` and the profile's reason |
 | `UOWOpeners` | the Open with menu on Blueprints, over the baked tools list: `OpenersFor(World, ElementId, Surface, Rows, Reason)` for an element of an opened world (`""` for the world itself) and `OpenersForAddress(Address, Surface, Rows, Reason)` for an address (an element's rows when it gives an id). `FOWOpenerSurface`: `Audience` (`Public` by default), `Tool`, `SignIn` (`Unknown`, `SignedIn`, `SignedOut`), `bBrowser` (false by default: a game), `bPhone`, `bOnline` (true by default; false offline, a web row then says "Needs a connection"). Each `FOWOpener` row: `Id`, `Name`, `Href`, `State` (`""` for none) |
 | `UOWNames` | the names profile on Blueprints: `TypeWord(World, Type, Supertype, bMany, Word)`, the world's own word for a type from `x_names` on its World, or `false` for the standard's name (`Supertype` `""` for none) |
+| `FOWHttpTransport` | the core client's transport on Unreal's own HTTP (`FHttpModule`): `Config.transport = FOWHttpTransport::Make();`, and each `OnlyWorlds::OWClient` call answers once, on the game thread. The engine follows a redirect before the transport sees it (curl, `CURLOPT_FOLLOWLOCATION`), so a followed answer is refused as a failure: point the client at `https://www.onlyworlds.com/api/v2` (its default), which redirects no API call (`OnlyWorldsLive.Client.Redirect`) |
 | `FOW<Type>`, `UOWElements` | one `USTRUCT(BlueprintType)` per element type (`FOWCharacter`, `FOWPin`, ...), and the library that reads them out of a world: `GetAll<Types>(World)`, `Find<Type>(World, Id, Out)`. Generated from schema-dist's `schema.json` |
 
 Members are PascalCase (`birth_date` -> `BirthDate`, `STR` -> `Str`). A string field is an `FString` (`""` for unset),
@@ -171,6 +172,8 @@ regenerate, never edit.
   reflection only, not in a graph.
 - The Open with menu over a tools list other than the baked one (`OWOpeners::OpenersForJson` is in the core only).
 - The lens, its graph and the charter on Blueprints: `OWLens`, `OWGraph` and `OWCharter` are in the core only.
-- The message profile on Blueprints: the core reads it, but with no API client there is no members list to prove a
-  sender.
+- The API client on Blueprints: `OWClient` and `FOWHttpTransport` are C++ only, with no async Blueprint node yet,
+  and the client reads only (no writes).
+- The message profile on Blueprints: the core reads it, and the client's `Members` now gives the members list that
+  proves a sender, but no Blueprint call joins them yet.
 - Any platform other than Win64, and any engine other than 5.8.

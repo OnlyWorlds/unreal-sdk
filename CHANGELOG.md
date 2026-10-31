@@ -17,8 +17,14 @@ Nothing is released yet; the history before this file is in the git log.
   with `world=`, no key reading a public world, and what a client may not send refused before sending. Requests go
   through `OWTransport` (`OWTransport.h`), one call answered once through a callback, so Unreal's asynchronous HTTP and
   a synchronous test fake both fit; a client may be destroyed with a request in flight. Held to keel's OpenAPI
-  document, vendored from the Unity SDK (`tests/data/keel-wire.json`). Not yet in the plugin: its Unreal HTTP
-  transport and its Blueprint calls come next.
+  document, vendored from the Unity SDK (`tests/data/keel-wire.json`).
+- `FOWHttpTransport` in the plugin (`OWHttpTransport.h`): the client's transport on Unreal's `FHttpModule`. It
+  answers each request once, on the game thread, with the body's bytes as received, or with status 0 and a failure
+  (no connection, the timeout, a request that would not start). Unreal's HTTP follows a redirect itself, and nothing
+  above it can stop that, so a followed answer is refused as a failure: the client never reads another address's
+  answer as keel's. Its automation tests: `OnlyWorlds.Client.Transport.NoConnection` (no network), and
+  `OnlyWorldsLive.Client.Health`, `.Moppetopia` and `.Redirect` against production, run by name. Not yet: Blueprint
+  calls for the client.
 - `OWCharter::Served(answer)` in the core (`OWCharter.h`): the front door's packet as the server serves it,
   `reading_aids` in a `GET /me` answer or an agent's join answer, read as served for that key and never recomputed:
   the Charter, the Guide and the Domains as served, then the world's strand (serial 100) as `strand`, an
