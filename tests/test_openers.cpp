@@ -233,6 +233,33 @@ OW_TEST(openers_the_baked_list_gives_the_sites_row_then_each_listed_tool_with_a_
     t.Eq(std::string(OWTools::Sha256).size(), size_t(64), "the list's sha256");
 }
 
+OW_TEST(openers_the_baked_list_has_little_lens_and_the_menu_offers_it_to_anyone) {
+    const OWTool* lens = nullptr;
+    for (const OWTool& x : OWTools::All())
+        if (x.id == "little-lens") lens = &x;
+    t.Ok(lens != nullptr, "Little Lens is a row of the baked list");
+    if (!lens) return;
+    t.Eq(lens->rung, std::string("listed"), "listed");
+    t.Ok(lens->open && !lens->open->needs, "it needs no account");
+    OWOpenerSurface pub;
+    pub.audience = OWOpeners::Public;
+    OWAddressParts world;
+    world.form = OWAddress::Human;
+    world.world = World;
+    OWAddressParts element = world;
+    element.type = "character";
+    element.id = Element;
+    auto Href = [&](const char* kind, const OWAddressParts& a) {
+        OWOpenersResult r = OWOpeners::OpenersFor(OWTools::All(), kind, a, pub);
+        t.Ok(r.ok, "read: " + r.message);
+        for (const OWOpener& o : r.rows)
+            if (o.id == "little-lens") return o.href;
+        return std::string("(not offered)");
+    };
+    t.Eq(Href(OWOpeners::World, world), "https://little-lens.onlyworlds.com/#/open/" + World, "offered for a world");
+    t.Eq(Href(OWOpeners::Element, element), "https://little-lens.onlyworlds.com/#/open/" + World + "/element/" + Element, "offered for an element");
+}
+
 // -- offline (the surface's online, false) ----------------------------------------------------------------------
 
 // The fixture's online-not-a-boolean case names only "online", which a reader that does not know the key also names

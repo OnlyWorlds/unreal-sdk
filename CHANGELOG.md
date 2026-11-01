@@ -21,6 +21,10 @@ Nothing is released yet; the history before this file is in the git log.
 - The shared openers fixture is re-vendored at 65 cases, in parity with the TypeScript SDK: one refused case for each
   scheme that opens no app (`vbscript:`, `file:`, `blob:`, `about:` beside `javascript:` and `data:`), so a reader that
   forgot one of the six no longer passes. No reader changed; the six were already refused.
+- `OWTools::All()` carries Little Lens, in parity with the TypeScript SDK 4.123.5. The tools list is repinned at `a1573ac`
+  (from `86208c8`): Little Lens, a world as a web of its elements and links, read only, is a listed row, so
+  `OWOpeners::OpenersFor` offers it in the Open with menu for a world and for an element, to anyone (it needs no account).
+  No type or function changed.
 
 ### Added
 
