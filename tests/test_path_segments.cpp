@@ -1,9 +1,11 @@
 // A caller's string never changes which route is asked: every value OWClient puts in a request path (the element type,
-// the id) is sent as one escaped segment, as the TypeScript SDK sends it since 4.122.1. keel declares every element id
-// a UUID, so the escape changes nothing on a real id or type; on `abc/hidden` the raw form asked a different route.
-// Two halves, as the TypeScript SDK's test/path-segments.test.mjs: the source scan reads every request path the client
-// builds, so a new route that puts a value in raw, or builds its path some way the scan cannot read, fails here; the
-// calls show the wire, through the fake transport, for the routes that sent the type raw.
+// the id) is checked as one segment by Seg() and refused before sending when it is not one, and what passes is sent
+// escaped, as the TypeScript SDK does since 4.123.3. keel decodes an escaped slash before it routes (measured on
+// production: /character/abc%2Fhidden/ answers as /character/abc/hidden/ does), so the escape alone cannot hold a
+// slash. Two halves, as the TypeScript SDK's test/path-segments.test.mjs: the source scan reads every request path the
+// client builds, so a new route that puts a value in unchecked, or builds its path some way the scan cannot read, fails
+// here; the calls show that a value that is not one segment is refused with nothing sent, and that one that is goes out
+// as given.
 
 #include "ow_test.h"
 #include "fake_transport.h"
@@ -169,9 +171,12 @@ const std::vector<std::pair<std::string, size_t>> PathTakers = {{"Request", 2}, 
 
 // A path the scan can read: a quoted literal of path characters alone, or the variable `path`.
 const std::regex PathLiteral(R"re(^"(/[a-z_]+)*/"$)re");
-// A term of a built path: a literal of path characters, or one escaped variable.
+// A term of a built path: a literal of path characters, or one variable checked by Seg() under its own name, which the
+// refusal names (Seg("id", id, why)).
 const std::regex Literal(R"re(^"[a-z_/]*"$)re");
-const std::regex Escaped(R"re(^Escape\([A-Za-z_][A-Za-z_0-9]*\)$)re");
+const std::regex Checked(R"re(^Seg\("([A-Za-z_][A-Za-z_0-9]*)", ([A-Za-z_][A-Za-z_0-9]*), why\)$)re");
+// What follows a built path at once: the refusal, before anything is sent.
+const std::string RefuseFirst = "if (!why.empty()) return Refuse(done, why)";
 
 struct Scan {
     std::vector<std::string> problems;  // each a value sent raw, or a path the scan cannot read
@@ -239,10 +244,24 @@ Scan ScanClient(const std::string& source) {
                 ++decls;
                 ++out.built;
                 std::string expr = (*m)[1].str();
+                bool checks = false;
                 for (const std::string& term : SplitTop(expr, '+')) {
-                    if (std::regex_match(term, Literal) || std::regex_match(term, Escaped)) continue;
-                    out.problems.push_back("a raw segment in a request path: " + term + " in " + Trim(expr));
+                    std::smatch seg;
+                    if (std::regex_match(term, Literal)) continue;
+                    if (std::regex_match(term, seg, Checked) && seg[1].str() == seg[2].str()) {
+                        checks = true;
+                        continue;
+                    }
+                    out.problems.push_back("a segment Seg() does not check in a request path: " + term + " in " +
+                                           Trim(expr));
                 }
+                // A path with a checked value refuses at once when Seg() did: the next statement.
+                size_t after = static_cast<size_t>(m->position() + m->length());
+                size_t semi = body.find(';', after);
+                std::string next = Trim(body.substr(after, semi == std::string::npos ? std::string::npos : semi - after));
+                if (checks && next != RefuseFirst)
+                    out.problems.push_back("a checked path not refused at once (" + RefuseFirst + "): " + Trim(expr) +
+                                           ", then " + next);
             }
             int assigns = static_cast<int>(std::distance(std::sregex_iterator(body.begin(), body.end(), Assign),
                                                          std::sregex_iterator()));
@@ -280,11 +299,11 @@ std::string Join(const std::vector<std::string>& lines) {
 
 }  // namespace
 
-OW_TEST(path_segments_source_every_value_escaped) {
+OW_TEST(path_segments_source_every_value_checked) {
     const std::string source = ReadText(P().root + ClientSource);
     if (source.empty()) return t.Fail("the client's source did not load: " + P().root + ClientSource);
     Scan scan = ScanClient(source);
-    t.Eq(Join(scan.problems), std::string(), "every request path a literal or built from literals and Escape()");
+    t.Eq(Join(scan.problems), std::string(), "every request path a literal or built from literals and Seg(), refused at once");
     // A scan that lost its shape fails rather than passing empty: the nine request calls (Health, GetWorld, Me,
     // Members, the helper's own, List, Get, Changes, ChangesHead), the two built paths (List's and Get's), the one
     // helper, both path takers defined, the URL's two lines.
@@ -324,14 +343,26 @@ OW_TEST(path_segments_source_one_request_builder) {
 
 namespace {
 
-const std::string ID = "abc/hidden?x=1#y";
-const std::string ESC = "abc%2Fhidden%3Fx%3D1%23y";
+const std::string UUID = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 
 struct Sent {
     size_t calls = 0;
-    std::string path;   // the URL past the API root, up to its query
-    std::string query;  // past the '?', "" for none
+    std::string path;     // the first request's URL past the API root, up to its query
+    bool answered = false;
+    bool refused = false;  // answered with an error of kind Refused
+    std::string message;  // the error's message, "" for none
 };
+
+template <typename T>
+OWHandler<T> Keep(Sent& out) {
+    return [&out](OWReply<T> r) {
+        out.answered = true;
+        if (r.error) {
+            out.refused = r.error->kind == OWApiError::Kind::Refused;
+            out.message = r.error->message;
+        }
+    };
+}
 
 template <typename Call>
 Sent Send(Call call) {
@@ -343,62 +374,84 @@ Sent Send(Call call) {
     config.base_url = Base;
     config.transport = fake;
     OWClient client(std::move(config));
-    call(client);
     Sent out;
+    call(client, out);
     out.calls = fake->calls.size();
     if (out.calls == 0) return out;
     std::string url = fake->calls[0].url;
     if (url.rfind(Base, 0) == 0) url = url.substr(Base.size());
-    size_t q = url.find('?');
-    out.path = url.substr(0, q);
-    out.query = q == std::string::npos ? "" : url.substr(q + 1);
+    out.path = url.substr(0, url.find('?'));
     return out;
 }
 
-void Expect(owtest::T& t, const Sent& got, const std::string& path, const std::string& name) {
-    t.Eq(got.calls, size_t{1}, name + ": one request sent");
-    t.Eq(got.path, path, name + ": the caller's string is one segment");
+using Call = std::function<void(OWClient&, Sent&)>;
+
+Call GetOf(std::string type, std::string id) {
+    return [type, id](OWClient& c, Sent& out) { c.Get(type, id, {}, Keep<OWJsonValue>(out)); };
+}
+Call ListOf(std::string type) {
+    return [type](OWClient& c, Sent& out) { c.List(type, {}, Keep<OWPage>(out)); };
+}
+Call ListAllOf(std::string type) {
+    return [type](OWClient& c, Sent& out) { c.ListAll(type, {}, Keep<std::vector<OWJsonValue>>(out)); };
 }
 
-template <typename T>
-OWHandler<T> Ignore() {
-    return [](OWReply<T>) {};
+struct Refusal {
+    std::string name;
+    Call call;
+    std::string names;  // the value the refusal names: its message starts "<names> "
+};
+
+// The TypeScript SDK's refusal cases where this client has the call (its Get, List and ListAll; the write, link,
+// adopt, hide, draught and account routes are not in the core yet), with the type's and the newline's.
+std::vector<Refusal> Refusals() {
+    return {
+        {"get", GetOf("character", UUID + "/hidden"), "id"},
+        {"get (id with ? and #)", GetOf("character", "abc/hidden?x=1#y"), "id"},
+        {"get (escaped slash)", GetOf("character", UUID + "%2Fhidden"), "id"},
+        {"get (dot segment)", GetOf("character", ".."), "id"},
+        {"get (empty)", GetOf("character", ""), "id"},
+        {"get (a final newline)", GetOf("character", "abc\n"), "id"},
+        {"get (type)", GetOf("Character", UUID), "type"},
+        {"get (type with a final newline)", GetOf("character\n", UUID), "type"},
+        {"list (type)", ListOf("character/x"), "type"},
+        {"list (type with ? and #)", ListOf("character?x=1#y"), "type"},
+        {"listAll (type)", ListAllOf("character/x"), "type"},
+    };
 }
 
 }  // namespace
 
-OW_TEST(path_segments_wire_get_id) {
-    Expect(t, Send([](OWClient& c) { c.Get("character", ID, {}, Ignore<OWJsonValue>()); }), "/character/" + ESC + "/",
-           "get");
+OW_CASES(path_segments_refused) {
+    owtest::Cases out;
+    for (const Refusal& r : Refusals()) {
+        out.emplace_back("path_segments:" + r.name + " is refused before sending", [r](owtest::T& t) {
+            Sent got = Send(r.call);
+            t.Eq(got.calls, size_t{0}, r.name + ": nothing was sent");
+            t.Ok(got.answered && got.refused, r.name + ": answered with a refusal: " + got.message);
+            t.Ok(got.message.rfind(r.names + " ", 0) == 0, r.name + ": the refusal names " + r.names + ": " + got.message);
+            t.Ok(got.message.find("Nothing was sent.") != std::string::npos, r.name + ": the refusal says so");
+        });
+    }
+    return out;
 }
 
-OW_TEST(path_segments_wire_get_type) {
-    Expect(t, Send([](OWClient& c) { c.Get("character/x", "y", {}, Ignore<OWJsonValue>()); }), "/character%2Fx/y/",
-           "get (type)");
+OW_TEST(path_segments_refused_cases_counted) {
+    t.Eq(Refusals().size(), size_t{11}, "eleven refusal cases");
 }
 
-OW_TEST(path_segments_wire_list_type) {
-    Expect(t, Send([](OWClient& c) { c.List("character/x", {}, Ignore<OWPage>()); }), "/character%2Fx/",
-           "list (type)");
-}
-
-OW_TEST(path_segments_wire_list_type_query) {
-    // A type carrying ? and # adds no query and cuts nothing off: the page's own query is all there is.
-    Sent got = Send([](OWClient& c) { c.List("character?x=1#y", {}, Ignore<OWPage>()); });
-    Expect(t, got, "/character%3Fx%3D1%23y/", "list (type with ? and #)");
-    t.Eq(got.query, std::string("limit=100"), "list (type with ? and #): the page's query alone");
-}
-
-OW_TEST(path_segments_wire_list_all_type) {
-    Expect(t, Send([](OWClient& c) { c.ListAll("character/x", {}, Ignore<std::vector<OWJsonValue>>()); }),
-           "/character%2Fx/", "listAll (type)");
-}
-
-OW_TEST(path_segments_wire_real_values_unchanged) {
-    // keel's ids are UUIDs and its types lowercase words: the escape leaves both as they were.
-    const std::string uuid = "0193b2e4-7c1d-7a3e-9f2b-5d6c8e9a0b1c";
-    Expect(t, Send([&](OWClient& c) { c.Get("character", uuid, {}, Ignore<OWJsonValue>()); }),
-           "/character/" + uuid + "/", "get (a real id)");
-    Expect(t, Send([](OWClient& c) { c.List("character", {}, Ignore<OWPage>()); }), "/character/",
-           "list (a real type)");
+OW_TEST(path_segments_one_segment_goes_out_as_given) {
+    // A uuid, letters with dots, a dash and an underscore inside, and a lower-case type: each one segment, sent as given.
+    const std::vector<std::pair<Call, std::string>> sent = {
+        {GetOf("character", UUID), "/character/" + UUID + "/"},
+        {GetOf("character", "a.b_c-D9"), "/character/a.b_c-D9/"},
+        {ListOf("character"), "/character/"},
+        {ListAllOf("character"), "/character/"},
+    };
+    for (const auto& [call, path] : sent) {
+        Sent got = Send(call);
+        t.Eq(got.calls, size_t{1}, path + ": one request sent");
+        t.Eq(got.path, path, path + ": as given");
+        t.Ok(!got.refused, path + ": not refused: " + got.message);
+    }
 }

@@ -106,8 +106,30 @@ std::string Fill(const std::string& tpl, const std::string& world, const std::st
     return out;
 }
 
-// The rows, with the address, kind and audience already checked; a needs outside the list's format is refused here, in
-// the list's order, as the npm SDK refuses it.
+// Schemes that open no app: a row whose link used one would run what it carries when pressed.
+const char* const NoApp[] = {"javascript", "data", "vbscript", "file", "blob", "about"};
+
+// A link template begins with its scheme (the npm SDK's /^([A-Za-z][A-Za-z0-9+.-]*):/; a browser drops leading spaces
+// before reading one), and a scheme that opens no app is refused, in any case: the npm SDK's templateOf. None is none.
+std::optional<OWOpenersResult> CheckTemplate(const std::string& row, const char* key,
+                                             const std::optional<std::string>& tpl) {
+    if (!tpl) return std::nullopt;
+    const std::string& s = *tpl;
+    auto letter = [](char c) { return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'); };
+    auto more = [&](char c) { return letter(c) || (c >= '0' && c <= '9') || c == '+' || c == '.' || c == '-'; };
+    size_t n = 0;
+    if (!s.empty() && letter(s[0]))
+        for (n = 1; n < s.size() && more(s[n]);) ++n;
+    if (n == 0 || n >= s.size() || s[n] != ':')
+        return Mistake("tool " + row + ": open." + key + " begins with its scheme");
+    const std::string scheme = AsciiLower(s.substr(0, n));
+    if (OneOf(scheme, NoApp))
+        return Mistake("tool " + row + ": open." + key + " is a " + scheme + ": link, which opens no app");
+    return std::nullopt;
+}
+
+// The rows, with the address, kind and audience already checked; a link template that is not one (CheckTemplate) or a
+// needs outside the list's format is refused here, in the list's order, as the npm SDK refuses it.
 OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::string& page, const std::string& world,
                      const std::string& type, const std::string& id, const OWOpenerSurface& surface) {
     OWOpenersResult out;
@@ -125,6 +147,8 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
     for (const OWTool& r : tools) {
         if (!r.open) continue;
         const OWToolOpen& o = *r.open;
+        if (auto bad = CheckTemplate(r.id, "world", o.world)) return *bad;
+        if (auto bad = CheckTemplate(r.id, "element", o.element)) return *bad;
         if (o.needs && *o.needs != Account && *o.needs != Device)
             return Mistake("tool " + r.id + ": open.needs is 'account', 'device' or null; got " + Quoted(*o.needs));
         if (r.rung != Listed) continue;

@@ -708,8 +708,8 @@ OW_TEST(client_get_sends_its_options_and_reads_the_body) {
     t.Eq(TextOf(g.reply.value, "x"), "4", "a number keeps its text");
     c.Get("pin", "p1", {}, g.H());
     t.Eq(fake->Last().url, Base + "/pin/p1/", "no options, no query");
-    c.Get("pin", "a/b?c", {}, g.H());
-    t.Eq(fake->Last().url, Base + "/pin/a%2Fb%3Fc/", "the id escaped: a path segment, never a route or a query");
+    c.Get("pin", "a.b_c-D9", {}, g.H());
+    t.Eq(fake->Last().url, Base + "/pin/a.b_c-D9/", "an id that is one path segment goes out as given");
 }
 
 OW_TEST(client_an_answer_that_is_not_the_body) {

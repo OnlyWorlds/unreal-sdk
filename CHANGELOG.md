@@ -5,6 +5,20 @@ Nothing is released yet; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Changed
+
+- Parity with the TypeScript SDK 4.123.2: `OWOpeners::OpenersFor` and `OpenersForJson` refuse a tools row whose
+  `open.world` or `open.element` link does not begin with its scheme, or whose scheme (in any case) is `javascript:`,
+  `data:`, `vbscript:`, `file:`, `blob:` or `about:`, a link that opens no app. The refusal is the reader's own for a
+  malformed row: no rows, and a message naming the row and the key. A missing or null link is still none. The shared
+  openers fixture is at 61 cases.
+- Parity with the TypeScript SDK 4.123.3: `OWClient`'s `Get`, `List` and `ListAll` refuse, before sending anything, a
+  value that is not one path segment. The type must be a lower-case word (letters, digits, `_`); the id must be
+  letters, digits, `_`, `.` and `-`, and must not start with a dot or a dash. The API decodes an escaped slash before
+  it routes, so escaping alone could not keep an id like `abc/hidden` on its own route. The refusal is the client's
+  own for a bad argument, an `OWApiError` of kind `Refused` naming the value (`id "abc/hidden" is not one path
+  segment. Nothing was sent.`). A value that passes is still escaped.
+
 ### Added
 
 - `OWRecord::RecordsOf(character, elements)` in the core (`OWRecord.h`): the record profile's reader (schema-dist

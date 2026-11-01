@@ -57,6 +57,26 @@ std::string Escape(std::string_view s) {
     return out;
 }
 
+// One caller value as one path segment, escaped; else `why` names it (the first refusal kept) and the caller refuses
+// before sending. keel decodes an escaped slash before it routes (/character/<id>%2Fhidden/ reaches another route), so
+// the escape alone cannot keep a value in its segment: the TypeScript SDK's seg() since 4.123.3. A type is a lower-case
+// word (^[a-z][a-z0-9_]*$); any other value letters, digits and _ . -, not starting with a dot or a dash
+// (^[A-Za-z0-9][A-Za-z0-9_.-]*$). Read byte by byte, so a final newline is refused as any other byte is.
+std::string Seg(const char* name, const std::string& value, std::string& why) {
+    auto lower = [](char c) { return c >= 'a' && c <= 'z'; };
+    auto digit = [](char c) { return c >= '0' && c <= '9'; };
+    auto letter = [&](char c) { return lower(c) || (c >= 'A' && c <= 'Z'); };
+    const bool type = std::string_view(name) == "type";
+    bool ok = !value.empty() && (type ? lower(value[0]) : (letter(value[0]) || digit(value[0])));
+    for (size_t i = 1; ok && i < value.size(); ++i) {
+        char c = value[i];
+        ok = lower(c) || digit(c) || c == '_' || (!type && (letter(c) || c == '.' || c == '-'));
+    }
+    if (!ok && why.empty())
+        why = std::string(name) + " " + OWJson::Quote(value) + " is not one path segment." + NothingSent;
+    return Escape(value);
+}
+
 std::string Joined(const std::vector<std::string>& names) {
     std::string out;
     for (size_t i = 0; i < names.size(); ++i) out += (i ? "," : "") + names[i];
@@ -265,8 +285,10 @@ void ListOn(const StatePtr& s, const std::string& type, const OWListOptions& o, 
         query.emplace_back(field, value);
     }
     if (!o.view_as.empty()) query.emplace_back("as", o.view_as);
-    // The type escaped: one path segment (keel's {type}), never a route or a query.
-    std::string path = "/" + Escape(type) + "/";
+    // The type one path segment (keel's {type}), checked and escaped, never a route or a query.
+    std::string why;
+    std::string path = "/" + Seg("type", type, why) + "/";
+    if (!why.empty()) return Refuse(done, why);
     std::string route = "GET " + path;
     How how;
     how.world_read = true;
@@ -493,8 +515,11 @@ void OWClient::Get(const std::string& type, const std::string& id, const OWGetOp
     if (!options.expand.empty()) query.emplace_back("expand", Joined(options.expand));
     if (!options.fields.empty()) query.emplace_back("fields", Joined(options.fields));
     if (!options.view_as.empty()) query.emplace_back("as", options.view_as);
-    // The type and the id escaped: each one path segment (keel's {type} and {id}), never a route or a query.
-    std::string path = "/" + Escape(type) + "/" + Escape(id) + "/";
+    // The type and the id each one path segment (keel's {type} and {id}), checked and escaped: never a route or a
+    // query.
+    std::string why;
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/";
+    if (!why.empty()) return Refuse(done, why);
     std::string route = "GET " + path;
     How how;
     how.world_read = true;

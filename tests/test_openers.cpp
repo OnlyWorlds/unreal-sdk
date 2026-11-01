@@ -19,10 +19,9 @@ using owtest::P;
 
 namespace {
 
-// The npm SDK's test/fixtures/openers.fixture.json at 538c8ac (4.118.0: the offline row), the Python package's at
-// 223b5be the same bytes.
-const char* const FixtureSha256 = "351ddec25f3af8cf8ec2c9c901d6ed4719355286467ada091e45d6012f8ed05b";
-const size_t CaseCount = 57;
+// The npm SDK's test/fixtures/openers.fixture.json at 008d946 (4.123.2: a link that opens no app is refused).
+const char* const FixtureSha256 = "0cbd1de0daa3535fbf36dcd502a611c6d960db827cfe88f5045f0a1a49d65ea0";
+const size_t CaseCount = 61;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";
@@ -284,24 +283,28 @@ OW_TEST(openers_offline_the_scheme_in_any_case_and_a_link_with_no_scheme) {
         return x;
     };
     std::vector<OWTool> tools{tool("upper", "HTTPS://upper.example/{world}"), tool("mixed", "Http://mixed.example/{world}"),
-                              tool("relative", "//relative.example/{world}"), tool("app", "app://open?world={world}"),
-                              tool("ftp", "ftp://ftp.example/{world}"), tool("bare", "https//bare.example/{world}")};
+                              tool("app", "app://open?world={world}"), tool("ftp", "ftp://ftp.example/{world}")};
     OWAddressParts parts;
     parts.form = OWAddress::Human;
     parts.world = World;
     OWOpenerSurface off = Member(std::nullopt);
     off.online = false;
     OWOpenersResult r = OWOpeners::OpenersFor(tools, OWOpeners::World, parts, off);
-    t.Ok(r.ok && r.rows.size() == 7, "the site and six rows: " + r.message);
-    if (r.rows.size() != 7) return;
+    t.Ok(r.ok && r.rows.size() == 5, "the site and four rows: " + r.message);
+    if (r.rows.size() != 5) return;
     const std::string word = OWOpeners::NeedsAConnection;
     t.Eq(r.rows[0].state.value_or(""), word, "the site's row");
     t.Eq(r.rows[1].state.value_or(""), word, "HTTPS: in capitals is a web address");
     t.Eq(r.rows[2].state.value_or(""), word, "Http: in mixed case is one");
-    t.Ok(!r.rows[3].state, "a link with no scheme (//host) is not one");
-    t.Ok(!r.rows[4].state, "an app's link is not one");
-    t.Ok(!r.rows[5].state, "ftp: is not one");
-    t.Ok(!r.rows[6].state, "https// (no colon) is not one");
+    t.Ok(!r.rows[3].state, "an app's link is not one");
+    t.Ok(!r.rows[4].state, "ftp: is not one");
+    // A link with no scheme (//host, or https// with no colon) is refused since 4.123.2: it begins with its scheme.
+    for (const char* bare : {"//relative.example/{world}", "https//bare.example/{world}"}) {
+        OWOpenersResult no = OWOpeners::OpenersFor({tool("bare", bare)}, OWOpeners::World, parts, off);
+        t.Ok(!no.ok && no.reason.empty() && no.rows.empty(), std::string(bare) + ": refused, not an address's refusal");
+        t.Ok(no.message.find("tool bare: open.world begins with its scheme") != std::string::npos,
+             std::string(bare) + ": the message names the row and the key: " + no.message);
+    }
     OWOpenerSurface own = off;
     own.tool = "upper";
     OWOpenersResult here = OWOpeners::OpenersFor(tools, OWOpeners::World, parts, own);
