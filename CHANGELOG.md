@@ -7,6 +7,17 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWRecord::RecordsOf(character, elements)` in the core (`OWRecord.h`): the record profile's reader (schema-dist
+  `profiles/record.md`, serial 102), a Character's records in a world, each a game's run kept as an Event marked by
+  `x_record`, read over the elements as served: the run's tool, `played_at`, version, seed and outcome, the
+  Character's seat, and their stories of it (`protagonist`, `narrator` or `both`), newest first (`OWCharacterRecord`,
+  `ToJson()` the profile's entry). Who took part is the Event's `characters` alone, never `seats`; a run or story still
+  proposed is not read; a mark on anything but an Event is no record. Beside it `OWRecord::MarkOf(element)` (the mark
+  read, or none for a broken writer: a tool or outcome out of form, a seed or version that is not a string, seats that
+  are not an object of strings) and `OWRecord::InstantOf(played_at)`: `played_at` is checked by its parts on the
+  Gregorian calendar, never by a date parser, and ordered as an instant to the millisecond, a fraction truncated past
+  three digits; ties and stories by id in code point order. Held to the profile's 32-case fixture by its sha256. Not
+  yet in the plugin's Blueprint library.
 - `OWClient` in the core (`OWClient.h`): the first API client, so a game reads an onlyworlds.com world over keel's v2
   API. The read calls: `Health`, `GetWorld`, `Me` (`OWCharter::Served` reads its `reading_aids`), `Members` (the rows
   `OWMessage` takes), `List` with its typed options and single-link filters, `ListAll` (every page by `has_more`; a
