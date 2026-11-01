@@ -84,6 +84,8 @@ namespace OWGraph {
 // The profile's tables, as its fixture writes them.
 // The extension fields a published profile declares a link, each a list of ids: the lens profile's and the spine's.
 const std::vector<std::string>& DeclaredLinks();
+// Map space, out by default for size: map, pin, marker (type slugs, folded). A Zone is content (serial 92).
+const std::vector<std::string>& MapSpaceTypes();
 // The flags (rooms, hidden, proposed, map_space), and the owner's two. A refusal names the first unmet one in the order
 // hidden, proposed, rooms, map_space.
 const std::vector<std::string>& Flags();

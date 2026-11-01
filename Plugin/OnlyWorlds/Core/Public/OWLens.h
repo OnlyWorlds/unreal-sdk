@@ -151,6 +151,9 @@ bool IsRoomElement(const OWJsonValue& element);
 // A reading aid (rule 4): the charter (law, Charter), its guide (construct, Guide) or a domain (construct, Domain), by
 // the pair AND the mark x_charter_of; the pair without the mark is lore.
 bool IsReadingAid(const OWJsonValue& element);
+// The hidden mark on the element's own body (folder spec 4.8): hidden present and not null or false, so a doubt counts
+// as hidden. The lens view reads it beside the world's hidden list; the npm SDK's isHiddenMark.
+bool IsHidden(const OWJsonValue& element);
 // Proposed as a reader reads it (the review profile's rule 1): x_review_proposed present as a mark counts (any value
 // but null, a string only when something is left after trimming White_Space), and not an empty list or object.
 bool IsProposed(const OWJsonValue& element);

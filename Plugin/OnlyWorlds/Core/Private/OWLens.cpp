@@ -515,8 +515,7 @@ struct View {
             els.push_back(&el);
             ids.push_back(id->Text());
             types.push_back(slug);
-            const OWJsonValue* mark = Get(el, "hidden");
-            hidden.push_back(listed_hidden.count(id->Text()) || (mark && !mark->IsNull() && !(mark->IsBool() && !mark->AsBool())));
+            hidden.push_back(listed_hidden.count(id->Text()) || IsHidden(el));
             room.push_back(IsRoomElement(el));
             aid.push_back(IsReadingAid(el) ? PairWord(el) : std::string());
             proposed.push_back(IsProposed(el));
@@ -1204,6 +1203,11 @@ bool IsRoomElement(const OWJsonValue& element) {
 
 bool IsReadingAid(const OWJsonValue& element) {
     return HasMark(element, ReadingAidMark) && Has(Aids, PairWord(element));
+}
+
+bool IsHidden(const OWJsonValue& element) {
+    const OWJsonValue* mark = element.IsObject() ? element.Find("hidden") : nullptr;
+    return mark && !mark->IsNull() && !(mark->IsBool() && !mark->AsBool());
 }
 
 bool IsProposed(const OWJsonValue& element) {

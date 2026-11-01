@@ -2,6 +2,11 @@
 
 #include "OWOpeners.h"
 
+#include "OWGraph.h"
+#include "OWLens.h"
+#include "OWMessage.h"
+
+#include <algorithm>
 #include <utility>
 
 namespace OnlyWorlds {
@@ -18,6 +23,25 @@ const char* const OpensTheWorld = "Opens the world";
 const char* const NeedsAConnection = "Needs a connection";
 
 std::string SignInFirst(std::string_view name) { return "Sign in to " + std::string(name) + " first"; }
+
+const std::vector<std::string>& ElementMarks() {
+    static const std::vector<std::string> marks = {"room", "hidden", "proposed", "map_space", "reading_aid"};
+    return marks;
+}
+
+std::vector<std::string> MarksOf(const OWJsonValue& element) {
+    std::vector<std::string> out;
+    if (OWLens::IsRoomElement(element)) out.push_back("room");
+    if (OWLens::IsHidden(element)) out.push_back("hidden");
+    if (OWLens::IsProposed(element)) out.push_back("proposed");
+    const OWJsonValue* type = element.IsObject() ? element.Find("type") : nullptr;
+    if (type && type->IsString()) {
+        const std::vector<std::string>& space = OWGraph::MapSpaceTypes();
+        if (std::find(space.begin(), space.end(), OWMessage::Fold(type->Text())) != space.end()) out.push_back("map_space");
+    }
+    if (OWLens::IsReadingAid(element)) out.push_back("reading_aid");
+    return out;
+}
 
 namespace {
 
@@ -131,7 +155,8 @@ std::optional<OWOpenersResult> CheckTemplate(const std::string& row, const char*
 // The rows, with the address, kind and audience already checked; a link template that is not one (CheckTemplate) or a
 // needs outside the list's format is refused here, in the list's order, as the npm SDK refuses it.
 OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::string& page, const std::string& world,
-                     const std::string& type, const std::string& id, const OWOpenerSurface& surface) {
+                     const std::string& type, const std::string& id, const OWOpenerSurface& surface,
+                     const std::vector<std::string>& marks) {
     OWOpenersResult out;
     OWAddressParts site;
     site.form = OWAddress::Human;
@@ -151,10 +176,24 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
         if (auto bad = CheckTemplate(r.id, "element", o.element)) return *bad;
         if (o.needs && *o.needs != Account && *o.needs != Device)
             return Mistake("tool " + r.id + ": open.needs is 'account', 'device' or null; got " + Quoted(*o.needs));
+        const std::vector<std::string>& words = ElementMarks();
+        for (const std::string& s : o.element_skips)
+            if (std::find(words.begin(), words.end(), s) == words.end()) {
+                std::string list;
+                for (const std::string& word : words) list += (list.empty() ? "" : ", ") + word;
+                return Mistake("tool " + r.id + ": open.element_skips is a list of " + list + "; got " + Quoted(s));
+            }
+        if (!o.element && !o.element_skips.empty())
+            return Mistake("tool " + r.id + ": open.element_skips names what an element door leaves out, and the row has none");
         if (r.rung != Listed) continue;
         if (surface.audience == Public && o.needs) continue;
         const std::optional<std::string>& tpl = element ? (o.element ? o.element : o.world) : o.world;
         if (!tpl) continue;
+        // An element door that cannot open this element is no door (a row with skips has one: refused above).
+        if (element && std::any_of(marks.begin(), marks.end(), [&](const std::string& m) {
+                return std::find(o.element_skips.begin(), o.element_skips.end(), m) != o.element_skips.end();
+            }))
+            continue;
         // The first that holds. A word the row needs (it cannot open now) comes before "Opens the world" (it opens,
         // somewhere else), so a world door alone that needs a sign-in says the sign-in.
         std::optional<std::string> state;
@@ -223,27 +262,43 @@ std::optional<OWOpenersResult> CheckAudience(const std::string& audience) {
     return std::nullopt;
 }
 
+// The element given for the menu: only an element's, and only the one the address names (its id compared lowercased,
+// as the address's is); on success fills its marks (MarksOf). Null is no element.
+std::optional<OWOpenersResult> CheckElement(std::string_view kind, const OWJsonValue* element, const std::string& id,
+                                            std::vector<std::string>& marks) {
+    if (!element || element->IsNull()) return std::nullopt;
+    if (!element->IsObject()) return Mistake("options element is the element as served, an object, or null");
+    if (kind != Element) return Mistake("options element is for an element's menu; a world's menu takes none");
+    const OWJsonValue* eid = element->Find("id");
+    if (!eid || !eid->IsString() || AsciiLower(eid->Text()) != id)
+        return Mistake("options element is the element the address names: its id differs");
+    marks = MarksOf(*element);
+    return std::nullopt;
+}
+
 OWOpenersResult Typed(const std::vector<OWTool>& tools, std::string_view kind, const std::optional<std::string>& world,
                       const std::optional<std::string>& type, const std::optional<std::string>& id,
-                      const OWOpenerSurface& surface) {
+                      const OWOpenerSurface& surface, const OWOpenersOptions& options) {
     if (auto bad = CheckKind(kind)) return *bad;
     std::string page, w, t, i;
     if (auto bad = CheckAddress(kind, world, type, id, page, w, t, i)) return *bad;
     if (auto bad = CheckAudience(surface.audience)) return *bad;
-    return Rows(tools, kind == Element, page, w, t, i, surface);
+    std::vector<std::string> marks;
+    if (auto bad = CheckElement(kind, options.element, i, marks)) return *bad;
+    return Rows(tools, kind == Element, page, w, t, i, surface, marks);
 }
 
 }  // namespace
 
 OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view kind, const OWAddressParts& address,
-                           const OWOpenerSurface& surface) {
+                           const OWOpenerSurface& surface, const OWOpenersOptions& options) {
     if (auto bad = CheckKind(kind)) return *bad;
     if (auto bad = CheckWhole(address)) return *bad;
-    return Typed(tools, kind, address.world, address.type, address.id, surface);
+    return Typed(tools, kind, address.world, address.type, address.id, surface, options);
 }
 
 OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view kind, const OWAddressReading& address,
-                           const OWOpenerSurface& surface) {
+                           const OWOpenerSurface& surface, const OWOpenersOptions& options) {
     if (auto bad = CheckKind(kind)) return *bad;
     if (!address.ok) {
         OWOpenersResult r;
@@ -258,11 +313,11 @@ OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view ki
     whole.lens = address.lens;
     whole.moment = address.moment;
     if (auto bad = CheckWhole(whole)) return *bad;
-    return Typed(tools, kind, address.world, address.type, address.id, surface);
+    return Typed(tools, kind, address.world, address.type, address.id, surface, options);
 }
 
 OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, const OWJsonValue& address,
-                               const OWJsonValue& surface) {
+                               const OWJsonValue& surface, const OWJsonValue* options) {
     if (!tools.IsArray()) return Mistake("tools is the tools list's rows, an array");
     if (auto bad = CheckKind(kind)) return *bad;
     if (!address.IsObject()) return Mistake("the address is an object ({ form, world, type, id }), as Parse reads it");
@@ -315,6 +370,14 @@ OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, 
         s.online = v->AsBool();
     }
 
+    std::vector<std::string> marks;
+    if (options) {
+        if (!options->IsObject()) return Mistake("the options are an object ({ element })");
+        for (const std::string& key : options->Keys())
+            if (key != "element") return Mistake("unknown key '" + key + "' in the options. The keys are element.");
+        if (auto bad = CheckElement(kind, options->Find("element"), i, marks)) return *bad;
+    }
+
     std::vector<OWTool> rows;
     rows.reserve(tools.Size());
     for (const OWJsonValue& r : tools.Items()) {
@@ -347,11 +410,26 @@ OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, 
                     return Mistake("tool " + tool.id + ": open.needs is 'account', 'device' or null; got " + Show(*v));
                 door.needs = v->Text();
             }
+            // A list of words, absent or null for none; which words is Rows' check, as for a row built in code.
+            if (const OWJsonValue* v = o->Find("element_skips"); v && !v->IsNull()) {
+                bool words = v->IsArray();
+                if (words)
+                    for (const OWJsonValue& word : v->Items()) {
+                        if (!word.IsString()) {
+                            words = false;
+                            break;
+                        }
+                        door.element_skips.push_back(word.Text());
+                    }
+                if (!words)
+                    return Mistake("tool " + tool.id + ": open.element_skips is a list of room, hidden, proposed, map_space, reading_aid; got " +
+                                   Show(*v));
+            }
             tool.open = door;
         }
         rows.push_back(std::move(tool));
     }
-    return Rows(rows, kind == Element, page, w, t, i, s);
+    return Rows(rows, kind == Element, page, w, t, i, s, marks);
 }
 
 }  // namespace OWOpeners

@@ -51,6 +51,7 @@ std::vector<std::pair<std::string, int64_t>> Tally(const std::map<std::string, i
 }  // namespace
 
 const std::vector<std::string>& DeclaredLinks() { return Declared; }
+const std::vector<std::string>& MapSpaceTypes() { return MapSpace; }
 const std::vector<std::string>& Flags() { return FlagWords; }
 const std::vector<std::string>& OwnerOnlyFlags() { return OwnerFlags; }
 const std::vector<std::string>& EdgeReasons() { return Reasons; }
