@@ -19,9 +19,9 @@ using owtest::P;
 
 namespace {
 
-// The npm SDK's test/fixtures/openers.fixture.json at 008d946 (4.123.2: a link that opens no app is refused).
-const char* const FixtureSha256 = "0cbd1de0daa3535fbf36dcd502a611c6d960db827cfe88f5045f0a1a49d65ea0";
-const size_t CaseCount = 61;
+// The npm SDK's test/fixtures/openers.fixture.json at 233e6bc (one refused case for each scheme that opens no app).
+const char* const FixtureSha256 = "1e84a613a1bca3795ef7ef09bf0c3b8f7e60d2156b185441d60a10933f49a05d";
+const size_t CaseCount = 65;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";
