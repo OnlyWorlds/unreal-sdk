@@ -334,6 +334,32 @@ OW_TEST(record_ties_order_by_code_point_npm_vector) {
     }
 }
 
+// npm 4.124.1's test (test/record.test.mjs): a Narrative naming an Event twice is one story of it, and other values in
+// events name none. (The npm clause "no two records share a story" is moot here: stories are values, copied into each
+// record; the check below still holds a record's story apart from the next record's.)
+OW_TEST(record_a_narrative_naming_an_event_twice_is_one_story) {
+    const std::string c = Fluffington;
+    OWJsonValue els = Parse(R"([
+        {"id": "e1", "type": "event", "name": "e1", "characters": [")" + c + R"("], "x_record": {"tool": "tangle", "played_at": "2026-11-02T00:00:00Z"}},
+        {"id": "e2", "type": "event", "name": "e2", "characters": [")" + c + R"("], "x_record": {"tool": "tangle", "played_at": "2026-11-01T00:00:00Z"}},
+        {"id": "n1", "type": "narrative", "name": "One", "protagonist": ")" + c + R"(", "events": ["e1", "e1", "e2"]},
+        {"id": "n2", "type": "narrative", "name": "Two", "narrator": ")" + c + R"(", "events": [7, null, {}, ["e1"], "e1"]}])");
+    OWCharacterRecords got = OWRecord::RecordsOf(c, els);
+    t.Eq(got.records.size(), size_t(2), "two records");
+    if (got.records.size() != 2) return;
+    t.Eq(got.records[0].event_id, std::string("e1"), "e1 first");
+    t.Eq(got.records[0].stories.size(), size_t(2), "e1: two stories, not one per mention");
+    if (got.records[0].stories.size() == 2) {
+        t.Eq(got.records[0].stories[0].id + ":" + got.records[0].stories[0].as, std::string("n1:protagonist"), "e1 first story");
+        t.Eq(got.records[0].stories[1].id + ":" + got.records[0].stories[1].as, std::string("n2:narrator"), "e1 second story");
+    }
+    t.Eq(got.records[1].stories.size(), size_t(1), "e2: n1 alone");
+    if (got.records[0].stories.size() == 2 && got.records[1].stories.size() == 1) {
+        got.records[0].stories[0].name = "planted";
+        t.Eq(got.records[1].stories[0].name, std::string("One"), "no two records share a story");
+    }
+}
+
 // A caller's mistake is no reading: elements that are not a list.
 OW_TEST(record_a_callers_mistake_is_named) {
     OWCharacterRecords got = OWRecord::RecordsOf(Fluffington, Parse(R"({"elements": []})"));

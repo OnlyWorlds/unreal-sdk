@@ -1,6 +1,8 @@
 #include "OWRecord.h"
 
 #include <algorithm>
+#include <unordered_map>
+#include <unordered_set>
 
 // keel's records_of (elements/record.py) over the elements as served: the mark checked member by member, played_at by
 // its parts on the proleptic Gregorian calendar (never a date parser), the order by the instant to the millisecond,
@@ -213,6 +215,21 @@ OWCharacterRecords RecordsOf(const std::string& character, const OWJsonValue& el
         out.error = "records_of: elements must be a list";
         return out;
     }
+    // This Character's stories, by each Event they name (once per Narrative, however often it names it; a value in
+    // events that is not a string names nothing): one pass over the world, then a lookup per record (npm 4.124.1).
+    std::unordered_map<std::string, std::vector<OWRecordStory>> stories_of;
+    for (const OWJsonValue& n : elements.Items()) {
+        const std::string* story = IdOf(n);
+        if (!story || !IsType(n, "narrative") || IsProposed(n)) continue;
+        bool p = Names(n, "protagonist", character), t = Names(n, "narrator", character);
+        if (!p && !t) continue;
+        const OWJsonValue* events = Get(n, "events");
+        if (!events || !events->IsArray()) continue;
+        OWRecordStory s{*story, NameOf(n), p && t ? "both" : p ? "protagonist" : "narrator"};
+        std::unordered_set<std::string> seen;
+        for (const OWJsonValue& e : events->Items())
+            if (e.IsString() && seen.insert(e.Text()).second) stories_of[e.Text()].push_back(s);
+    }
     std::vector<int64_t> instants;
     for (const OWJsonValue& ev : elements.Items()) {
         const std::string* id = IdOf(ev);
@@ -231,13 +248,7 @@ OWCharacterRecords RecordsOf(const std::string& character, const OWJsonValue& el
                 r.seat = seat;
                 break;
             }
-        for (const OWJsonValue& n : elements.Items()) {
-            const std::string* story = IdOf(n);
-            if (!story || !IsType(n, "narrative") || IsProposed(n) || !Lists(n, "events", *id)) continue;
-            bool p = Names(n, "protagonist", character), t = Names(n, "narrator", character);
-            if (!p && !t) continue;
-            r.stories.push_back({*story, NameOf(n), p && t ? "both" : p ? "protagonist" : "narrator"});
-        }
+        if (auto at = stories_of.find(*id); at != stories_of.end()) r.stories = at->second;
         std::stable_sort(r.stories.begin(), r.stories.end(),
                          [](const OWRecordStory& a, const OWRecordStory& b) { return a.id < b.id; });
         out.records.push_back(std::move(r));
