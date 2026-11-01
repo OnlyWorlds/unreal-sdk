@@ -57,6 +57,8 @@ bool UOWOpeners::OpenersFor(const UOWWorld* World, const FString& ElementId, con
 	Address.form = OnlyWorlds::OWAddress::Human;
 	Address.world = Native->Id();
 	const char* Kind = OnlyWorlds::OWOpeners::World;
+	OnlyWorlds::OWJsonValue Served;
+	OnlyWorlds::OWOpenersOptions Options;
 	if (!ElementId.IsEmpty())
 	{
 		const OnlyWorlds::OWElement* E = Native->Get(Utf8(ElementId));
@@ -68,8 +70,22 @@ bool UOWOpeners::OpenersFor(const UOWWorld* World, const FString& ElementId, con
 		Address.type = E->Type();
 		Address.id = E->Id();
 		Kind = OnlyWorlds::OWOpeners::Element;
+		// The element as the API serves it, so a tool whose door skips a mark it carries is not in the menu: its body,
+		// with the type a folder keeps in the folder's name (the map space mark reads it).
+		if (E->body.IsObject())
+		{
+			Served = UOWOpeners::ServedElement(*E);
+			Options.element = &Served;
+		}
 	}
-	return Answer(OnlyWorlds::OWOpeners::OpenersFor(OnlyWorlds::OWTools::All(), Kind, Address, AsSurface(Surface)), Rows, Reason);
+	return Answer(OnlyWorlds::OWOpeners::OpenersFor(OnlyWorlds::OWTools::All(), Kind, Address, AsSurface(Surface), Options), Rows, Reason);
+}
+
+OnlyWorlds::OWJsonValue UOWOpeners::ServedElement(const OnlyWorlds::OWElement& Element)
+{
+	OnlyWorlds::OWJsonValue Served = Element.body;
+	if (Served.IsObject() && !Served.Find("type")) Served.Set("type", OnlyWorlds::OWJsonValue::String(Element.Type()));
+	return Served;
 }
 
 bool UOWOpeners::OpenersForAddress(const FOWAddress& Address, const FOWOpenerSurface& Surface, TArray<FOWOpener>& Rows,

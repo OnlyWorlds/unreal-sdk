@@ -172,8 +172,8 @@ regenerate, never edit.
   tests; the calendar's `GetWorldCalendars` and `BreakdownStep` and the openers' `OpenersFor` are held through
   reflection only, not in a graph.
 - The Open with menu over a tools list other than the baked one (`OWOpeners::OpenersForJson` is in the core only).
-- The element's skips on Blueprints: `UOWOpeners::OpenersFor` holds the opened world and the element's id but does not
-  pass the element yet, so its rows are every row, as before; the core's `OpenersFor` takes it (`OWOpenersOptions`).
+- The element's skips through an address on Blueprints: `UOWOpeners::OpenersForAddress` has no element to read, so
+  its rows are every row; `UOWOpeners::OpenersFor` on an opened world reads the element and leaves the skipped rows out.
 - The lens, its graph and the charter on Blueprints: `OWLens`, `OWGraph` and `OWCharter` are in the core only.
 - The API client on Blueprints: `OWClient` and `FOWHttpTransport` are C++ only, with no async Blueprint node yet,
   and the client reads only (no writes).

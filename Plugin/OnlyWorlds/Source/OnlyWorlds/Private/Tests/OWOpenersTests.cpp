@@ -17,7 +17,9 @@
 #include "OWBlueprintCall.h"
 #include "OWTestPaths.h"
 
+#include <algorithm>
 #include <string>
+#include <vector>
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -217,11 +219,23 @@ bool FOWOpenersWorldTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Atlas's own surface: You are here (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 4
 		&& M.Rows[1].State == TEXT("You are here") && M.Rows[2].State == TEXT("Opens in your browser") && M.Rows[3].State.IsEmpty());
 
-	// Every element of the world, as a member in a game and as the public: the core's rows for the same parts.
-	int32 Elements = 0, Same = 0;
+	// Every element of the world, as a member in a game and as the public: the core's rows for the same parts and the
+	// element as served (its marks skip a door: Sikelia's Maps, Pins and Markers have no Little Lens row).
+	int32 Elements = 0, Same = 0, Skipped = 0, Unskipped = 0, Marked = 0;
 	TMap<FString, int32> Refused;
+	std::vector<std::string> LensSkips;
+	for (const OnlyWorlds::OWTool& T : OnlyWorlds::OWTools::All())
+		if (T.id == "little-lens" && T.open) LensSkips = T.open->element_skips;
+	TestTrue(TEXT("the baked list's Little Lens row skips marks"), !LensSkips.empty());
 	for (const OnlyWorlds::OWElement& E : World->Native()->elements)
 	{
+		const OWJsonValue Served = UOWOpeners::ServedElement(E);
+		OnlyWorlds::OWOpenersOptions Options;
+		Options.element = &Served;
+		bool bMarked = false;
+		for (const std::string& Mark : OnlyWorlds::OWOpeners::MarksOf(Served))
+			bMarked = bMarked || std::find(LensSkips.begin(), LensSkips.end(), Mark) != LensSkips.end();
+		if (bMarked) ++Marked;
 		for (const FOWOpenerSurface& S : { Surface(EOWAudience::Member), Surface(EOWAudience::Public, true, EOWSignIn::SignedIn) })
 		{
 			++Elements;
@@ -230,14 +244,25 @@ bool FOWOpenersWorldTest::RunTest(const FString& Parameters)
 			P.world = World->Native()->Id();
 			P.type = E.Type();
 			P.id = E.Id();
-			const FMenu Want = CoreMenu(OnlyWorlds::OWOpeners::OpenersFor(OnlyWorlds::OWTools::All(), OnlyWorlds::OWOpeners::Element, P, CoreSurface(S)));
+			const FMenu Want = CoreMenu(OnlyWorlds::OWOpeners::OpenersFor(OnlyWorlds::OWTools::All(), OnlyWorlds::OWOpeners::Element, P, CoreSurface(S), Options));
 			const FMenu Got = CallOpenersFor(*this, World, Str(E.Id()), S);
 			if (SameMenu(Got, Want)) ++Same;
 			else if (Elements - Same <= 3) AddError(FString::Printf(TEXT("%s: %s, the core %s"), *Str(E.Id()), *Got.Show(), *Want.Show()));
 			if (!Got.bOk) Refused.FindOrAdd(Got.Reason)++;
+			if (Got.bOk)
+			{
+				const bool bLens = Got.Rows.ContainsByPredicate([](const FRow& R) { return R.Id == TEXT("little-lens"); });
+				if (bMarked && !bLens) ++Skipped;
+				if (!bMarked && bLens) ++Unskipped;
+			}
 		}
 	}
-	TestEqual(TEXT("every element's rows as the core gives them"), Same, Elements);
+	TestEqual(TEXT("every element's rows as the core gives them, the element as served"), Same, Elements);
+	// Little Lens's row is gone exactly where the element carries a mark its door skips (the baked list: room, hidden,
+	// proposed, map space).
+	TestTrue(FString::Printf(TEXT("Sikelia carries marked elements (%d)"), Marked), Marked > 0);
+	TestEqual(TEXT("a marked element's menu has no Little Lens row, as a member and as the public"), Skipped, Marked * 2);
+	TestEqual(TEXT("an unmarked element's menu keeps it"), Unskipped, (Elements / 2 - Marked) * 2);
 	FString RefusedText;
 	for (const TPair<FString, int32>& R : Refused) RefusedText += FString::Printf(TEXT(" %s %d"), *R.Key, R.Value);
 	AddInfo(FString::Printf(TEXT("Sikelia: %d menus (each element as a member in a game and as the public); refused:%s"),
@@ -384,6 +409,12 @@ bool FOWOpenersAddressTest::RunTest(const FString& Parameters)
 		if (Why.IsEmpty() && !bAddressRefusal && bElement != (Kind == TEXT("element")))
 			Why = TEXT("its kind is not the one its address gives");
 		if (Why.IsEmpty() && Refuse && !bAddressRefusal) Why = TEXT("its refusal is the tools list's (the door's list is baked)");
+		// An address carries no element: OpenersFor on a world reads the element as served, held on Sikelia in
+		// OnlyWorlds.Openers.World (a marked element's menu has no row for a door that skips its mark).
+		const OWJsonValue* Opts = Case.Find("options");
+		const OWJsonValue* Served = Opts && Opts->IsObject() ? Opts->Find("element") : nullptr;
+		if (Why.IsEmpty() && !bAddressRefusal && Served && !Served->IsNull())
+			Why = TEXT("it carries the element as served (the address door takes none)");
 		if (!Why.IsEmpty())
 		{
 			NotCarried.Add(Name + TEXT(" (") + Why + TEXT(")"));
@@ -412,8 +443,8 @@ bool FOWOpenersAddressTest::RunTest(const FString& Parameters)
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	TestEqual(TEXT("65 cases"), static_cast<int32>(Cases->Items().size()), 65);
-	TestEqual(TEXT("the row cases carried"), RowCases, 38);
+	TestEqual(TEXT("90 cases"), static_cast<int32>(Cases->Items().size()), 90);
+	TestEqual(TEXT("the row cases carried"), RowCases, 40);
 	TestEqual(TEXT("the address refusals carried"), Refusals, 6);
 	TestEqual(TEXT("cases failed"), Failed, 0);
 	AddInfo(FString::Printf(TEXT("openers fixture: %d row cases and %d address refusals through the Blueprint path; not carried (%d): %s"),

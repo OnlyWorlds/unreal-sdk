@@ -8,6 +8,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 
 #include "OWAddressLibrary.h"
+#include "OWWorld.h"
 
 #include "OWOpenersLibrary.generated.h"
 
@@ -96,10 +97,17 @@ class ONLYWORLDS_API UOWOpeners : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	/** The rows for an element of the world (by its id and its type), or for the world itself when ElementId is "". */
+	/**
+	 * The rows for an element of the world (by its id and its type), or for the world itself when ElementId is "". An
+	 * element's menu reads the element itself (ServedElement): a tool whose element door skips a mark it carries
+	 * (room, hidden, proposed, map space, a reading aid: the list's element_skips) is not there.
+	 */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Open with")
 	static bool OpenersFor(const UOWWorld* World, const FString& ElementId, const FOWOpenerSurface& Surface,
 		TArray<FOWOpener>& Rows, FString& Reason);
+
+	/** An element of a world folder as the API serves it, the shape the core's OWOpenersOptions takes: its body, with its type when the body declares none (a folder keeps it in the folder's name). */
+	static OnlyWorlds::OWJsonValue ServedElement(const OnlyWorlds::OWElement& Element);
 
 	/**
 	 * The rows for an address (one ParseAddress read, or parts): an element's when it gives an id, else its world's.

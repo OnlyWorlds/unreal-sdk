@@ -20,8 +20,11 @@ Nothing is released yet; the history before this file is in the git log.
   naming another id than the address, a skip word outside the list's, and skips on a row with no element door. Parity
   with the TypeScript SDK 4.126.0 and the Python package 0.101.0, their test vector ported: the shared openers
   fixture at 90 cases, the same bytes. `OWTools::All()` repinned at the tools list's `6da4d55` (Little Lens skips
-  room, hidden, proposed and map space; Atlas and Lantern none); `generate_tools.py` bakes a list of words. The
-  Blueprint layer does not pass the element yet (README, Not built yet).
+  room, hidden, proposed and map space; Atlas and Lantern none); `generate_tools.py` bakes a list of words. On
+  Blueprints, `UOWOpeners::OpenersFor` on an opened world passes the element as served (`UOWOpeners::ServedElement`:
+  its body, with the folder's type when the body declares none), so a Map, Pin or Marker of Sikelia has no Little
+  Lens row; held on all 20,570 of its elements, as a member and as the public, against the core. `OpenersForAddress`
+  has no element and gives every row; the fixture's 22 cases that carry one are named as not carried there.
 
 ### Changed
 
