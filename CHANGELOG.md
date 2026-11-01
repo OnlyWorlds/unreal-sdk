@@ -5,6 +5,24 @@ Nothing is released yet; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- `OWOpeners::OpenersFor(tools, kind, address, surface, OWOpenersOptions{&body})` and `OpenersForJson(..., &options)`:
+  no row for a tool that cannot open the element. The tools list's `open.element_skips` (`OWToolOpen::element_skips`)
+  says what a tool's element door does not open, in the lens profile's graph section's words
+  (`OWOpeners::ElementMarks()`: `room`, `hidden`, `proposed`, `map_space`, a Map, Pin or Marker, a Zone being content,
+  and `reading_aid`). Given the element as served, a row whose door skips a mark it carries is left out, each mark read
+  by the reader `OWGraph::WorldGraph` uses (`OWLens::IsRoomElement`, `OWLens::IsHidden`, new and now the lens view's
+  own reader, `OWLens::IsProposed`, the type folded among `OWGraph::MapSpaceTypes()`, new, `OWLens::IsReadingAid`;
+  `OWOpeners::MarksOf`); a test holds the menu and the graph equal on every element of the lens fixture's worlds.
+  Without the element every row is there, as before (the options default to none, so every caller compiles as it
+  did). Refused by name: options that are not an object, an unknown options key, an element for a world's menu or
+  naming another id than the address, a skip word outside the list's, and skips on a row with no element door. Parity
+  with the TypeScript SDK 4.126.0 and the Python package 0.101.0, their test vector ported: the shared openers
+  fixture at 90 cases, the same bytes. `OWTools::All()` repinned at the tools list's `6da4d55` (Little Lens skips
+  room, hidden, proposed and map space; Atlas and Lantern none); `generate_tools.py` bakes a list of words. The
+  Blueprint layer does not pass the element yet (README, Not built yet).
+
 ### Changed
 
 - Parity with the TypeScript SDK 4.123.2: `OWOpeners::OpenersFor` and `OpenersForJson` refuse a tools row whose

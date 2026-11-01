@@ -8,9 +8,11 @@
 
 #include "OWAddress.h"
 #include "OWFiles.h"
+#include "OWGraph.h"
 #include "OWJson.h"
 #include "OWOpeners.h"
 
+#include <algorithm>
 #include <memory>
 #include <set>
 
@@ -19,9 +21,9 @@ using owtest::P;
 
 namespace {
 
-// The npm SDK's test/fixtures/openers.fixture.json at 233e6bc (one refused case for each scheme that opens no app).
-const char* const FixtureSha256 = "1e84a613a1bca3795ef7ef09bf0c3b8f7e60d2156b185441d60a10933f49a05d";
-const size_t CaseCount = 65;
+// The npm SDK's test/fixtures/openers.fixture.json at 6d31677 (4.126.0: the element door's skips, 25 cases more).
+const char* const FixtureSha256 = "381b3ab03bbb19187a74e830c7236306f9ba1f6128020c8855515ce7a63bb6cc";
+const size_t CaseCount = 90;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";
@@ -92,7 +94,8 @@ OWJsonValue Answer(const OWJsonValue& c) {
     const OWJsonValue* address = c.Find("address");
     const OWJsonValue* surface = c.Find("surface");
     if (!tools || !address || !surface) return One("threw", OWJsonValue::String("the case names no list, address or surface"));
-    OWOpenersResult r = OWOpeners::OpenersForJson(*tools, Str(c, "kind"), *address, *surface);
+    // The fixture's options, when present, are the fifth argument as written ({element}).
+    OWOpenersResult r = OWOpeners::OpenersForJson(*tools, Str(c, "kind"), *address, *surface, c.Find("options"));
     if (r.ok) return One("expect", Rows(r.rows));
     OWJsonValue refusal = OWJsonValue::Object();
     if (!r.reason.empty()) {
@@ -360,4 +363,149 @@ OW_TEST(openers_a_game_outside_a_browser_says_opens_in_your_browser) {
     if (r.rows.size() < 2) return;
     t.Eq(r.rows[1].state.value_or(""), std::string(OWOpeners::OpensInYourBrowser), "the word");
     t.Eq(r.rows[1].href, "https://zephyr.example/" + World, "the world door");
+}
+
+// -- element_skips beside the fixture ---------------------------------------------------------------------------
+
+OW_TEST(openers_the_baked_list_little_lens_skips_four_marks_atlas_and_lantern_none) {
+    std::vector<std::string> lens, atlas, lantern;
+    for (const OWTool& x : OWTools::All()) {
+        if (!x.open) continue;
+        if (x.id == "little-lens") lens = x.open->element_skips;
+        if (x.id == "atlas") atlas = x.open->element_skips;
+        if (x.id == "lantern") lantern = x.open->element_skips;
+    }
+    t.Ok(lens == std::vector<std::string>{"room", "hidden", "proposed", "map_space"}, "Little Lens skips four marks");
+    t.Ok(atlas.empty() && lantern.empty(), "Atlas and Lantern none");
+    OWJsonParseResult pin = OWJson::Parse("{\"id\": \"" + Element + "\", \"type\": \"pin\", \"name\": \"A pin\"}");
+    OWAddressParts parts;
+    parts.form = OWAddress::Human;
+    parts.world = World;
+    parts.type = "pin";
+    parts.id = Element;
+    OWOpenersOptions options;
+    options.element = &pin.value;
+    OWOpenersResult r = OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, parts, Member(std::nullopt), options);
+    std::vector<std::string> ids;
+    for (const OWOpener& o : r.rows) ids.push_back(o.id);
+    t.Ok(r.ok && ids == std::vector<std::string>{"onlyworlds", "atlas", "lantern"}, "a Pin's menu leaves Little Lens out: " + r.message);
+}
+
+OW_TEST(openers_a_skip_outside_the_words_is_refused_a_row_built_in_code_too) {
+    OWTool thorn;
+    thorn.id = "thorn";
+    thorn.name = "Thorn";
+    thorn.url = "https://thorn.example";
+    thorn.rung = "listed";
+    thorn.open = OWToolOpen{"https://thorn.example/{world}", "https://thorn.example/{world}/{id}", std::nullopt, {"private"}};
+    OWAddressParts world;
+    world.form = OWAddress::Human;
+    world.world = World;
+    OWOpenersResult r = OWOpeners::OpenersFor({thorn}, OWOpeners::World, world, Member(std::nullopt));
+    t.Ok(!r.ok && r.reason.empty() && r.message.find("tool thorn: open.element_skips") != std::string::npos, "refused: " + r.message);
+    OWJsonParseResult address = OWJson::Parse("{\"form\": \"human\", \"world\": \"" + World + "\"}");
+    OWJsonParseResult surface = OWJson::Parse("{\"audience\": \"member\"}");
+    for (const char* skips : {"\"hidden\"", "[7]", "{}"}) {
+        OWJsonParseResult tools = OWJson::Parse(std::string("[{\"id\": \"thorn\", \"name\": \"Thorn\", \"rung\": \"listed\", \"open\": "
+                                                            "{\"world\": \"https://thorn.example/{world}\", \"element\": null, \"needs\": null, "
+                                                            "\"element_skips\": ") + skips + "}}]");
+        OWOpenersResult j = OWOpeners::OpenersForJson(tools.value, OWOpeners::World, address.value, surface.value);
+        t.Ok(!j.ok && j.message.find("tool thorn: open.element_skips") != std::string::npos, std::string(skips) + ": refused: " + j.message);
+    }
+    OWJsonParseResult bad = OWJson::Parse("[1]");
+    OWOpenersResult o = OWOpeners::OpenersForJson(OWJsonValue::Array(), OWOpeners::World, address.value, surface.value, &bad.value);
+    t.Ok(!o.ok && o.message.find("the options are an object") != std::string::npos, "options that are not an object: " + o.message);
+}
+
+// The menu reads an element's marks as OWGraph::WorldGraph does: on every element of the lens fixture's worlds, a door
+// that skips one word is left out exactly when the graph reader, asked about that element alone, says it carries that
+// mark: room, hidden and proposed from a node's marks with every flag on, map space from the cut with that one flag
+// off, a reading aid from the one kind no flag brings back. An element under the world's hidden list carries
+// hidden: true, as the owner is served it. The npm SDK's openers-marks.test.mjs, ported.
+OW_TEST(openers_every_skip_word_leaves_a_door_out_exactly_when_the_graph_reads_that_mark) {
+    OWBytes bytes;
+    t.Ok(OWFiles::Read(P().root + "/codegen/schema-dist/profiles/lens.fixture.json", bytes), "the lens fixture is vendored");
+    OWJsonParseResult doc = OWJson::Parse(bytes);
+    const OWJsonValue* worlds = doc.ok ? doc.value.Find("worlds") : nullptr;
+    t.Ok(worlds && worlds->IsObject(), "the lens fixture parses, with its worlds");
+    if (!worlds) return;
+    auto door_id = [](std::string word) {
+        std::replace(word.begin(), word.end(), '_', '-');
+        return "skip-" + word;
+    };
+    std::vector<OWTool> tools;
+    for (const std::string& word : OWOpeners::ElementMarks()) {
+        OWTool x;
+        x.id = door_id(word);
+        x.name = word;
+        x.url = "https://x.example";
+        x.rung = "listed";
+        x.open = OWToolOpen{"https://x.example/#/w/{world}", "https://x.example/#/w/{world}/e/{id}", std::nullopt, {word}};
+        tools.push_back(x);
+    }
+    OWGraphOptions all;
+    all.rooms = all.hidden = all.proposed = all.map_space = true;
+    OWGraphOptions no_map = all;
+    no_map.map_space = false;
+    OWJsonParseResult owner = OWJson::Parse("{\"rung\": \"owner\"}");
+    auto count = [](const std::vector<std::pair<std::string, int64_t>>& cut, const char* reason) {
+        for (const auto& [k, n] : cut)
+            if (k == reason) return n;
+        return int64_t(0);
+    };
+    size_t n = 0;
+    std::set<std::string> seen;
+    std::vector<std::string> wrong;
+    for (const std::string& key : worlds->Keys()) {
+        const OWJsonValue& w = *worlds->Find(key);
+        std::set<std::string> hidden;
+        if (const OWJsonValue* h = w.Find("hidden"); h && h->IsArray())
+            for (const OWJsonValue& id : h->Items())
+                if (id.IsString()) hidden.insert(id.Text());
+        const OWJsonValue* elements = w.Find("elements");
+        if (!elements || !elements->IsArray()) continue;
+        for (const OWJsonValue& raw : elements->Items()) {
+            OWJsonValue el = raw;
+            const std::string id = Str(el, "id");
+            if (hidden.count(id)) el.Set("hidden", OWJsonValue::Bool(true));
+            OWJsonValue world = OWJsonValue::Object(), list = OWJsonValue::Array();
+            list.Push(el);
+            world.Set("elements", list);
+            OWWorldGraph full = OWGraph::WorldGraph(world, owner.value, all);
+            OWWorldGraph less_map = OWGraph::WorldGraph(world, owner.value, no_map);
+            std::set<std::string> want;
+            if (full.nodes.size() == 1)
+                for (const std::string& m : full.nodes[0].marks) want.insert(m);
+            if (full.nodes.size() == 1 && less_map.nodes.empty() && count(less_map.cut, "map_space") == 1) want.insert("map_space");
+            if (full.nodes.empty() && count(full.cut, "reading_aid") == 1) want.insert("reading_aid");
+            seen.insert(want.begin(), want.end());
+            std::string type = Str(el, "type");
+            std::transform(type.begin(), type.end(), type.begin(), [](char c) { return c >= 'A' && c <= 'Z' ? char(c + 32) : c; });
+            OWAddressParts parts;
+            parts.form = OWAddress::Human;
+            parts.world = Str(w, "id");
+            parts.type = type;
+            parts.id = id;
+            OWOpenersOptions options;
+            options.element = &el;
+            OWOpenersResult r = OWOpeners::OpenersFor(tools, OWOpeners::Element, parts, Member(std::nullopt), options);
+            if (!r.ok) {
+                wrong.push_back(Str(w, "name") + " " + Str(el, "name") + ": refused, " + r.message);
+                continue;
+            }
+            for (const std::string& word : OWOpeners::ElementMarks()) {
+                bool gone = std::none_of(r.rows.begin(), r.rows.end(), [&](const OWOpener& o) { return o.id == door_id(word); });
+                if (gone != (want.count(word) > 0))
+                    wrong.push_back(Str(w, "name") + " " + type + " " + Str(el, "name") + ": " + word + (gone ? " skipped" : " kept") +
+                                    ", the graph " + (want.count(word) ? "marks it" : "does not"));
+            }
+            ++n;
+        }
+    }
+    std::string lines;
+    for (const std::string& line : wrong) lines += "\n  " + line;
+    t.Ok(wrong.empty(), "the menu and the graph agree:" + lines);
+    t.Ok(n >= 100, "read " + std::to_string(n) + " elements");
+    const std::vector<std::string>& marks = OWOpeners::ElementMarks();
+    t.Ok(seen == std::set<std::string>(marks.begin(), marks.end()), "every word met at least once");
 }

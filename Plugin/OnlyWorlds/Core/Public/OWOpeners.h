@@ -12,8 +12,11 @@
 // "onlyworlds" (the site itself), else "Needs a connection" when offline), then one
 // row per tools row, in the list's order, that is "listed" and has a door for this kind. A row with no open, or with
 // no door for this kind, is not there. On an element, a tool with only a world door is a row to its world door that
-// says "Opens the world". For the public audience only rows whose needs is absent are there: a row that needs anything
-// does not exist for the public. A lens and a moment on the address ride on no href.
+// says "Opens the world". On an element given as the options' element (the element as served, the mark flat on it), a
+// row whose open.element_skips names a mark the element carries (ElementMarks(), each read as OWGraph::WorldGraph
+// reads it: MarksOf) is not there: its door cannot open it. A world door alone opens the world, so it stays. For the
+// public audience only rows whose needs is absent are there: a row that needs anything does not exist for the public.
+// A lens and a moment on the address ride on no href.
 //
 // Each row's state, the first that holds: "You are here" for the surface's own tool (its client is surface.tool); then,
 // when surface.online is false, "Needs a connection" for a row whose href is a web address (it begins http: or https:,
@@ -28,8 +31,10 @@
 // (bad_moment, bad_lens), a slug or anything else for the world's id (bad_world); and an address without a world
 // (no_world), the text form inside a world included;
 // reason is empty and message names the rest (the npm SDK's TypeError): a kind that is neither, an element's openers
-// asked of an address with no element, an unknown key on the address or the surface, a missing or unknown audience, a
-// surface value of the wrong type, a tools row that is not one (a needs outside the list's format included).
+// asked of an address with no element, an unknown key on the address, the surface or the options, a missing or unknown
+// audience, a surface value of the wrong type, an element given for a world's menu or naming another element than the
+// address, a tools row that is not one (a needs or an element_skips word outside the list's format, or skips on a row
+// with no element door, included).
 
 #include "OWAddress.h"
 #include "OWJson.h"
@@ -45,10 +50,13 @@ namespace OnlyWorlds {
 // element holds {id} and, if it needs them, {world} and {type} (the type word); either absent without one. needs is
 // "account" (signed in to the tool), "device" (the world already in the tool on this device), or absent for nothing,
 // the one kind of row a public page offers.
+// element_skips is what the element door does not open, in the lens profile's graph section's words (ElementMarks():
+// room, hidden, proposed, map_space, reading_aid); empty when it opens every element, and on a list older than the key.
 struct OWToolOpen {
     std::optional<std::string> world;
     std::optional<std::string> element;
     std::optional<std::string> needs;
+    std::vector<std::string> element_skips = {};
 };
 
 // The keys of one tools list row that OpenersFor reads; the list's other keys are not kept.
@@ -69,6 +77,13 @@ struct OWOpenerSurface {
     bool browser = true;              // false in a game or a desktop app, which cannot see the browser's sign-in
     bool phone = false;
     bool online = true;               // false when the device has no connection: every web row says "Needs a connection"
+};
+
+// What OpenersFor takes beside the surface: the element the menu is for, as the surface was served it (the API's body,
+// the mark flat on it); a row whose door skips a mark it carries is not there. Null: every row, as before. Only for an
+// element's menu, and only the element the address names. Read during the call, never kept.
+struct OWOpenersOptions {
+    const OWJsonValue* element = nullptr;
 };
 
 // One row of the menu.
@@ -102,21 +117,31 @@ extern const char* const OpensTheWorld;          // "Opens the world"
 extern const char* const NeedsAConnection;       // "Needs a connection"
 std::string SignInFirst(std::string_view name);  // "Sign in to <name> first"
 
+// The marks an element door may skip, the lens profile's graph section's words for what a lore view leaves an element
+// out by, in its order: room, hidden, proposed, map_space (a Map, Pin or Marker; a Zone is content), reading_aid.
+const std::vector<std::string>& ElementMarks();
+
+// The marks an element carries, in ElementMarks()' order, each read by the reader OWGraph::WorldGraph uses:
+// OWLens::IsRoomElement, OWLens::IsHidden, OWLens::IsProposed, the type folded (OWMessage::Fold) among
+// OWGraph::MapSpaceTypes(), OWLens::IsReadingAid. Empty for one a lore view keeps.
+std::vector<std::string> MarksOf(const OWJsonValue& element);
+
 // The rows for a world ("world") or one element of it ("element") at these parts (their form is not read: the site's
 // row is always the human form). tools is OWTools::All(), or the list as served through OpenersForJson.
 OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view kind, const OWAddressParts& address,
-                           const OWOpenerSurface& surface);
+                           const OWOpenerSurface& surface, const OWOpenersOptions& options = {});
 
 // The rows for a reading from OWAddress::Parse (a reading by slug refuses as bad_world, one with no world as no_world).
 OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view kind, const OWAddressReading& address,
-                           const OWOpenerSurface& surface);
+                           const OWOpenerSurface& surface, const OWOpenersOptions& options = {});
 
 // The rows with every argument as JSON, the shape the npm and Python packages take and the fixture writes: tools an
 // array of rows (straight from tools.json: keys it does not read are ignored), the address an object of the address's
 // keys (OWAddress::WriteJson's), the surface an object with snake_case keys (tool, audience, signed_in, browser,
-// phone, online). Checks in the npm SDK's order.
+// phone, online), the options an object ({element}: the element as served, or null) or nullptr for none. Checks in the
+// npm SDK's order.
 OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, const OWJsonValue& address,
-                               const OWJsonValue& surface);
+                               const OWJsonValue& surface, const OWJsonValue* options = nullptr);
 
 }  // namespace OWOpeners
 

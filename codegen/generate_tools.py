@@ -58,7 +58,14 @@ def row(t: dict[str, Any]) -> str:
     if o is None:
         door = "std::nullopt"
     elif isinstance(o, dict):
-        door = "OWToolOpen{" + ", ".join(text(o.get(k), f"row {rid!r} open.{k}", True) for k in ("world", "element", "needs")) + "}"
+        parts = [text(o.get(k), f"row {rid!r} open.{k}", True) for k in ("world", "element", "needs")]
+        skips = o.get("element_skips")
+        if skips is not None:
+            # A list of words (open.element_skips), in the list's own order; absent or null bakes none.
+            if not (isinstance(skips, list) and all(isinstance(v, str) for v in skips)):
+                die(f"row {rid!r} open.element_skips is {skips!r}; this generator bakes a list of words or null")
+            parts.append("{" + ", ".join(json.dumps(v) for v in skips) + "}")
+        door = "OWToolOpen{" + ", ".join(parts) + "}"
     else:
         die(f"row {rid!r} open is {o!r}; an object or null")
     return f"        {{{head},\n         {door}}},\n"
