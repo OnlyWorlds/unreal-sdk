@@ -311,6 +311,29 @@ OW_TEST(record_ids_order_by_code_point) {
     }
 }
 
+// The npm SDK 4.124.2's vector (test/record.test.mjs): ties order by code point, never UTF-16. U+FF00 is below
+// U+1F600 by code point and above it in UTF-16 (the surrogate pair starts at 0xD83D); the ids' UTF-8 bytes compare in
+// code point order. Both the Events' tie and the stories.
+OW_TEST(record_ties_order_by_code_point_npm_vector) {
+    const std::string at = R"("x_record": {"tool": "tangle", "played_at": "2026-11-01T00:00:00Z"})";
+    const std::string emoji = "\xF0\x9F\x98\x80", bmp = "\xEF\xBC\x80";   // U+1F600, U+FF00
+    OWJsonValue els = Parse(R"([{"id": "e)" + emoji + R"(", "type": "event", "name": "hi", "characters": ["c"], )" + at +
+                            R"(}, {"id": "e)" + bmp + R"(", "type": "event", "name": "bmp", "characters": ["c"], )" + at +
+                            R"(}, {"id": "n)" + emoji + R"(", "type": "narrative", "name": "a", "protagonist": "c", "events": ["e)" +
+                            emoji + R"("]}, {"id": "n)" + bmp + R"(", "type": "narrative", "name": "b", "protagonist": "c", "events": ["e)" +
+                            emoji + R"("]}])");
+    OWCharacterRecords got = OWRecord::RecordsOf("c", els);
+    t.Eq(got.records.size(), size_t(2), "two records");
+    if (got.records.size() != 2) return;
+    t.Eq(got.records[0].event_id, "e" + bmp, "e U+FF00 first");
+    t.Eq(got.records[1].event_id, "e" + emoji, "e U+1F600 second");
+    t.Eq(got.records[1].stories.size(), size_t(2), "two stories");
+    if (got.records[1].stories.size() == 2) {
+        t.Eq(got.records[1].stories[0].id, "n" + bmp, "n U+FF00 first");
+        t.Eq(got.records[1].stories[1].id, "n" + emoji, "n U+1F600 second");
+    }
+}
+
 // A caller's mistake is no reading: elements that are not a list.
 OW_TEST(record_a_callers_mistake_is_named) {
     OWCharacterRecords got = OWRecord::RecordsOf(Fluffington, Parse(R"({"elements": []})"));
