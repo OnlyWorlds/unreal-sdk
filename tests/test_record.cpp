@@ -214,6 +214,10 @@ OW_TEST(record_the_instant_is_milliseconds_on_the_gregorian_calendar) {
 OW_TEST(record_played_at_is_the_profiles_form_and_nothing_else) {
     const char* const bad[] = {
         "\xEF\xBC\x92\xEF\xBC\x90\xEF\xBC\x92\xEF\xBC\x96-11-01T00:30Z",  // 2026 in fullwidth digits (U+FF12 U+FF10 ...)
+        // The Unity SDK's three (OWRecordTests): a fraction with no seconds, an empty fraction, one fullwidth first digit.
+        "2026-11-01T00:00.5Z",
+        "2026-11-01T00:00:00.Z",
+        "\xEF\xBC\x92" "026-11-01T00:00Z",
         "2026-11-01T00:30z",
         "2026-11-01t00:30Z",
         "2026-11-01T00:30.5Z",
