@@ -19,9 +19,9 @@ using owtest::P;
 
 namespace {
 
-// The npm SDK's test/fixtures/openers.fixture.json at 008d946 (4.123.2: a link that opens no app is refused).
-const char* const FixtureSha256 = "0cbd1de0daa3535fbf36dcd502a611c6d960db827cfe88f5045f0a1a49d65ea0";
-const size_t CaseCount = 61;
+// The npm SDK's test/fixtures/openers.fixture.json at 233e6bc (one refused case for each scheme that opens no app).
+const char* const FixtureSha256 = "1e84a613a1bca3795ef7ef09bf0c3b8f7e60d2156b185441d60a10933f49a05d";
+const size_t CaseCount = 65;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";
@@ -231,6 +231,33 @@ OW_TEST(openers_the_baked_list_gives_the_sites_row_then_each_listed_tool_with_a_
     t.Ok(got_public == want_public, "the public's rows");
     t.Eq(std::string(OWTools::Commit).size(), size_t(40), "the pinned commit");
     t.Eq(std::string(OWTools::Sha256).size(), size_t(64), "the list's sha256");
+}
+
+OW_TEST(openers_the_baked_list_has_little_lens_and_the_menu_offers_it_to_anyone) {
+    const OWTool* lens = nullptr;
+    for (const OWTool& x : OWTools::All())
+        if (x.id == "little-lens") lens = &x;
+    t.Ok(lens != nullptr, "Little Lens is a row of the baked list");
+    if (!lens) return;
+    t.Eq(lens->rung, std::string("listed"), "listed");
+    t.Ok(lens->open && !lens->open->needs, "it needs no account");
+    OWOpenerSurface pub;
+    pub.audience = OWOpeners::Public;
+    OWAddressParts world;
+    world.form = OWAddress::Human;
+    world.world = World;
+    OWAddressParts element = world;
+    element.type = "character";
+    element.id = Element;
+    auto Href = [&](const char* kind, const OWAddressParts& a) {
+        OWOpenersResult r = OWOpeners::OpenersFor(OWTools::All(), kind, a, pub);
+        t.Ok(r.ok, "read: " + r.message);
+        for (const OWOpener& o : r.rows)
+            if (o.id == "little-lens") return o.href;
+        return std::string("(not offered)");
+    };
+    t.Eq(Href(OWOpeners::World, world), "https://little-lens.onlyworlds.com/#/open/" + World, "offered for a world");
+    t.Eq(Href(OWOpeners::Element, element), "https://little-lens.onlyworlds.com/#/open/" + World + "/element/" + Element, "offered for an element");
 }
 
 // -- offline (the surface's online, false) ----------------------------------------------------------------------

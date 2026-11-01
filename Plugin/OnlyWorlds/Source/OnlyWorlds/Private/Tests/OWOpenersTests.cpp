@@ -159,25 +159,29 @@ bool FOWOpenersWorldTest::RunTest(const FString& Parameters)
 	const FString Ana = Characters[0].ToLower();
 	const FString AnaPage = Site + TEXT("/character/") + Ana;
 
-	// The world's own rows. The baked list (Atlas, Lantern) needs an account for both, so the public sees the site alone.
+	// The world's own rows. The baked list (Atlas, Lantern, Little Lens): Atlas and Lantern need an account, so the public sees the site and Little Lens.
 	FMenu M = CallOpenersFor(*this, World, FString(), Surface(EOWAudience::Public));
-	TestTrue(TEXT("public, the world: the site's page alone (") + M.Show() + TEXT(")"),
-		M.bOk && M.Reason.IsEmpty() && M.Rows.Num() == 1 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), Site, FString() });
+	TestTrue(TEXT("public, the world: the site's page, then Little Lens (") + M.Show() + TEXT(")"),
+		M.bOk && M.Reason.IsEmpty() && M.Rows.Num() == 2 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), Site, FString() }
+		&& M.Rows[1] == FRow{ TEXT("little-lens"), TEXT("Little Lens"), TEXT("https://little-lens.onlyworlds.com/#/open/") + Id, FString() });
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Public));
-	TestTrue(TEXT("public, an element: its page alone (") + M.Show() + TEXT(")"),
-		M.bOk && M.Rows.Num() == 1 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), AnaPage, FString() });
+	TestTrue(TEXT("public, an element: its page, then Little Lens (") + M.Show() + TEXT(")"),
+		M.bOk && M.Rows.Num() == 2 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), AnaPage, FString() }
+		&& M.Rows[1] == FRow{ TEXT("little-lens"), TEXT("Little Lens"), TEXT("https://little-lens.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, FString() });
 
-	// A member in a game: each tool needs an account it cannot see, so each says "Opens in your browser".
+	// A member in a game: Atlas and Lantern need an account it cannot see, so each says "Opens in your browser"; Little Lens needs none.
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member));
 	const TArray<FRow> Game = {
 		{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), AnaPage, FString() },
 		{ TEXT("atlas"), TEXT("Atlas"), TEXT("https://atlas.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, TEXT("Opens in your browser") },
 		{ TEXT("lantern"), TEXT("Lantern"), TEXT("https://lantern.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, TEXT("Opens in your browser") },
+		{ TEXT("little-lens"), TEXT("Little Lens"), TEXT("https://little-lens.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, FString() },
 	};
-	TestTrue(TEXT("a member in a game: three rows, each tool's word (") + M.Show() + TEXT(")"), M.bOk && M.Rows == Game);
+	TestTrue(TEXT("a member in a game: four rows, each account tool's word (") + M.Show() + TEXT(")"), M.bOk && M.Rows == Game);
 	M = CallOpenersFor(*this, World, FString(), Surface(EOWAudience::Member));
-	TestTrue(TEXT("the world's rows in a game (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 3
-		&& M.Rows[1].Href == TEXT("https://atlas.onlyworlds.com/#/open/") + Id && M.Rows[2].State == TEXT("Opens in your browser"));
+	TestTrue(TEXT("the world's rows in a game (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 4
+		&& M.Rows[1].Href == TEXT("https://atlas.onlyworlds.com/#/open/") + Id && M.Rows[2].State == TEXT("Opens in your browser")
+		&& M.Rows[3].State.IsEmpty());
 	// On a phone too: no tool of the list needs the device, so nothing changes.
 	TestTrue(TEXT("a phone changes no row of the baked list"),
 		CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member, false, EOWSignIn::Unknown, TEXT(""), true)).Rows == Game);
@@ -193,25 +197,25 @@ bool FOWOpenersWorldTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("offline: every row says Needs a connection, its href kept (") + M.Show() + TEXT(")"), bAllOffline);
 	Offline.Tool = TEXT("atlas");
 	M = CallOpenersFor(*this, World, FString(), Offline);
-	TestTrue(TEXT("offline, Atlas's own surface: You are here first (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 3
+	TestTrue(TEXT("offline, Atlas's own surface: You are here first (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 4
 		&& M.Rows[0].State == TEXT("Needs a connection") && M.Rows[1].State == TEXT("You are here")
-		&& M.Rows[2].State == TEXT("Needs a connection"));
+		&& M.Rows[2].State == TEXT("Needs a connection") && M.Rows[3].State == TEXT("Needs a connection"));
 	TestTrue(TEXT("a surface as it is made is online"), FOWOpenerSurface().bOnline);
 
 	// In a browser: the sign-in decides, and only when it is known.
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member, true, EOWSignIn::SignedOut));
-	TestTrue(TEXT("signed out in a browser: Sign in to <name> first (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 3
-		&& M.Rows[1].State == TEXT("Sign in to Atlas first") && M.Rows[2].State == TEXT("Sign in to Lantern first"));
+	TestTrue(TEXT("signed out in a browser: Sign in to <name> first (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 4
+		&& M.Rows[1].State == TEXT("Sign in to Atlas first") && M.Rows[2].State == TEXT("Sign in to Lantern first") && M.Rows[3].State.IsEmpty());
 	for (EOWSignIn SignIn : { EOWSignIn::SignedIn, EOWSignIn::Unknown })
 	{
 		M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member, true, SignIn));
 		TestTrue(FString::Printf(TEXT("sign-in %d in a browser: no word (%s)"), static_cast<int32>(SignIn), *M.Show()),
-			M.bOk && M.Rows.Num() == 3 && M.Rows[1].State.IsEmpty() && M.Rows[2].State.IsEmpty());
+			M.bOk && M.Rows.Num() == 4 && M.Rows[1].State.IsEmpty() && M.Rows[2].State.IsEmpty() && M.Rows[3].State.IsEmpty());
 	}
 	// The surface's own tool, by its client name: You are here, before any other word.
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member, false, EOWSignIn::SignedOut, TEXT("atlas")));
-	TestTrue(TEXT("Atlas's own surface: You are here (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 3
-		&& M.Rows[1].State == TEXT("You are here") && M.Rows[2].State == TEXT("Opens in your browser"));
+	TestTrue(TEXT("Atlas's own surface: You are here (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 4
+		&& M.Rows[1].State == TEXT("You are here") && M.Rows[2].State == TEXT("Opens in your browser") && M.Rows[3].State.IsEmpty());
 
 	// Every element of the world, as a member in a game and as the public: the core's rows for the same parts.
 	int32 Elements = 0, Same = 0;
