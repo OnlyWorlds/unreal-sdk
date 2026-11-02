@@ -1,4 +1,4 @@
-// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.96's copy, its sha256
+// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.103's copy, its sha256
 // held to MANIFEST.json): the pair and the template, the legal values of x_lens, where a seat's choice lives, every
 // resolution over the fixture's nine worlds and their readers, the invariants, and the graph kind's 45 cases (each its
 // own world, through OWGraph::WorldGraph, the want compared whole). The profile's tables are held equal to the
@@ -24,8 +24,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.96's MANIFEST.json records it.
-const char* const DistSha256 = "73485a1610c981bcde7a7738a6c1c7498d229dd84c81f1fb7a60156aee57829e";
+// The fixture's sha256 as dist.103's MANIFEST.json records it.
+const char* const DistSha256 = "2950d16b7a660428a78fd0c383a7608135c94f86c5c4b46402a4b9744cf3d07c";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/lens.fixture.json"; }
 
@@ -277,7 +277,7 @@ bool Runs(const std::string& kind) {
 OW_TEST(lens_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the lens fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.96's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.103's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -297,18 +297,19 @@ OW_TEST(lens_fixture_is_the_pinned_one) {
         names.insert(Str(c, "name"));
         if (Runs(Str(c, "kind"))) ++run;
     }
-    t.Eq(cases->Size(), size_t(191), "191 cases");
-    t.Eq(names.size(), size_t(191), "each name its own");
+    t.Eq(cases->Size(), size_t(196), "196 cases");
+    t.Eq(names.size(), size_t(196), "each name its own");
     const std::pair<const char*, size_t> want[] = {{"shape", 6},   {"keys", 25},      {"uses", 5},
-                                                   {"resolve", 102}, {"invariant", 4}, {"graph", 49}};
+                                                   {"resolve", 102}, {"invariant", 4}, {"graph", 49},
+                                                   {"degree", 5}};
     size_t sum = 0;
     for (const auto& [kind, n] : want) {
         t.Eq(kinds[kind], n, std::string("kind ") + kind);
         sum += n;
     }
-    t.Eq(sum, size_t(191), "the six kinds are every case");
-    t.Eq(kinds.size(), size_t(6), "and no other kind");
-    t.Eq(run, size_t(191), "every case runs here, the 49 graph cases among them");
+    t.Eq(sum, size_t(196), "the seven kinds are every case");
+    t.Eq(kinds.size(), size_t(7), "and no other kind");
+    t.Eq(run, size_t(191), "every case runs here but the 5 degree cases, the 49 graph cases among them");
 }
 
 OW_TEST(lens_tables_are_the_fixtures) {

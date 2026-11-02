@@ -118,6 +118,12 @@ Nothing is released yet; the history before this file is in the git log.
 - The Open with menu's own site row says "You are here" when the surface's `tool` is `onlyworlds` (the site itself),
   where before it said "Needs a connection" offline or nothing. Parity with the TypeScript SDK 4.123.0, the shared
   openers fixture re-vendored at 57 cases.
+- Schema pin to `v0.34.0-dist.103` (canonical `00.34.00`): Location gains `vehicle`, a single link to the Object the
+  place is the inside of (a ship, a train, a walking city). The generated `FOWLocation` gains `Vehicle` (an `FString`,
+  the Object's id), and the core's field table gains it, so the lens reader hops through it and the graph draws it as
+  an edge. The serial also brings the landing profile (`profiles/landing.md`, 30 cases), degree and out-degree defined
+  on the lens page (the lens fixture at 196 cases, a new `degree` kind) and seven new readings in the record profile
+  (its fixture at 40 cases).
 - Schema pin to `v0.33.0-dist.102`: the record profile, new (`profiles/record.md` and its fixture, 32 cases): one
   run of a game kept in the world its Characters live in, an Event marked by `x_record`, a Character's records read
   from the Event's `characters` and the stories' `protagonist` or `narrator`. The strand profile's ruled line moved

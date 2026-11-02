@@ -36,7 +36,8 @@ namespace {
 
 using K = OWFieldKind;
 
-// Each type's own fields, schema.json's order (dist.91), held equal to it by tests/test_lens.cpp.
+// Each type's own fields, schema.json's order (dist.103: Location's vehicle), held equal to it by tests/test_lens.cpp.
+// Written by hand, not generated: a schema field the vendored schema.json gains lands here in the repin's commit.
 struct TypeRow {
     const char* type;
     const OWLensField* fields;
@@ -121,8 +122,8 @@ const OWLensField F_law[] = {
 };
 const OWLensField F_location[] = {
     {"form", K::Text, ""}, {"function", K::Text, ""}, {"founding_date", K::Int, ""},
-    {"parent_location", K::Single, "location"}, {"populations", K::Multi, "collective"},
-    {"political_climate", K::Text, ""}, {"primary_power", K::Single, "institution"},
+    {"parent_location", K::Single, "location"}, {"vehicle", K::Single, "object"},
+    {"populations", K::Multi, "collective"}, {"political_climate", K::Text, ""}, {"primary_power", K::Single, "institution"},
     {"governing_title", K::Single, "title"}, {"secondary_powers", K::Multi, "institution"},
     {"zone", K::Single, "zone"}, {"rival", K::Single, "location"}, {"partner", K::Single, "location"},
     {"customs", K::Text, ""}, {"founders", K::Multi, "character"}, {"cults", K::Multi, "construct"},
