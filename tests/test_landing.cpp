@@ -255,6 +255,10 @@ OW_TEST(landing_options_as_json_at_their_edges) {
     t.Eq(OWLanding::LandingOf(g, Parse(R"({"heads": 1.0})")).clusters.size(), size_t(1), "and caps at one head");
     t.Eq(refused(R"({"size": 2e1})"), std::string(), "2e1 is 20");
     t.Eq(OWLanding::LandingOf(g, Parse(R"({"size": 2e1})")).size, int64_t(20), "read at 20");
+    t.Eq(refused(R"({"heads": 1e30, "hops": 1e30})"), std::string(), "past 64 bits is still a whole number");
+    t.Eq(OWLanding::LandingOf(g, Parse(R"({"heads": 1e30, "hops": 1e30})")).clusters.size(), size_t(2),
+         "every head, each reaching all it can");
+    t.Eq(refused(R"({"size": 1e400})"), std::string("size"), "a number past every double is none (JavaScript's Infinity)");
     t.Eq(refused(R"({"heads": true})"), std::string("heads"), "a boolean");
     t.Eq(refused(R"({"hops": -1})"), std::string("hops"), "below 1");
     t.Eq(refused(R"({"size": [3]})"), std::string("size"), "a list");

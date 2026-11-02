@@ -17,13 +17,15 @@ namespace {
 OWJsonValue Int(int64_t n) { return OWJsonValue::Number(n); }
 OWJsonValue Text(const std::string& s) { return OWJsonValue::String(s); }
 
-// A whole number as the packages read one: an integral number (2.0 as 2, as JavaScript cannot tell them apart) inside
-// 64 bits; anything else is none.
+// A whole number as the packages read one: an integral number (2.0 as 2, as JavaScript cannot tell them apart); one
+// past 64 bits reads as the largest (every option is a count or a reach, and the packages take 1e30 too); anything
+// else is none.
 std::optional<int64_t> Whole(const OWJsonValue& v) {
     if (!v.IsNumber()) return std::nullopt;
     double d = v.AsDouble();
-    if (!std::isfinite(d) || std::floor(d) != d || d >= 9223372036854775808.0 || d < -9223372036854775808.0)
-        return std::nullopt;
+    if (!std::isfinite(d) || std::floor(d) != d) return std::nullopt;
+    if (d >= 9223372036854775808.0) return INT64_MAX;
+    if (d < -9223372036854775808.0) return INT64_MIN;
     return int64_t(d);
 }
 
