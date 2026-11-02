@@ -1,4 +1,4 @@
-// OWMapSpace on the map-space profile's conformance fixture (schema-dist profiles/map-space.fixture.json, dist.105's
+// OWMapSpace on the map-space profile's conformance fixture (schema-dist profiles/map-space.fixture.json, dist.106's
 // copy, its sha256 held to MANIFEST.json): every case by name, its elements read as served and the whole answer
 // compared as bytes (key order, list order and each number's spelling as JSON.stringify writes it); then the profile's
 // invariants over every case (four keys in order, read twice the same bytes, the rows read backwards the same bytes,
@@ -22,8 +22,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.105's MANIFEST.json records it.
-const char* const DistSha256 = "5baad8af69ed14356ab16a5fbb542db53040b69a8d14e437397dfe4a3a2659ab";
+// The fixture's sha256 as dist.106's MANIFEST.json records it.
+const char* const DistSha256 = "7622c9cc44f7254481b29add8846e2077e431353f993e8fc95702d7a530279af";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/map-space.fixture.json"; }
 
@@ -96,7 +96,7 @@ bool IsRow(const OWJsonValue& e) {
 OW_TEST(map_space_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the map-space fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.105's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.106's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -110,10 +110,10 @@ OW_TEST(map_space_fixture_is_the_pinned_one) {
         names.insert(Str(*c, "name"));
         if (const OWJsonValue* ch = c->Find("choice")) choices.insert(Str(ch));
     }
-    t.Eq(Cases().size(), size_t(24), "24 cases");
-    t.Eq(names.size(), size_t(24), "each name its own");
-    t.Ok(choices == std::set<std::string>{"B", "C", "D", "E", "G", "H"},
-         "the cases that carry a ruled reading: B, C, D, E, G, H");
+    t.Eq(Cases().size(), size_t(34), "34 cases");
+    t.Eq(names.size(), size_t(34), "each name its own");
+    t.Ok(choices == std::set<std::string>{"A", "B", "C", "D", "E", "G", "H", "I", "J", "K"},
+         "the cases that carry a ruled reading: A to E, G to K");
 }
 
 OW_CASES(map_space_fixture_cases) {
