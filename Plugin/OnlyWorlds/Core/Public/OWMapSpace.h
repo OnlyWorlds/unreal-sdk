@@ -1,9 +1,9 @@
 #pragma once
-// The map-space profile (schema-dist profiles/map-space.md, serial 105): how a reader turns a world's four map-space
-// types into geometry, a Map's frame, a Zone's outline from its Markers, a Pin's point. Structure and coordinates in the
-// Map's own pixels, counted from its bottom left, z upward (an elevation, never a height); looks, cameras, walls,
-// doors and units are a drawing tool's. It adds nothing to the world and stores nothing. The npm SDK's mapSpace and
-// the Python package's map_space give the same answer; held to the profile's conformance fixture
+// The map-space profile (schema-dist profiles/map-space.md, serials 105 and 106): how a reader turns a world's four
+// map-space types into geometry, a Map's frame, a Zone's outline from its Markers, a Pin's point. Structure and
+// coordinates in the Map's own pixels, counted from its bottom left, z upward (an elevation, never a height); looks,
+// cameras, walls, doors and units are a drawing tool's. It adds nothing to the world and stores nothing. The npm
+// SDK's mapSpace and the Python package's map_space give the same answer; held to the profile's conformance fixture
 // (profiles/map-space.fixture.json).
 
 #include "OWJson.h"
@@ -15,7 +15,7 @@
 
 namespace OnlyWorlds {
 
-// A point, whole numbers in the Map's pixels; z reads 0 when the row has none.
+// A point, whole numbers in the Map's pixels; z reads 0 when the row has none or one that is not whole.
 struct OWMapSpacePoint {
     int64_t x = 0;
     int64_t y = 0;
@@ -25,8 +25,9 @@ struct OWMapSpacePoint {
 // One Map's frame.
 struct OWMapSpaceMap {
     std::string id;
-    // The Map's own `width` and `height` when whole numbers, else the largest x (or y) among its own outline and Pin
-    // points (none with no point), and `measured` is then true.
+    // The Map's own `width` and `height` when whole numbers, else the largest x (or y) among its own placed points, its
+    // outlines' and its Pins' (a dangling or unplaced point measures nothing; none with no point), and `measured` is
+    // then true.
     std::optional<int64_t> width;
     std::optional<int64_t> height;
     // The Map's `depth` when a whole number, the z extent.
@@ -95,14 +96,16 @@ const std::vector<std::string>& OutReasons();
 const std::vector<std::string>& Shapes();
 
 // A whole number as the profile reads one, by value: a JSON number with no fractional part (2.0 is 2, 1e2 is 100),
-// never a string or a boolean. An integer literal reads exactly (past 2^53 too); a value past 64 bits is none here, a
-// platform limit.
+// never a string or a boolean. This reader's integer range is int64: an integer literal within it reads exactly (past
+// 2^53 too), and a value past it reads as not whole, as the page says a reader does (the fixture stays within 2^53).
 std::optional<int64_t> WholeOf(const OWJsonValue* v);
 
 // mapSpace(elements), over the elements as the reader is served them (a JSON list: a folder's rows or the API's, so
 // visibility is already applied and a Zone the reader may not see is not brought back). Rows are read by their
-// `type` as stored (`map`, `zone`, `marker`, `pin`); a row that is not an object, has no string `type`, or no
-// non-empty string `id` is no element, ignored and never counted.
+// `type` as written, case-exactly (`map`, `zone`, `marker`, `pin`; `Map` is none of them), and `shape` too (`Line` is
+// a polygon); a row that is not an object, has no string `type`, or no non-empty string `id` is no element, ignored
+// and never counted. Two rows of one type with one id read as the last one served, for every type, even when the last
+// reads less (an element is its id).
 // A Zone's outline is the Markers whose `zone` names it and whose `map` names one Map, by `order` ascending; a Marker
 // without a whole `order` sorts after every ordered one, ties by id in code point order; one outline per Map the Zone
 // has Markers on. A Marker whose Zone or Map is not served is counted `dangling` (checked first, so it counts once),
