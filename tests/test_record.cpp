@@ -1,4 +1,4 @@
-// OWRecord on the record profile's conformance fixture (schema-dist profiles/record.fixture.json, dist.102's copy, its
+// OWRecord on the record profile's conformance fixture (schema-dist profiles/record.fixture.json, dist.103's copy, its
 // sha256 held to MANIFEST.json): every case by name, the mark (MarkOf) and the records (RecordsOf) over the fixture's
 // one world, the mark's field and members held equal to the fixture's; then readings the fixture leaves open (the
 // instant's arithmetic, played_at's form at its edges, the tool's and the outcome's bounds, an element that cannot be
@@ -21,8 +21,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.102's MANIFEST.json records it.
-const char* const DistSha256 = "eff88749296799cb27643ba3a189b1cb128b39f37395c723c38e774ded20c571";
+// The fixture's sha256 as dist.103's MANIFEST.json records it.
+const char* const DistSha256 = "27cac893fff9afd3835ec6e105c4d9c18128319586cde8fb05c626db7cd3071d";
 
 const char* const Fluffington = "019a8000-0000-7000-8000-000000000101";
 const char* const Ford = "019a8000-0000-7000-8000-000000000201";
@@ -147,7 +147,7 @@ std::string Played(const std::string& at) { return R"({"tool": "subs", "played_a
 OW_TEST(record_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the record fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.102's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.103's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -166,10 +166,10 @@ OW_TEST(record_fixture_is_the_pinned_one) {
         if (Str(c, "kind") == "mark") ++marks;
         if (Str(c, "kind") == "records") ++records;
     }
-    t.Eq(cases->Size(), size_t(32), "32 cases");
-    t.Eq(names.size(), size_t(32), "each name its own");
-    t.Eq(marks, size_t(25), "25 mark cases");
-    t.Eq(records, size_t(7), "7 records cases");
+    t.Eq(cases->Size(), size_t(40), "40 cases");
+    t.Eq(names.size(), size_t(40), "each name its own");
+    t.Eq(marks, size_t(29), "29 mark cases");
+    t.Eq(records, size_t(11), "11 records cases");
     const OWJsonValue* mark = doc->Find("mark");
     t.Eq(mark ? Str(*mark, "field") : std::string(), std::string(OWRecord::Mark), "the mark's field");
     std::vector<std::string> members;
@@ -358,6 +358,35 @@ OW_TEST(record_a_narrative_naming_an_event_twice_is_one_story) {
         got.records[0].stories[0].name = "planted";
         t.Eq(got.records[1].stories[0].name, std::string("One"), "no two records share a story");
     }
+}
+
+// Record rule 1 at serial 103: proposed is what the review profile's proposedMarkOf reads, an x_review_proposed object
+// with a key. The fixture cases an object with keys, null, {}, "" and []; the page's words decide the values it does
+// not case, and the npm SDK's recordsOf and the Python package's records_of read them the same: a string with text, a
+// number, a boolean and a list with an entry are no proposal, so the run and the story are read.
+OW_TEST(record_proposed_is_an_object_with_a_key) {
+    const std::string c = Fluffington;
+    auto read = [&](const std::string& proposed) {
+        OWJsonValue els = Parse(R"([
+            {"id": "e1", "type": "event", "characters": [")" + c + R"("], "x_review_proposed": )" + proposed +
+                                R"(, "x_record": {"tool": "subs", "played_at": "2026-11-01T00:00Z"}},
+            {"id": "e2", "type": "event", "characters": [")" + c + R"("], "x_record": {"tool": "subs", "played_at": "2026-11-02T00:00Z"}},
+            {"id": "n1", "type": "narrative", "protagonist": ")" + c + R"(", "x_review_proposed": )" + proposed +
+                                R"(, "events": ["e2"]}])");
+        OWCharacterRecords got = OWRecord::RecordsOf(c, els);
+        std::string out;
+        for (const OWCharacterRecord& r : got.records) {
+            out += r.event_id + "(";
+            for (const OWRecordStory& s : r.stories) out += s.id;
+            out += ")";
+        }
+        return out;
+    };
+    t.Eq(read(R"({"by": "m1"})"), std::string("e2()"), "an object with a key: the run and the story wait");
+    t.Eq(read(R"({"expires": null})"), std::string("e2()"), "any key: an object with a null member is still a mark");
+    for (const char* settled : {"null", "{}", "\"\"", "[]", "\"a seat's proposal\"", "\"  \"", "1", "0", "true", "false",
+                                "[\"m1\"]", "[{}]"})
+        t.Eq(read(settled), std::string("e2(n1)e1()"), std::string(settled) + ": settled, both read");
 }
 
 // A caller's mistake is no reading: elements that are not a list.

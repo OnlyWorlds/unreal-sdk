@@ -49,6 +49,16 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWLanding::LandingOf(graph, options)` in the core (`OWLanding.h`): the landing profile's reader (schema-dist
+  `profiles/landing.md`, serial 103), a world's first picture at a door, read from the graph `OWGraph::WorldGraph`
+  answers for the visitor, so it sees exactly what that reader may see. The answer (`OWWorldLanding`, `ToJson()` the
+  profile's `{mode, size, clusters, unclustered, gaps}`): the most-linked Characters as heads, each with the nodes
+  within `hops` steps of it (the nearest head wins, a tie going to the higher-ranked one), every node no head reaches,
+  and the gaps (an orphan, a near-orphan, a Character with no place, a Location nobody is in), with the mode (`gaps`
+  under `size` nodes, `graph` at it). Options (`OWLandingOptions`, or as JSON the way the packages take them): `heads`
+  (5), `hops` (1), `size` (24), each a whole number of 1 or more; an unknown key or another value is refused by name.
+  Counted in integers, ids in code point order. Parity with the TypeScript SDK's `landingOf` and the Python package's
+  `landing_of`; held to the profile's 30-case fixture by its sha256. Not yet in the plugin's Blueprint library.
 - `OWRecord::RecordsOf(character, elements)` in the core (`OWRecord.h`): the record profile's reader (schema-dist
   `profiles/record.md`, serial 102), a Character's records in a world, each a game's run kept as an Event marked by
   `x_record`, read over the elements as served: the run's tool, `played_at`, version, seed and outcome, the
@@ -118,6 +128,19 @@ Nothing is released yet; the history before this file is in the git log.
 - The Open with menu's own site row says "You are here" when the surface's `tool` is `onlyworlds` (the site itself),
   where before it said "Needs a connection" offline or nothing. Parity with the TypeScript SDK 4.123.0, the shared
   openers fixture re-vendored at 57 cases.
+- Schema pin to `v0.34.0-dist.103` (canonical `00.34.00`): Location gains `vehicle`, a single link to the Object the
+  place is the inside of (a ship, a train, a walking city). The generated `FOWLocation` gains `Vehicle` (an `FString`,
+  the Object's id), and the core's field table gains it, so the lens reader hops through it and the graph draws it as
+  an edge. The serial also brings the landing profile (`profiles/landing.md`, 30 cases), degree and out-degree defined
+  on the lens page (the lens fixture at 196 cases, a new `degree` kind) and seven new readings in the record profile
+  (its fixture at 40 cases).
+- `OWRecord::RecordsOf` reads a run or a story as proposed exactly when the review profile's `proposedMarkOf` does:
+  an `x_review_proposed` object with a key. An empty mark (`{}`, `""`, `[]`) is settled, so the run and its stories
+  are read, where before any value but null held them back; a value that is not an object is settled too. The record
+  profile at serial 103, parity with the TypeScript SDK and the Python package. The serial's other record readings
+  (`played_at`'s upper-case `T` and `Z`, ASCII digits, an optional fraction; ties and stories by code point; an Event
+  or a Narrative whose id is not a string never read; a name that is not a string read as `""`) this reader already
+  kept; the fixture's 40 cases pass.
 - Schema pin to `v0.33.0-dist.102`: the record profile, new (`profiles/record.md` and its fixture, 32 cases): one
   run of a game kept in the world its Characters live in, an Event marked by `x_record`, a Character's records read
   from the Event's `characters` and the stories' `protagonist` or `narrator`. The strand profile's ruled line moved
