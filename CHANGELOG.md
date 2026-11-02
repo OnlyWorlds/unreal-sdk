@@ -49,6 +49,16 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWLanding::LandingOf(graph, options)` in the core (`OWLanding.h`): the landing profile's reader (schema-dist
+  `profiles/landing.md`, serial 103), a world's first picture at a door, read from the graph `OWGraph::WorldGraph`
+  answers for the visitor, so it sees exactly what that reader may see. The answer (`OWWorldLanding`, `ToJson()` the
+  profile's `{mode, size, clusters, unclustered, gaps}`): the most-linked Characters as heads, each with the nodes
+  within `hops` steps of it (the nearest head wins, a tie going to the higher-ranked one), every node no head reaches,
+  and the gaps (an orphan, a near-orphan, a Character with no place, a Location nobody is in), with the mode (`gaps`
+  under `size` nodes, `graph` at it). Options (`OWLandingOptions`, or as JSON the way the packages take them): `heads`
+  (5), `hops` (1), `size` (24), each a whole number of 1 or more; an unknown key or another value is refused by name.
+  Counted in integers, ids in code point order. Parity with the TypeScript SDK's `landingOf` and the Python package's
+  `landing_of`; held to the profile's 30-case fixture by its sha256. Not yet in the plugin's Blueprint library.
 - `OWRecord::RecordsOf(character, elements)` in the core (`OWRecord.h`): the record profile's reader (schema-dist
   `profiles/record.md`, serial 102), a Character's records in a world, each a game's run kept as an Event marked by
   `x_record`, read over the elements as served: the run's tool, `played_at`, version, seed and outcome, the
