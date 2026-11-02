@@ -52,11 +52,12 @@ Nothing is released yet; the history before this file is in the git log.
   it already read Maps and Zones (schema-dist serial 106, reading I), even when the last reads less: a placed Marker
   followed by an unplaced one with its id counts `no_point`, a Pin followed by one naming no served Map counts
   `no_map`. Before, every Marker and Pin row was read, as the TypeScript SDK 4.129.0 reads them (the Python package
-  0.104.0 kept one Pin per id, every Marker row); the packages' serial 106 readers read as this one.
-  `OWMapSpace::WholeOf` reads an integer literal past int64 as not whole (the page's platform range), where one just
-  below int64's least read as that least. Unchanged, now the page's own words: a frame measured from placed points only, a `z` that is
-  not whole as 0, a Zone with no placed Marker counted `no_markers`, a Pin with neither a served Map nor a point
-  counted once as `no_map` (J), and `type` and `shape` read case-exactly (K).
+  0.104.0 kept one Pin per id, every Marker row). Parity with the TypeScript SDK 4.129.1's `mapSpace` and the Python
+  package 0.104.1's `map_space`, both at serial 106. `OWMapSpace::WholeOf` reads an integer literal past int64 as not
+  whole (the page's platform range), where one just below int64's least read as that least. Unchanged, now the page's
+  own words: a frame measured from placed points only, a `z` that is not whole as 0, a Zone with no placed Marker
+  counted `no_markers`, a Pin with neither a served Map nor a point counted once as `no_map` (J), and `type` and
+  `shape` read case-exactly (K).
 - Schema pin to `v0.34.0-dist.105` (canonical `00.34.00` unchanged: no model or wire change). The new map-space
   profile and its fixture (`OWMapSpace`, above), and the landing page's door sentence, words only: any door may serve
   the answer, and a key beside the five is the door's own. `OWLanding::LandingOf` is unchanged; its 33 cases pass.
