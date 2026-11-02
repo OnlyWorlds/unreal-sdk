@@ -15,13 +15,15 @@
 // says "Opens the world". On an element given as the options' element (the element as served, the mark flat on it), a
 // row whose open.element_skips names a mark the element carries (ElementMarks(), each read as OWGraph::WorldGraph
 // reads it: MarksOf) is not there: its door cannot open it. A world door alone opens the world, so it stays. For the
-// public audience only rows whose needs is absent are there: a row that needs anything does not exist for the public.
+// public audience (the signed-out reader) a row whose needs is "device" is not there, since a visitor's device holds no
+// world of this one's, and a row whose needs is "account" is there and says it needs one.
 // A lens and a moment on the address ride on no href.
 //
 // Each row's state, the first that holds: "You are here" for the surface's own tool (its client is surface.tool); then,
 // when surface.online is false, "Needs a connection" for a row whose href is a web address (it begins http: or https:,
 // in any case; a row whose link opens an app on the device keeps its own word, and the href stays in the row either
-// way); then what needs asks of this surface: "account" outside a browser "Opens in your browser", in a browser signed
+// way); then, for the public audience, "Needs an account" for a row whose needs is "account", whatever signed_in says
+// (the href stays in the row; a menu draws it as a row that opens nothing); then what needs asks of this surface: "account" outside a browser "Opens in your browser", in a browser signed
 // out "Sign in to <name> first" (none when signed_in is unknown: a word shows only when the surface knows it is true),
 // "device" on a phone "Needs the world on this phone"; then "Opens the world" (a world door on an element: a sign-in
 // the row needs is the more urgent word); else none.
@@ -48,8 +50,8 @@ namespace OnlyWorlds {
 
 // A tool's open in the tools list: its link templates and what they need first. world holds {world} (the world's id);
 // element holds {id} and, if it needs them, {world} and {type} (the type word); either absent without one. needs is
-// "account" (signed in to the tool), "device" (the world already in the tool on this device), or absent for nothing,
-// the one kind of row a public page offers.
+// "account" (signed in to the tool), "device" (the world already in the tool on this device), or absent for nothing. A
+// public page offers those rows, and an "account" row only as one that opens nothing ("Needs an account").
 // element_skips is what the element door does not open, in the lens profile's graph section's words (ElementMarks():
 // room, hidden, proposed, map_space, reading_aid); empty when it opens every element, and on a list older than the key.
 struct OWToolOpen {
@@ -72,7 +74,7 @@ struct OWTool {
 // What the surface drawing the menu knows of itself and its reader. Nothing is guessed.
 struct OWOpenerSurface {
     std::optional<std::string> tool;  // the surface's own tool's client name, when it is a listed tool
-    std::string audience;             // "member" (a seat in the world, a guest included) or "public"; required
+    std::string audience;             // "member" (a seat in the world, a guest included) or "public" (signed out); required
     std::optional<bool> signed_in;    // absent when the surface cannot know, and then no row says so
     bool browser = true;              // false in a game or a desktop app, which cannot see the browser's sign-in
     bool phone = false;
@@ -115,6 +117,7 @@ extern const char* const OpensInYourBrowser;     // "Opens in your browser"
 extern const char* const NeedsTheWorldOnThisPhone;  // "Needs the world on this phone"
 extern const char* const OpensTheWorld;          // "Opens the world"
 extern const char* const NeedsAConnection;       // "Needs a connection"
+extern const char* const NeedsAnAccount;         // "Needs an account"
 std::string SignInFirst(std::string_view name);  // "Sign in to <name> first"
 
 // The marks an element door may skip, the lens profile's graph section's words for what a lore view leaves an element

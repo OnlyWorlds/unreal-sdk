@@ -18,7 +18,7 @@ class UOWWorld;
 UENUM(BlueprintType)
 enum class EOWAudience : uint8
 {
-	/** Anyone: only the rows that need nothing first. */
+	/** Anyone, signed out: the rows that need nothing, and a tool that needs an account as a row that says "Needs an account" and opens nothing; a tool that needs the device is not there. */
 	Public,
 	/** A seat in the world, a guest included. */
 	Member,
@@ -40,7 +40,7 @@ struct ONLYWORLDS_API FOWOpenerSurface
 {
 	GENERATED_BODY()
 
-	/** Public by default: a row that needs anything does not exist for the public. */
+	/** Public by default, the signed-out reader: a tool that needs an account says "Needs an account", whatever SignIn says. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Open with")
 	EOWAudience Audience = EOWAudience::Public;
 
@@ -81,7 +81,7 @@ struct ONLYWORLDS_API FOWOpener
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Open with")
 	FString Href;
 
-	/** What the row says ("You are here", "Needs a connection", "Opens in your browser", "Sign in to Atlas first", ...); "" when it opens now and says nothing. */
+	/** What the row says ("You are here", "Needs a connection", "Needs an account", "Opens in your browser", "Sign in to Atlas first", ...); "" when it opens now and says nothing. A row that says "Needs a connection" or "Needs an account" opens nothing now: its Href is kept, and a menu draws the row disabled, still reachable, and opens no link from it. */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Open with")
 	FString State;
 };

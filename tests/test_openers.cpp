@@ -21,9 +21,10 @@ using owtest::P;
 
 namespace {
 
-// The npm SDK's test/fixtures/openers.fixture.json at 6d31677 (4.126.0: the element door's skips, 25 cases more).
-const char* const FixtureSha256 = "381b3ab03bbb19187a74e830c7236306f9ba1f6128020c8855515ce7a63bb6cc";
-const size_t CaseCount = 90;
+// The npm SDK's test/fixtures/openers.fixture.json at 1ef974a (4.130.0: a signed-out visitor's account rows, 2 cases
+// more).
+const char* const FixtureSha256 = "b5c6afb76bf1ab2b95ee50641e2fd36344320d12fe0fd293d4f09fcf8cde7027";
+const size_t CaseCount = 92;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";
@@ -216,10 +217,14 @@ OW_TEST(openers_the_baked_list_gives_the_sites_row_then_each_listed_tool_with_a_
     OWOpenersResult member = OWOpeners::OpenersFor(all, OWOpeners::World, world, Member(true));
     t.Ok(member.ok, "read: " + member.message);
     std::vector<std::string> want{"onlyworlds"}, want_public{"onlyworlds"}, got, got_public;
+    std::vector<std::string> want_public_state{""}, got_public_state;
     for (const OWTool& x : all) {
         if (x.rung != "listed" || !x.open || !x.open->world) continue;
         want.push_back(x.id);
-        if (!x.open->needs) want_public.push_back(x.id);
+        // The public: a tool that needs the device is not there; one that needs an account says so.
+        if (x.open->needs && *x.open->needs == "device") continue;
+        want_public.push_back(x.id);
+        want_public_state.push_back(x.open->needs ? OWOpeners::NeedsAnAccount : "");
     }
     for (const OWOpener& r : member.rows) got.push_back(r.id);
     t.Ok(got == want, "the site, then the list's order");
@@ -230,8 +235,12 @@ OW_TEST(openers_the_baked_list_gives_the_sites_row_then_each_listed_tool_with_a_
     }
     OWOpenerSurface pub;
     pub.audience = OWOpeners::Public;
-    for (const OWOpener& r : OWOpeners::OpenersFor(all, OWOpeners::World, world, pub).rows) got_public.push_back(r.id);
+    for (const OWOpener& r : OWOpeners::OpenersFor(all, OWOpeners::World, world, pub).rows) {
+        got_public.push_back(r.id);
+        got_public_state.push_back(r.state.value_or(""));
+    }
     t.Ok(got_public == want_public, "the public's rows");
+    t.Ok(got_public_state == want_public_state, "the public's words: an account tool's says it needs one");
     t.Eq(std::string(OWTools::Commit).size(), size_t(40), "the pinned commit");
     t.Eq(std::string(OWTools::Sha256).size(), size_t(64), "the list's sha256");
 }

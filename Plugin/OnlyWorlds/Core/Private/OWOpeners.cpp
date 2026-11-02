@@ -21,6 +21,7 @@ const char* const OpensInYourBrowser = "Opens in your browser";
 const char* const NeedsTheWorldOnThisPhone = "Needs the world on this phone";
 const char* const OpensTheWorld = "Opens the world";
 const char* const NeedsAConnection = "Needs a connection";
+const char* const NeedsAnAccount = "Needs an account";
 
 std::string SignInFirst(std::string_view name) { return "Sign in to " + std::string(name) + " first"; }
 
@@ -186,7 +187,10 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
         if (!o.element && !o.element_skips.empty())
             return Mistake("tool " + r.id + ": open.element_skips names what an element door leaves out, and the row has none");
         if (r.rung != Listed) continue;
-        if (surface.audience == Public && o.needs) continue;
+        // The public is the signed-out reader: a visitor's device holds no world of this one's, so a row that needs the
+        // device is not there; a row that needs an account is, and says so.
+        const bool visitor = surface.audience == Public;
+        if (visitor && o.needs && *o.needs == Device) continue;
         const std::optional<std::string>& tpl = element ? (o.element ? o.element : o.world) : o.world;
         if (!tpl) continue;
         // An element door that cannot open this element is no door (a row with skips has one: refused above).
@@ -201,6 +205,7 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
         const std::string href = Fill(*tpl, world, type, id);
         if (surface.tool && r.client && *r.client == *surface.tool) state = YouAreHere;
         else if (offline(href)) state = NeedsAConnection;
+        else if (visitor && account) state = NeedsAnAccount;
         else if (account && !surface.browser) state = OpensInYourBrowser;
         else if (account && surface.signed_in == false) state = SignInFirst(r.name);
         else if (o.needs && *o.needs == Device && surface.phone) state = NeedsTheWorldOnThisPhone;

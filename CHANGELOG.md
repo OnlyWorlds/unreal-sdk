@@ -46,6 +46,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- A signed-out visitor sees the tools that need an account. `OWOpeners::OpenersFor` and `OpenersForJson` with the
+  `public` audience give a row for a tool whose `open.needs` is `account`, with the new word "Needs an account"
+  (`OWOpeners::NeedsAnAccount`), whatever `signed_in` and `browser` say; before, the public saw no such row. The href
+  stays in the row; a menu draws it as one that opens nothing. A tool that needs the device is still not there for
+  the public. The word comes after "You are here" and "Needs a connection", before every other word. On Blueprints,
+  `UOWOpeners` gives the public Atlas and Lantern so worded (`FOWOpener::State`), each `Href` kept, as it gives a row
+  that needs a connection. Parity with the TypeScript SDK 4.130.0 and the Python package 0.105.0: the shared openers
+  fixture at 92 cases.
 - Schema pin to `v0.34.0-dist.106` (canonical `00.34.00` unchanged: no model or wire change). The map-space page
   rules readings I to K and four sentences from what the engine ports found; its fixture moves from 24 cases to 34.
 - `OWMapSpace::MapSpaceOf` reads two rows of one type with one id as the last one served for Markers and Pins too, as
