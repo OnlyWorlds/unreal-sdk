@@ -14,6 +14,7 @@
 #include "OWLanding.h"
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <set>
 #include <string>
@@ -221,15 +222,19 @@ OW_TEST(landing_the_tables) {
 }
 
 OW_TEST(landing_the_typed_options_answer_as_the_json_ones) {
-    // Every case read again through OWLandingOptions, its options set from the JSON: the same bytes.
+    // Every case read again through OWLandingOptions, its options set from the JSON: the same bytes. A number past
+    // int64 is set as the largest int64 holds, as the page reads it (a heads too large to hold reads as the largest);
+    // a bare int64_t(double) past the range is undefined, and MSVC gives INT64_MIN.
     for (const OWJsonValue* c : Cases()) {
         const OWJsonValue& o = OptionsOf(*c);
         if (c->Find("want")->Find("refused")) continue;  // the typed form cannot carry a string or a fraction
         OWLandingOptions typed;
         for (auto [key, into] : {std::pair<const char*, std::optional<int64_t>*>{"heads", &typed.heads},
                                  {"hops", &typed.hops}, {"size", &typed.size}})
-            if (const OWJsonValue* v = o.IsObject() ? o.Find(key) : nullptr; v && v->IsNumber())
-                *into = int64_t(v->AsDouble());
+            if (const OWJsonValue* v = o.IsObject() ? o.Find(key) : nullptr; v && v->IsNumber()) {
+                const double d = v->AsDouble();
+                *into = d >= 9223372036854775807.0 ? std::numeric_limits<int64_t>::max() : int64_t(d);
+            }
         OWWorldGraph g = GraphOf(*c->Find("graph"));
         t.Eq(Bytes(OWLanding::LandingOf(g, typed).ToJson()), Bytes(OWLanding::LandingOf(g, o).ToJson()),
              Str(*c, "name"));
