@@ -96,8 +96,10 @@ const std::vector<std::string>& OutReasons();
 const std::vector<std::string>& Shapes();
 
 // A whole number as the profile reads one, by value: a JSON number with no fractional part (2.0 is 2, 1e2 is 100),
-// never a string or a boolean. This reader's integer range is int64: an integer literal within it reads exactly (past
-// 2^53 too), and a value past it reads as not whole, as the page says a reader does (the fixture stays within 2^53).
+// never a string or a boolean. A reader's integer range is the range it holds exactly: an integer literal is read as
+// int64, exactly (past 2^53 too), and one past int64 reads as not whole; a literal with a fraction or an exponent is
+// read as a double, whole only to 2^53 - 1 (past it the parse may have rounded it), as the npm SDK's isSafeInteger.
+// The fixture stays within 2^53.
 std::optional<int64_t> WholeOf(const OWJsonValue* v);
 
 // mapSpace(elements), over the elements as the reader is served them (a JSON list: a folder's rows or the API's, so

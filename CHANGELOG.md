@@ -54,6 +54,11 @@ Nothing is released yet; the history before this file is in the git log.
   `UOWOpeners` gives the public Atlas and Lantern so worded (`FOWOpener::State`), each `Href` kept, as it gives a row
   that needs a connection. Parity with the TypeScript SDK 4.130.0 and the Python package 0.105.0: the shared openers
   fixture at 92 cases.
+- `OWMapSpace::WholeOf` reads a number written with a fraction or an exponent as whole only up to 2^53 - 1 (a double
+  holds whole numbers exactly that far; past it the parse may have rounded it), where before it read any integral
+  double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
+  least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
+  integer range is the range it holds exactly), its test vector ported.
 - Schema pin to `v0.34.0-dist.106` (canonical `00.34.00` unchanged: no model or wire change). The map-space page
   rules readings I to K and four sentences from what the engine ports found; its fixture moves from 24 cases to 34.
 - `OWMapSpace::MapSpaceOf` reads two rows of one type with one id as the last one served for Markers and Pins too, as
