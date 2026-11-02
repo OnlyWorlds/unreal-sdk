@@ -124,6 +124,13 @@ Nothing is released yet; the history before this file is in the git log.
   an edge. The serial also brings the landing profile (`profiles/landing.md`, 30 cases), degree and out-degree defined
   on the lens page (the lens fixture at 196 cases, a new `degree` kind) and seven new readings in the record profile
   (its fixture at 40 cases).
+- `OWRecord::RecordsOf` reads a run or a story as proposed exactly when the review profile's `proposedMarkOf` does:
+  an `x_review_proposed` object with a key. An empty mark (`{}`, `""`, `[]`) is settled, so the run and its stories
+  are read, where before any value but null held them back; a value that is not an object is settled too. The record
+  profile at serial 103, parity with the TypeScript SDK and the Python package. The serial's other record readings
+  (`played_at`'s upper-case `T` and `Z`, ASCII digits, an optional fraction; ties and stories by code point; an Event
+  or a Narrative whose id is not a string never read; a name that is not a string read as `""`) this reader already
+  kept; the fixture's 40 cases pass.
 - Schema pin to `v0.33.0-dist.102`: the record profile, new (`profiles/record.md` and its fixture, 32 cases): one
   run of a game kept in the world its Characters live in, an Event marked by `x_record`, a Character's records read
   from the Event's `characters` and the stories' `protagonist` or `narrator`. The strand profile's ruled line moved

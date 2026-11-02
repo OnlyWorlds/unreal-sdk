@@ -1,5 +1,5 @@
 #pragma once
-// The record profile (schema-dist profiles/record.md, serial 102): one run of a game a world's Characters took part in
+// The record profile (schema-dist profiles/record.md, serials 102 and 103): one run of a game a world's Characters took part in
 // (a battle, a crossing, a match), kept in the world they live in, on kinds the standard already has. The run is an
 // Event carrying the mark x_record ({tool, played_at, version?, seed?, outcome?, seats?}), the game's own tally beside
 // it under its own prefix (never read here); who took part is the Event's `characters` alone; a Narrative that lists
@@ -7,7 +7,8 @@
 // Character's experience is the list RecordsOf reads, never a field on the Character.
 //
 // keel's elements/record.py (record_mark, records_of) is the reading this follows, the npm SDK's recordMarkOf and
-// recordsOf and the Python package's record_mark_of and records_of the same. Held to the profile's conformance fixture
+// recordsOf and the Python package's record_mark_of and records_of the same; where serial 103 moved the page (what is
+// proposed), the page and both packages, ahead of keel. Held to the profile's conformance fixture
 // (profiles/record.fixture.json).
 
 #include "OWJson.h"
@@ -95,8 +96,9 @@ std::optional<int64_t> InstantOf(std::string_view played_at);
 // A Character's records in a world (the packages' recordsOf), `elements` the world's elements as this reader is served
 // them, a JSON list. Pure: nothing is stored or written.
 //
-// Every Event whose mark MarkOf reads, not still proposed (the review profile's x_review_proposed, any value but null),
-// whose `characters` list names `character`; each with the Narratives, not still proposed, whose `events` list names
+// Every Event whose mark MarkOf reads, not still proposed (as the review profile's proposedMarkOf reads it: an
+// x_review_proposed object with a key; an empty mark, {}, "" or [], is settled), whose `characters` list names
+// `character`; each with the Narratives, not still proposed, whose `events` list names
 // the Event and whose `protagonist` or `narrator` (or both) is `character`. Newest first by played_at as an instant to
 // the millisecond (never compared as a string), a tie by the Event's id in code point order; stories in code point
 // order of their ids. A seat is the mark's seat for `character`, never a fallback for `characters`: a seat for a

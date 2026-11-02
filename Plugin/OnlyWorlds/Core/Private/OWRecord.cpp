@@ -34,10 +34,12 @@ bool IsType(const OWJsonValue& el, std::string_view type) {
     return t && t->IsString() && t->Text() == type;
 }
 
-// Still proposed while x_review_proposed holds any value but null (the review profile); absent or null is settled.
+// Proposed as the review profile's reader that shows a world reads it (proposedMarkOf; record rule 1, serial 103): an
+// x_review_proposed object with a key. Absent, null, an empty mark ({}, "", []) or any value that is not an object is
+// settled.
 bool IsProposed(const OWJsonValue& el) {
     const OWJsonValue* p = Get(el, Proposed);
-    return p && !p->IsNull();
+    return p && p->IsObject() && p->Size() > 0;
 }
 
 // A string id, or nullptr: an element whose id is not a string cannot be named.

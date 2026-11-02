@@ -360,6 +360,35 @@ OW_TEST(record_a_narrative_naming_an_event_twice_is_one_story) {
     }
 }
 
+// Record rule 1 at serial 103: proposed is what the review profile's proposedMarkOf reads, an x_review_proposed object
+// with a key. The fixture cases an object with keys, null, {}, "" and []; the page's words decide the values it does
+// not case, and the npm SDK's recordsOf and the Python package's records_of read them the same: a string with text, a
+// number, a boolean and a list with an entry are no proposal, so the run and the story are read.
+OW_TEST(record_proposed_is_an_object_with_a_key) {
+    const std::string c = Fluffington;
+    auto read = [&](const std::string& proposed) {
+        OWJsonValue els = Parse(R"([
+            {"id": "e1", "type": "event", "characters": [")" + c + R"("], "x_review_proposed": )" + proposed +
+                                R"(, "x_record": {"tool": "subs", "played_at": "2026-11-01T00:00Z"}},
+            {"id": "e2", "type": "event", "characters": [")" + c + R"("], "x_record": {"tool": "subs", "played_at": "2026-11-02T00:00Z"}},
+            {"id": "n1", "type": "narrative", "protagonist": ")" + c + R"(", "x_review_proposed": )" + proposed +
+                                R"(, "events": ["e2"]}])");
+        OWCharacterRecords got = OWRecord::RecordsOf(c, els);
+        std::string out;
+        for (const OWCharacterRecord& r : got.records) {
+            out += r.event_id + "(";
+            for (const OWRecordStory& s : r.stories) out += s.id;
+            out += ")";
+        }
+        return out;
+    };
+    t.Eq(read(R"({"by": "m1"})"), std::string("e2()"), "an object with a key: the run and the story wait");
+    t.Eq(read(R"({"expires": null})"), std::string("e2()"), "any key: an object with a null member is still a mark");
+    for (const char* settled : {"null", "{}", "\"\"", "[]", "\"a seat's proposal\"", "\"  \"", "1", "0", "true", "false",
+                                "[\"m1\"]", "[{}]"})
+        t.Eq(read(settled), std::string("e2(n1)e1()"), std::string(settled) + ": settled, both read");
+}
+
 // A caller's mistake is no reading: elements that are not a list.
 OW_TEST(record_a_callers_mistake_is_named) {
     OWCharacterRecords got = OWRecord::RecordsOf(Fluffington, Parse(R"({"elements": []})"));
