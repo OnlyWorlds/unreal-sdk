@@ -18,7 +18,7 @@ namespace OWGraph {
 namespace {
 
 const std::vector<std::string> Declared = {"x_lens_leads_to", "x_spine_depends_on"};
-const std::vector<std::string> FlagWords = {"rooms", "hidden", "proposed", "map_space"};
+const std::vector<std::string> FlagWords = {"rooms", "hidden", "proposed", "map_space", "reading_aids"};
 const std::vector<std::string> OwnerFlags = {"hidden", "proposed"};
 const std::vector<std::string> Reasons = {"room",   "hidden", "proposed", "map_space",   "reading_aid",
                                           "not_visible", "outside_lens", "budget", "types", "window",
@@ -65,13 +65,14 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
     }
     // Refused by name before anything is read, judged by the rung read as (the owner as another is that rung): the
     // owner's two flags from any other rung, then any flag from a public reading; the first unmet in the order hidden,
-    // proposed, rooms, map_space.
+    // proposed, rooms, map_space, reading_aids (any signed reader may ask the last, serial 104).
     const OWJsonValue* as = reader.Find("as");
     const OWJsonValue& seen = reader.Find("rung")->Text() == "owner" && as && as->IsObject() ? *as : reader;
     const std::string rung = seen.Find("rung")->Text();
-    const std::map<std::string, bool> asked = {{"rooms", options.rooms}, {"hidden", options.hidden},
-                                               {"proposed", options.proposed}, {"map_space", options.map_space}};
-    for (const char* flag : {"hidden", "proposed", "rooms", "map_space"}) {
+    const std::map<std::string, bool> asked = {{"rooms", options.rooms},         {"hidden", options.hidden},
+                                               {"proposed", options.proposed},   {"map_space", options.map_space},
+                                               {"reading_aids", options.reading_aids}};
+    for (const char* flag : {"hidden", "proposed", "rooms", "map_space", "reading_aids"}) {
         bool owners = Has(OwnerFlags, flag);
         if (asked.at(flag) && ((owners && rung != "owner") || rung == "public")) {
             g.refused = flag;
@@ -92,7 +93,8 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
     const bool seen_owner = r.seen_rung == "owner";
     const size_t n = r.els.size();
 
-    // The kinds out by default that apply to an element, each by its reason word (a flag's word but rooms -> room).
+    // The kinds out by default that apply to an element, each by its reason word (a flag's word but rooms -> room and
+    // reading_aids -> reading_aid).
     auto kinds = [&](size_t i) {
         std::vector<std::string> out;
         if (r.room[i]) out.push_back("room");
@@ -104,11 +106,15 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
     };
     // An unlensed graph's candidates: the reader's view, and for the owner (by the rung read as) what is proposed.
     auto candidate = [&](size_t i) { return r.view[i] || (seen_owner && r.proposed[i]); };
-    // Out by the first kind its flag does not bring back; a reading aid has no flag (only a lens naming its pair
-    // keeps one).
+    // Out by the first kind its flag does not bring back.
+    auto flag_of = [](const std::string& k) -> std::string {
+        if (k == "room") return "rooms";
+        if (k == "reading_aid") return "reading_aids";
+        return k;
+    };
     auto out_by = [&](size_t i) -> std::string {
         for (const std::string& k : kinds(i))
-            if (k == "reading_aid" || !asked.at(k == "room" ? "rooms" : k)) return k;
+            if (!asked.at(flag_of(k))) return k;
         return std::string();
     };
 
@@ -153,9 +159,10 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
         out.name = name ? *name : OWJsonValue::Null();
         out.family = OWPresentation::FamilyOf(r.types[i]);
         out.icon = OWPresentation::IconOf(r.types[i]);
-        // Every mark that applies, lens-kept or not.
+        // Every mark that applies, lens-kept or not: a reading aid a lens keeps carries reading_aid as a room element
+        // a lens keeps carries room (serial 104).
         for (const std::string& k : kinds(i))
-            if (k != "map_space" && k != "reading_aid") out.marks.push_back(k);
+            if (k != "map_space") out.marks.push_back(k);
         out.known_of = r.stub[i] != 0;
         g.nodes.push_back(std::move(out));
     }

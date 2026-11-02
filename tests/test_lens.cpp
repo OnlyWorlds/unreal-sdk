@@ -215,7 +215,7 @@ void Holds(owtest::T& t, const OWJsonValue& c) {
     }
 }
 
-// A graph case's options: the lens (a body or an id), the reading's as_of and clock, and the four flags.
+// A graph case's options: the lens (a body or an id), the reading's as_of and clock, and the five flags.
 OWGraphOptions GraphOptionsOf(const OWJsonValue& c) {
     OWGraphOptions o;
     const OWJsonValue* opt = c.Find("options");
@@ -224,7 +224,8 @@ OWGraphOptions GraphOptionsOf(const OWJsonValue& c) {
     if (const OWJsonValue* a = opt->Find("as_of"); a && a->IsNumber()) o.as_of = int64_t(std::llround(a->AsDouble()));
     if (const OWJsonValue* k = opt->Find("clock"); k && k->IsString()) o.clock = k->Text();
     for (auto [key, flag] : {std::pair<const char*, bool*>{"rooms", &o.rooms}, {"hidden", &o.hidden},
-                             {"proposed", &o.proposed}, {"map_space", &o.map_space}})
+                             {"proposed", &o.proposed}, {"map_space", &o.map_space},
+                             {"reading_aids", &o.reading_aids}})
         if (const OWJsonValue* v = opt->Find(key); v && v->IsBool()) *flag = v->AsBool();
     return o;
 }

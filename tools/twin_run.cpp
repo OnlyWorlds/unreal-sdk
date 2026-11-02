@@ -53,7 +53,7 @@ void Compact(const OWJsonValue& v, std::string& out) {
 
 OWJsonValue Refused(const std::string& msg) {
     OWJsonValue names = OWJsonValue::Array();
-    for (const char* flag : {"hidden", "proposed", "rooms", "map_space"})
+    for (const char* flag : {"hidden", "proposed", "rooms", "map_space", "reading_aids"})
         if (msg.find(flag) != std::string::npos) names.Push(OWJsonValue::String(flag));
     OWJsonValue got = OWJsonValue::Object();
     got.Set("threw", OWJsonValue::String("refused"));
@@ -90,7 +90,8 @@ OWJsonValue Answer(const OWJsonValue& c) {
         o.as_of = AsOf(opt->Find("as_of"));
         o.clock = Clock(opt->Find("clock"));
         for (auto [key, flag] : {std::pair<const char*, bool*>{"rooms", &o.rooms}, {"hidden", &o.hidden},
-                                 {"proposed", &o.proposed}, {"map_space", &o.map_space}})
+                                 {"proposed", &o.proposed}, {"map_space", &o.map_space},
+                                 {"reading_aids", &o.reading_aids}})
             if (const OWJsonValue* v = opt->Find(key); v && v->IsBool()) *flag = v->AsBool();
     }
     OWWorldGraph g = OWGraph::WorldGraph(world ? *world : none, reader ? *reader : none, o);
