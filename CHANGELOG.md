@@ -14,8 +14,8 @@ Nothing is released yet; the history before this file is in the git log.
   `order` (a Marker without one after every ordered one, ties by id; `shape` `polygon` unless `line`), a Pin's point
   with its element as both wire keys or neither, and what is left out counted once by reason (`no_point`,
   `no_markers`, `dangling`, `no_map`). Whole numbers by value (`2.0` is 2), ids by code point. Parity with the
-  TypeScript SDK 4.129.0's `mapSpace` and the Python package 0.104.0's `map_space`; held to the profile's fixture, 24
-  cases. Core only: there is no Blueprint door.
+  TypeScript SDK 4.129.0's `mapSpace` and the Python package 0.104.0's `map_space` at serial 105 (serial 106 below);
+  held to the profile's fixture, 34 cases since serial 106. Core only: there is no Blueprint door.
 - `OWGraphOptions::reading_aids`, a fifth flag on `OWGraph::WorldGraph` (schema-dist serial 104, the lens profile's
   "Out by default, a flag brings each back"): the reading aids, the charter, its guide and its domains (by the pair and
   the mark `x_charter_of`), come back into an unlensed graph, each node marked `reading_aid`; without it they stay out,
@@ -46,6 +46,17 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.0-dist.106` (canonical `00.34.00` unchanged: no model or wire change). The map-space page
+  rules readings I to K and four sentences from what the engine ports found; its fixture moves from 24 cases to 34.
+- `OWMapSpace::MapSpaceOf` reads two rows of one type with one id as the last one served for Markers and Pins too, as
+  it already read Maps and Zones (schema-dist serial 106, reading I), even when the last reads less: a placed Marker
+  followed by an unplaced one with its id counts `no_point`, a Pin followed by one naming no served Map counts
+  `no_map`. Before, every Marker and Pin row was read, as the TypeScript SDK 4.129.0 reads them (the Python package
+  0.104.0 kept one Pin per id, every Marker row); the packages' serial 106 readers read as this one.
+  `OWMapSpace::WholeOf` reads an integer literal past int64 as not whole (the page's platform range), where one just
+  below int64's least read as that least. Unchanged, now the page's own words: a frame measured from placed points only, a `z` that is
+  not whole as 0, a Zone with no placed Marker counted `no_markers`, a Pin with neither a served Map nor a point
+  counted once as `no_map` (J), and `type` and `shape` read case-exactly (K).
 - Schema pin to `v0.34.0-dist.105` (canonical `00.34.00` unchanged: no model or wire change). The new map-space
   profile and its fixture (`OWMapSpace`, above), and the landing page's door sentence, words only: any door may serve
   the answer, and a key beside the five is the door's own. `OWLanding::LandingOf` is unchanged; its 33 cases pass.

@@ -113,7 +113,12 @@ std::optional<int64_t> WholeOf(const OWJsonValue* v) {
     const std::string& text = v->Text();
     int64_t n = 0;
     auto [end, ec] = std::from_chars(text.data(), text.data() + text.size(), n);
-    if (ec == std::errc() && end == text.data() + text.size()) return n;
+    if (end == text.data() + text.size()) {
+        if (ec == std::errc()) return n;
+        // An integer literal past int64 is past this reader's range, read as not whole (rule 1, serial 106), never as
+        // the double it rounds to (-9223372036854775809 rounds to int64's least).
+        if (ec == std::errc::result_out_of_range) return std::nullopt;
+    }
     double d = v->AsDouble();
     if (!std::isfinite(d) || std::floor(d) != d || d >= 9223372036854775808.0 || d < -9223372036854775808.0)
         return std::nullopt;
@@ -135,20 +140,31 @@ OWWorldMapSpace MapSpaceOf(const OWJsonValue& elements) {
         answer.error = "mapSpace: elements is a list of elements.";
         return answer;
     }
-    // The rows by type, in the order served. A row without a non-empty string id is no element: ignored, never counted.
-    std::map<std::string, std::vector<const OWJsonValue*>> by_type;
+    // The rows by type, the type read as written (reading K: `Map` is no Map), one row per id: the last served takes
+    // the place of an earlier one (reading I, serial 106: an element is its id), in the first one's position, as npm's
+    // Map.set keeps it. A row without a non-empty string id is no element: ignored, never counted.
+    struct Rows {
+        std::vector<const OWJsonValue*> list;
+        std::map<std::string, size_t> at;
+    };
+    std::map<std::string, Rows> by_type;
     for (const OWJsonValue& e : elements.Items()) {
         if (!e.IsObject()) continue;
         const OWJsonValue* type = e.Find("type");
-        if (!type || !type->IsString() || !IdOf(e.Find("id"))) continue;
-        by_type[type->Text()].push_back(&e);
+        if (!type || !type->IsString()) continue;
+        std::optional<std::string> id = IdOf(e.Find("id"));
+        if (!id) continue;
+        Rows& rows = by_type[type->Text()];
+        auto [it, fresh] = rows.at.emplace(*id, rows.list.size());
+        if (fresh) rows.list.push_back(&e);
+        else rows.list[it->second] = &e;
     }
     auto rows_of = [&](const char* type) -> const std::vector<const OWJsonValue*>& {
         static const std::vector<const OWJsonValue*> none;
         auto it = by_type.find(type);
-        return it == by_type.end() ? none : it->second;
+        return it == by_type.end() ? none : it->second.list;
     };
-    // The Maps and Zones served, by id (a later row of the same id takes its place).
+    // The Maps and Zones served, by id.
     auto indexed = [&](const char* type) {
         std::map<std::string, const OWJsonValue*, ByCodePoint> m;
         for (const OWJsonValue* r : rows_of(type)) m[*IdOf(r->Find("id"))] = r;
@@ -219,7 +235,8 @@ OWWorldMapSpace MapSpaceOf(const OWJsonValue& elements) {
         answer.pins.push_back(std::move(pin));
     }
 
-    // Maps, by id: a slot of width and height measured from the Map's own points when it is not written whole.
+    // Maps, by id: a slot of width and height measured from the Map's own placed points (outlines and Pins; a dangling
+    // or unplaced point measures nothing) when it is not written whole.
     for (const auto& [mid, mp] : maps) {
         std::vector<OWMapSpacePoint> own;
         for (const OWMapSpaceOutline& o : answer.zones)

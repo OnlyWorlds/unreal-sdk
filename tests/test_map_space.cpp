@@ -1,9 +1,9 @@
-// OWMapSpace on the map-space profile's conformance fixture (schema-dist profiles/map-space.fixture.json, dist.105's
+// OWMapSpace on the map-space profile's conformance fixture (schema-dist profiles/map-space.fixture.json, dist.106's
 // copy, its sha256 held to MANIFEST.json): every case by name, its elements read as served and the whole answer
 // compared as bytes (key order, list order and each number's spelling as JSON.stringify writes it); then the profile's
-// invariants over every case (four keys in order, read twice the same bytes, the rows read backwards the same bytes,
-// every Marker and Pin row placed or counted once) and readings the fixture leaves open (a caller's mistake, rows that
-// are no element, a whole number's edges).
+// invariants over every case (four keys in order, read twice the same bytes, the rows held one per id read forwards and
+// backwards the same bytes, every Marker and Pin held placed or counted once) and readings the fixture leaves open (a
+// caller's mistake, rows that are no element, a whole number's edges).
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -13,17 +13,19 @@
 #include "OWMapSpace.h"
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
 
 using namespace OnlyWorlds;
 using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.105's MANIFEST.json records it.
-const char* const DistSha256 = "5baad8af69ed14356ab16a5fbb542db53040b69a8d14e437397dfe4a3a2659ab";
+// The fixture's sha256 as dist.106's MANIFEST.json records it.
+const char* const DistSha256 = "7622c9cc44f7254481b29add8846e2077e431353f993e8fc95702d7a530279af";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/map-space.fixture.json"; }
 
@@ -91,12 +93,27 @@ bool IsRow(const OWJsonValue& e) {
     return e.IsObject() && type && type->IsString() && id && id->IsString() && !id->Text().empty();
 }
 
+// The elements as the reader holds them: the rows only, one per type and id, the last served (reading I).
+OWJsonValue Served(const OWJsonValue& elements) {
+    std::vector<const OWJsonValue*> rows;
+    std::map<std::pair<std::string, std::string>, size_t> at;
+    for (const OWJsonValue& e : elements.Items()) {
+        if (!IsRow(e)) continue;
+        auto [it, fresh] = at.emplace(std::make_pair(Str(e, "type"), Str(e, "id")), rows.size());
+        if (fresh) rows.push_back(&e);
+        else rows[it->second] = &e;
+    }
+    OWJsonValue out = OWJsonValue::Array();
+    for (const OWJsonValue* r : rows) out.Push(*r);
+    return out;
+}
+
 }  // namespace
 
 OW_TEST(map_space_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the map-space fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.105's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.106's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -110,10 +127,10 @@ OW_TEST(map_space_fixture_is_the_pinned_one) {
         names.insert(Str(*c, "name"));
         if (const OWJsonValue* ch = c->Find("choice")) choices.insert(Str(ch));
     }
-    t.Eq(Cases().size(), size_t(24), "24 cases");
-    t.Eq(names.size(), size_t(24), "each name its own");
-    t.Ok(choices == std::set<std::string>{"B", "C", "D", "E", "G", "H"},
-         "the cases that carry a ruled reading: B, C, D, E, G, H");
+    t.Eq(Cases().size(), size_t(34), "34 cases");
+    t.Eq(names.size(), size_t(34), "each name its own");
+    t.Ok(choices == std::set<std::string>{"A", "B", "C", "D", "E", "G", "H", "I", "J", "K"},
+         "the cases that carry a ruled reading: A to E, G to K");
 }
 
 OW_CASES(map_space_fixture_cases) {
@@ -140,22 +157,25 @@ OW_TEST(map_space_every_case_holds_the_profiles_invariants) {
              name + ": the four keys, in order");
         const std::string once = Bytes(answer);
         t.Eq(Bytes(OWMapSpace::MapSpaceOf(elements).ToJson()), once, name + ": read twice, the same bytes");
-        // No row order decides anything (the fixture's ids are each their own within a type).
-        OWJsonValue back = elements;
+        // The rows as the reader holds them (one per type and id, the last served) answer the same; and reversed, no
+        // row order decides anything once each id is one row.
+        const OWJsonValue served = Served(elements);
+        t.Eq(Bytes(OWMapSpace::MapSpaceOf(served).ToJson()), once, name + ": from the rows held, one per id");
+        OWJsonValue back = served;
         std::reverse(back.Items().begin(), back.Items().end());
-        t.Eq(Bytes(OWMapSpace::MapSpaceOf(back).ToJson()), once, name + ": from the rows reversed");
-        // Every Marker and Pin row is placed or counted, once.
+        t.Eq(Bytes(OWMapSpace::MapSpaceOf(back).ToJson()), once, name + ": from the rows held, reversed");
+        // Every Marker and Pin held is placed or counted, once.
         int64_t rows = 0, placed = 0;
-        for (const OWJsonValue& e : elements.Items())
-            if (IsRow(e) && (Str(e, "type") == "marker" || Str(e, "type") == "pin")) ++rows;
+        for (const OWJsonValue& e : served.Items())
+            if (Str(e, "type") == "marker" || Str(e, "type") == "pin") ++rows;
         for (const OWMapSpaceOutline& o : got.zones) placed += int64_t(o.points.size());
         placed += int64_t(got.pins.size());
         t.Eq(placed + got.out.no_point + got.out.dangling + got.out.no_map, rows,
              name + ": every Marker and Pin placed or counted once");
         // Zones: each served one has an outline or is counted no_markers.
         std::set<std::string> zones, outlined;
-        for (const OWJsonValue& e : elements.Items())
-            if (IsRow(e) && Str(e, "type") == "zone") zones.insert(Str(e, "id"));
+        for (const OWJsonValue& e : served.Items())
+            if (Str(e, "type") == "zone") zones.insert(Str(e, "id"));
         for (const OWMapSpaceOutline& o : got.zones) outlined.insert(o.zone);
         t.Eq(int64_t(outlined.size()) + got.out.no_markers, int64_t(zones.size()),
              name + ": every Zone outlined or counted no_markers");
@@ -205,8 +225,14 @@ OW_TEST(map_space_a_whole_number_at_its_edges) {
     t.Ok(!whole("true"), "nor a boolean");
     t.Ok(!whole("null"), "nor null");
     t.Ok(!whole("1e400"), "a number past every double is none");
+    // The page's platform range: a whole number past the reader's own integer range (int64 here) reads as not whole.
+    t.Ok(whole("9223372036854775807") == std::optional<int64_t>(9223372036854775807LL),
+         "int64's largest reads exactly");
+    t.Ok(!whole("9223372036854775808"), "an integer literal past int64 is not whole");
+    t.Ok(!whole("-9223372036854775809"), "nor one below it");
+    t.Ok(!whole("1e19"), "nor a value past int64 spelled as a decimal");
     t.Ok(!OWMapSpace::WholeOf(nullptr), "an absent key is none");
-    // A Marker with a non-whole z reads z 0, as both packages read it (the page says only that a missing z is 0).
+    // A Marker with a non-whole z reads z 0 (rule 1 since serial 106; the fixture's z-not-whole-reads-0 too).
     OWWorldMapSpace m = OWMapSpace::MapSpaceOf(Parse(R"([{"type": "map", "id": "m", "width": 9, "height": 9},
         {"type": "zone", "id": "z"}, {"type": "marker", "id": "k", "map": "m", "zone": "z", "x": 1, "y": 2, "z": 1.5}])"));
     t.Ok(m.zones.size() == 1 && m.zones[0].points.size() == 1 && m.zones[0].points[0].z == 0, "a z of 1.5 reads 0");
