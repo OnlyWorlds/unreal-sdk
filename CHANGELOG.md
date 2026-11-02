@@ -7,6 +7,15 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWMapSpace::MapSpaceOf(elements)`, the map-space profile's reader (schema-dist serial 105, `profiles/map-space.md`):
+  over the elements as served, `{maps, zones, pins, out}` in the Map's pixels, z an elevation and never a height. A
+  Map's frame (`width` and `height` measured from its own points, marked `extent: "points"`, when not written whole;
+  `depth`; `z_max`; `scale` from `x_metres_per_pixel` when positive), a Zone's outline per Map from its Markers by whole
+  `order` (a Marker without one after every ordered one, ties by id; `shape` `polygon` unless `line`), a Pin's point
+  with its element as both wire keys or neither, and what is left out counted once by reason (`no_point`,
+  `no_markers`, `dangling`, `no_map`). Whole numbers by value (`2.0` is 2), ids by code point. Parity with the
+  TypeScript SDK 4.129.0's `mapSpace` and the Python package 0.104.0's `map_space`; held to the profile's fixture, 24
+  cases. Core only: there is no Blueprint door.
 - `OWGraphOptions::reading_aids`, a fifth flag on `OWGraph::WorldGraph` (schema-dist serial 104, the lens profile's
   "Out by default, a flag brings each back"): the reading aids, the charter, its guide and its domains (by the pair and
   the mark `x_charter_of`), come back into an unlensed graph, each node marked `reading_aid`; without it they stay out,
@@ -37,6 +46,9 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.0-dist.105` (canonical `00.34.00` unchanged: no model or wire change). The new map-space
+  profile and its fixture (`OWMapSpace`, above), and the landing page's door sentence, words only: any door may serve
+  the answer, and a key beside the five is the door's own. `OWLanding::LandingOf` is unchanged; its 33 cases pass.
 - Schema pin to `v0.34.0-dist.104` (canonical `00.34.00` unchanged: no model or wire change). The lens profile gains
   the graph's `reading_aids` flag (above; the lens fixture at 201 cases, 54 of them graph cases), and the landing
   profile rules `orphan` and `near_orphan` by its own degree (a link to itself once, each place in a list once) and
