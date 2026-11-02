@@ -1,9 +1,10 @@
 // OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.103's copy, its sha256
 // held to MANIFEST.json): the pair and the template, the legal values of x_lens, where a seat's choice lives, every
-// resolution over the fixture's nine worlds and their readers, the invariants, and the graph kind's 45 cases (each its
-// own world, through OWGraph::WorldGraph, the want compared whole). The profile's tables are held equal to the
-// fixture's, the field table to schema.json and the stub's public fields to presentation.json; then readings the
-// fixture leaves open. The graph's own tests are in test_graph.cpp.
+// resolution over the fixture's nine worlds and their readers, the invariants, the graph kind's 49 cases (each its
+// own world, through OWGraph::WorldGraph, the want compared whole) and the degree kind's 5 (OWGraph::DegreeOf and
+// OutDegreeOf over each case's graph, every node a key in the graph's node order). The profile's tables are held
+// equal to the fixture's, the field table to schema.json and the stub's public fields to presentation.json; then
+// readings the fixture leaves open. The graph's own tests are in test_graph.cpp.
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -228,6 +229,25 @@ OWGraphOptions GraphOptionsOf(const OWJsonValue& c) {
     return o;
 }
 
+// A degree case's graph, in WorldGraph's shape with the keys the counts read: the nodes' ids and types, the edges.
+OWWorldGraph GraphOf(const OWJsonValue& graph) {
+    OWWorldGraph g;
+    if (const OWJsonValue* nodes = graph.Find("nodes"))
+        for (const OWJsonValue& n : nodes->Items()) {
+            OWGraphNode node;
+            node.id = Str(n, "id");
+            node.type = Str(n, "type");
+            g.nodes.push_back(std::move(node));
+        }
+    if (const OWJsonValue* edges = graph.Find("edges"))
+        for (const OWJsonValue& e : edges->Items()) {
+            const OWJsonValue* index = e.Find("index");
+            g.edges.push_back({Str(e, "source"), Str(e, "field"), Str(e, "target"),
+                               index && index->IsNumber() ? int64_t(index->AsDouble()) : 0});
+        }
+    return g;
+}
+
 // One case, by its kind.
 void Case(owtest::T& t, const OWJsonValue& c) {
     std::string kind = Str(c, "kind");
@@ -258,13 +278,26 @@ void Case(owtest::T& t, const OWJsonValue& c) {
         OWWorldGraph got = OWGraph::WorldGraph(at("world"), at("reader"), GraphOptionsOf(c));
         t.Eq(got.error, std::string(), "no caller's mistake");
         Same(t, got.ToJson(), c.Find("want"), "the graph");
+    } else if (kind == "degree") {
+        OWWorldGraph g = GraphOf(at("graph"));
+        const OWJsonValue& want = at("want");
+        // Every node a key in the graph's node order: the keys compared in order, beside the values.
+        auto counted = [&](const std::vector<std::pair<std::string, int64_t>>& got, const char* key) {
+            OWJsonValue out = OWJsonValue::Object();
+            for (const auto& [id, n] : got) out.Set(id, OWJsonValue::Number(n));
+            const OWJsonValue* w = want.Find(key);
+            Same(t, out, w, key);
+            t.Ok(w && w->IsObject() && out.Keys() == w->Keys(), std::string(key) + ": the keys in the graph's node order");
+        };
+        counted(OWGraph::DegreeOf(g), "degree");
+        counted(OWGraph::OutDegreeOf(g), "out_degree");
     } else {
         t.Fail("a case of unknown kind " + kind);
     }
 }
 
 // The kinds this file runs: every kind of the fixture.
-const char* const Run[] = {"shape", "keys", "uses", "resolve", "invariant", "graph"};
+const char* const Run[] = {"shape", "keys", "uses", "resolve", "invariant", "graph", "degree"};
 
 bool Runs(const std::string& kind) {
     for (const char* k : Run)
@@ -309,7 +342,7 @@ OW_TEST(lens_fixture_is_the_pinned_one) {
     }
     t.Eq(sum, size_t(196), "the seven kinds are every case");
     t.Eq(kinds.size(), size_t(7), "and no other kind");
-    t.Eq(run, size_t(191), "every case runs here but the 5 degree cases, the 49 graph cases among them");
+    t.Eq(run, size_t(196), "every case runs here, the 49 graph and the 5 degree cases among them");
 }
 
 OW_TEST(lens_tables_are_the_fixtures) {
