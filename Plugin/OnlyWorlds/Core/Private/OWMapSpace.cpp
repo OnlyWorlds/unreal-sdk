@@ -119,9 +119,11 @@ std::optional<int64_t> WholeOf(const OWJsonValue* v) {
         // the double it rounds to (-9223372036854775809 rounds to int64's least).
         if (ec == std::errc::result_out_of_range) return std::nullopt;
     }
+    // A literal with a fraction or an exponent is read as a double, which holds a whole number exactly only to 2^53 - 1:
+    // past it a value the parse had to round cannot be told from an exact one, so it is not whole (the reader's range
+    // is the range it holds exactly; the npm SDK's isSafeInteger).
     double d = v->AsDouble();
-    if (!std::isfinite(d) || std::floor(d) != d || d >= 9223372036854775808.0 || d < -9223372036854775808.0)
-        return std::nullopt;
+    if (!std::isfinite(d) || std::floor(d) != d || std::fabs(d) > 9007199254740991.0) return std::nullopt;
     return int64_t(d);
 }
 

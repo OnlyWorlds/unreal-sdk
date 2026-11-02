@@ -161,15 +161,26 @@ bool FOWOpenersWorldTest::RunTest(const FString& Parameters)
 	const FString Ana = Characters[0].ToLower();
 	const FString AnaPage = Site + TEXT("/character/") + Ana;
 
-	// The world's own rows. The baked list (Atlas, Lantern, Little Lens): Atlas and Lantern need an account, so the public sees the site and Little Lens.
+	// The world's own rows. The baked list (Atlas, Lantern, Little Lens): Atlas and Lantern need an account, so the
+	// public (the signed-out reader) sees each as a row that says "Needs an account", its href kept: the menu draws it
+	// as one that opens nothing. Little Lens needs none.
+	const FString NoAccount = TEXT("Needs an account");
 	FMenu M = CallOpenersFor(*this, World, FString(), Surface(EOWAudience::Public));
-	TestTrue(TEXT("public, the world: the site's page, then Little Lens (") + M.Show() + TEXT(")"),
-		M.bOk && M.Reason.IsEmpty() && M.Rows.Num() == 2 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), Site, FString() }
-		&& M.Rows[1] == FRow{ TEXT("little-lens"), TEXT("Little Lens"), TEXT("https://little-lens.onlyworlds.com/#/open/") + Id, FString() });
+	TestTrue(TEXT("public, the world: the site's page, Atlas and Lantern needing an account, Little Lens (") + M.Show() + TEXT(")"),
+		M.bOk && M.Reason.IsEmpty() && M.Rows.Num() == 4 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), Site, FString() }
+		&& M.Rows[1] == FRow{ TEXT("atlas"), TEXT("Atlas"), TEXT("https://atlas.onlyworlds.com/#/open/") + Id, NoAccount }
+		&& M.Rows[2] == FRow{ TEXT("lantern"), TEXT("Lantern"), TEXT("https://lantern.onlyworlds.com/#/open/") + Id, NoAccount }
+		&& M.Rows[3] == FRow{ TEXT("little-lens"), TEXT("Little Lens"), TEXT("https://little-lens.onlyworlds.com/#/open/") + Id, FString() });
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Public));
-	TestTrue(TEXT("public, an element: its page, then Little Lens (") + M.Show() + TEXT(")"),
-		M.bOk && M.Rows.Num() == 2 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), AnaPage, FString() }
-		&& M.Rows[1] == FRow{ TEXT("little-lens"), TEXT("Little Lens"), TEXT("https://little-lens.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, FString() });
+	TestTrue(TEXT("public, an element: its page, Atlas and Lantern needing an account, Little Lens (") + M.Show() + TEXT(")"),
+		M.bOk && M.Rows.Num() == 4 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), AnaPage, FString() }
+		&& M.Rows[1] == FRow{ TEXT("atlas"), TEXT("Atlas"), TEXT("https://atlas.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, NoAccount }
+		&& M.Rows[2] == FRow{ TEXT("lantern"), TEXT("Lantern"), TEXT("https://lantern.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, NoAccount }
+		&& M.Rows[3] == FRow{ TEXT("little-lens"), TEXT("Little Lens"), TEXT("https://little-lens.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, FString() });
+	// Signed in or not, in a browser or not: the public's account rows say the same.
+	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Public, true, EOWSignIn::SignedIn));
+	TestTrue(TEXT("public, signed in, in a browser: still Needs an account (") + M.Show() + TEXT(")"),
+		M.bOk && M.Rows.Num() == 4 && M.Rows[1].State == NoAccount && M.Rows[2].State == NoAccount && M.Rows[3].State.IsEmpty());
 
 	// A member in a game: Atlas and Lantern need an account it cannot see, so each says "Opens in your browser"; Little Lens needs none.
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member));
@@ -443,8 +454,8 @@ bool FOWOpenersAddressTest::RunTest(const FString& Parameters)
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	TestEqual(TEXT("90 cases"), static_cast<int32>(Cases->Items().size()), 90);
-	TestEqual(TEXT("the row cases carried"), RowCases, 40);
+	TestEqual(TEXT("92 cases"), static_cast<int32>(Cases->Items().size()), 92);
+	TestEqual(TEXT("the row cases carried"), RowCases, 42);
 	TestEqual(TEXT("the address refusals carried"), Refusals, 6);
 	TestEqual(TEXT("cases failed"), Failed, 0);
 	AddInfo(FString::Printf(TEXT("openers fixture: %d row cases and %d address refusals through the Blueprint path; not carried (%d): %s"),

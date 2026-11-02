@@ -232,8 +232,67 @@ OW_TEST(map_space_a_whole_number_at_its_edges) {
     t.Ok(!whole("-9223372036854775809"), "nor one below it");
     t.Ok(!whole("1e19"), "nor a value past int64 spelled as a decimal");
     t.Ok(!OWMapSpace::WholeOf(nullptr), "an absent key is none");
+    // A literal with a fraction or an exponent is read as a double, which holds whole numbers exactly only to 2^53 - 1:
+    // past it a rounded value cannot be told from an exact one, so it is not whole (the reader's range is the range it
+    // holds exactly, npm 4.129.2's isSafeInteger).
+    t.Ok(whole("9007199254740991.0") == std::optional<int64_t>(9007199254740991LL), "2^53 - 1 as a double is whole");
+    t.Ok(whole("-9007199254740991.0") == std::optional<int64_t>(-9007199254740991LL), "and its negative");
+    t.Ok(!whole("9007199254740992.0"), "2^53 as a double is not whole");
+    t.Ok(!whole("-9007199254740992.0"), "nor its negative");
+    t.Ok(!whole("9007199254740993.0"), "nor 2^53 + 1, which the parse rounds to 2^53");
+    t.Ok(!whole("1e16"), "nor 1e16");
+    t.Ok(!whole("-9223372036854775809.0"), "nor a decimal the parse rounds to exactly -2^63");
     // A Marker with a non-whole z reads z 0 (rule 1 since serial 106; the fixture's z-not-whole-reads-0 too).
     OWWorldMapSpace m = OWMapSpace::MapSpaceOf(Parse(R"([{"type": "map", "id": "m", "width": 9, "height": 9},
         {"type": "zone", "id": "z"}, {"type": "marker", "id": "k", "map": "m", "zone": "z", "x": 1, "y": 2, "z": 1.5}])"));
     t.Ok(m.zones.size() == 1 && m.zones[0].points.size() == 1 && m.zones[0].points[0].z == 0, "a z of 1.5 reads 0");
+}
+
+// The npm SDK's vector (4.129.2, test/map-space.test.mjs), read from JSON text as a reader is served it. Written as
+// npm writes it, every number an integer literal, which this reader holds exactly within int64: 2^53 + 1 and 2^53 read
+// as themselves (npm's doubles round them, so there they are not whole), and -9223372036854775809, past int64, has no
+// point, as in npm. Written with a fraction, each is a double, and the answer is npm's.
+OW_TEST(map_space_a_number_the_parse_had_to_round_is_not_whole) {
+    auto vector = [](const char* k2x, const char* k3z, const char* p1x) {
+        return std::string(R"([
+    {"type": "map", "id": "m", "width": 10, "height": 10},
+    {"type": "zone", "id": "z"},
+    {"type": "marker", "id": "k1", "map": "m", "zone": "z", "x": 1, "y": 1, "z": 9007199254740991},
+    {"type": "marker", "id": "k2", "map": "m", "zone": "z", "x": )") + k2x + R"(, "y": 2},
+    {"type": "marker", "id": "k3", "map": "m", "zone": "z", "x": 3, "y": 3, "z": )" + k3z + R"(},
+    {"type": "pin", "id": "p1", "map": "m", "x": )" + p1x + R"(, "y": 1}
+  ])";
+    };
+    auto points = [](const OWWorldMapSpace& got) {
+        std::vector<std::vector<int64_t>> out;
+        for (const OWMapSpaceOutline& o : got.zones)
+            for (const OWMapSpacePoint& p : o.points) out.push_back({p.x, p.y, p.z});
+        return out;
+    };
+    using Points = std::vector<std::vector<int64_t>>;
+
+    // As npm writes it: integer literals, read exactly.
+    OWWorldMapSpace exact = OWMapSpace::MapSpaceOf(Parse(vector("-9223372036854775809", "9007199254740993", "9007199254740992")));
+    t.Eq(exact.error, std::string(), "no caller's mistake");
+    t.Ok(exact.zones.size() == 1 && exact.zones[0].zone == "z" && exact.zones[0].shape == "polygon", "one outline, z's");
+    t.Ok(points(exact) == Points{{1, 1, 9007199254740991LL}, {3, 3, 9007199254740993LL}},
+         "k2 has no point; k3's z, an integer literal within int64, is read exactly");
+    t.Ok(exact.pins.size() == 1 && exact.pins[0].point.x == 9007199254740992LL, "p1's x, 2^53 as an integer literal, is placed");
+    t.Eq(exact.out.no_point, int64_t(1), "only k2 has no point");
+    t.Ok(!exact.maps.empty() && exact.maps[0].z_max == std::optional<int64_t>(9007199254740993LL), "z_max is k3's z, exactly");
+
+    // As doubles: past 2^53 - 1, not whole. npm's answer.
+    OWWorldMapSpace rounded =
+        OWMapSpace::MapSpaceOf(Parse(vector("-9223372036854775809.0", "9007199254740993.0", "9007199254740992.0")));
+    t.Eq(rounded.error, std::string(), "no caller's mistake");
+    t.Ok(points(rounded) == Points{{1, 1, 9007199254740991LL}, {3, 3, 0}},
+         "k3's z, rounded by the parse, reads 0 as any z that is not whole, and the point stays placed");
+    t.Ok(rounded.pins.empty(), "p1's x, 2^53 as a double, is not whole: no pin");
+    t.Eq(rounded.out.no_point, int64_t(2), "k2 and p1 have no point");
+    t.Ok(!rounded.maps.empty() && rounded.maps[0].z_max == std::optional<int64_t>(9007199254740991LL), "z_max is 2^53 - 1");
+    t.Eq(Compact(rounded.ToJson()),
+         std::string(R"({"maps": [{"id": "m","width": 10,"height": 10,"depth": null,"z_max": 9007199254740991,"scale": null,)"
+                     R"("location": null,"parent_map": null}],"zones": [{"zone": "z","map": "m","shape": "polygon","points": )"
+                     R"([[1,1,9007199254740991],[3,3,0]]}],"pins": [],"out": {"no_point": 2}})"),
+         "the whole answer");
 }
