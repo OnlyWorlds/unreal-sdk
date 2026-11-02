@@ -25,8 +25,8 @@ struct OWGraphNode {
     OWJsonValue name;  // as the element carries it; null when it has none
     std::string family;  // the type's colour word (blue, green, pink or amber): a key for drawing, never a label
     std::string icon;    // the type's icon, a Material Symbols name
-    // Why a node that is out by default is in: room, hidden, proposed, each that applies, in that order (map space
-    // carries none: it is out for size, not standing).
+    // Why a node that is out by default is in: room, hidden, proposed, reading_aid, each that applies, in that order,
+    // brought back by a flag or kept by a lens (map space carries none: it is out for size, not standing).
     std::vector<std::string> marks;
     bool known_of = false;  // a guest's known-of stub: a node with no edges out
 };
@@ -77,6 +77,9 @@ struct OWGraphOptions {
     bool hidden = false;
     bool proposed = false;
     bool map_space = false;
+    // The reading aids (the charter, its guide, its domains, by the pair and the mark x_charter_of), each marked
+    // reading_aid: any signed reader's (serial 104).
+    bool reading_aids = false;
 };
 
 namespace OWGraph {
@@ -86,8 +89,8 @@ namespace OWGraph {
 const std::vector<std::string>& DeclaredLinks();
 // Map space, out by default for size: map, pin, marker (type slugs, folded). A Zone is content (serial 92).
 const std::vector<std::string>& MapSpaceTypes();
-// The flags (rooms, hidden, proposed, map_space), and the owner's two. A refusal names the first unmet one in the order
-// hidden, proposed, rooms, map_space.
+// The flags (rooms, hidden, proposed, map_space, reading_aids), and the owner's two. A refusal names the first unmet one
+// in the order hidden, proposed, rooms, map_space, reading_aids.
 const std::vector<std::string>& Flags();
 const std::vector<std::string>& OwnerOnlyFlags();
 // Every reason a link is cut, one closed list (the graph's out-by-default reasons, not_visible, outside_lens, then the
@@ -97,8 +100,8 @@ const std::vector<std::string>& OwnerOnlyEdgeReasons();
 
 // worldGraph(world, reader, options): `world` and `reader` are what OWLens::Resolve takes. Without a lens, the nodes
 // are every element the reader sees less what is out by default: room elements, hidden ones and (for the owner, who
-// sees them) proposed ones, and map space (Map, Pin, Marker; a Zone is a node by default), each back with its flag;
-// and the reading aids, counted reading_aid, which no flag brings back. With a lens, the nodes are its kept. The edges are the schema's
+// sees them) proposed ones, map space (Map, Pin, Marker; a Zone is a node by default) and the reading aids (counted
+// reading_aid), each back with its flag. With a lens, the nodes are its kept. The edges are the schema's
 // single and list links and the declared extension links, between nodes only; a link to an id that is not in the world
 // (or not of the field's type) is dropped and not counted. Pure: it never writes.
 OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, const OWGraphOptions& options = {});

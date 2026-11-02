@@ -1,4 +1,4 @@
-// OWLanding on the landing profile's conformance fixture (schema-dist profiles/landing.fixture.json, dist.103's copy,
+// OWLanding on the landing profile's conformance fixture (schema-dist profiles/landing.fixture.json, dist.104's copy,
 // its sha256 held to MANIFEST.json): every case by name, its graph built as OWGraph::WorldGraph answers it, the
 // options passed as the packages take them (JSON), each key the want holds compared in order and a case marked whole
 // compared whole; then readings the fixture leaves open (the typed options beside the JSON ones, a whole float, a
@@ -14,6 +14,7 @@
 #include "OWLanding.h"
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <set>
 #include <string>
@@ -23,8 +24,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.103's MANIFEST.json records it.
-const char* const DistSha256 = "bf6512dea464946e6fa3855d3a942446ecc97aabc564258d5ba801a6f7e01475";
+// The fixture's sha256 as dist.104's MANIFEST.json records it.
+const char* const DistSha256 = "0a5377fb5f5032951eb513d6ce71d236ff6f8290615eba3ed64c1753474d9696";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/landing.fixture.json"; }
 
@@ -133,7 +134,7 @@ OWWorldGraph Graph(const char* json) { return GraphOf(Parse(json)); }
 OW_TEST(landing_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the landing fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.103's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.104's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -149,8 +150,8 @@ OW_TEST(landing_fixture_is_the_pinned_one) {
         if (const OWJsonValue* w = c->Find("want"); w && w->Find("refused")) ++refusals;
         if (const OWJsonValue* w = c->Find("whole"); w && w->IsBool() && w->AsBool()) ++wholes;
     }
-    t.Eq(Cases().size(), size_t(30), "30 cases");
-    t.Eq(names.size(), size_t(30), "each name its own");
+    t.Eq(Cases().size(), size_t(33), "33 cases");
+    t.Eq(names.size(), size_t(33), "each name its own");
     t.Eq(refusals, size_t(7), "7 refusals");
     t.Eq(wholes, size_t(1), "1 case whole");
 }
@@ -221,15 +222,19 @@ OW_TEST(landing_the_tables) {
 }
 
 OW_TEST(landing_the_typed_options_answer_as_the_json_ones) {
-    // Every case read again through OWLandingOptions, its options set from the JSON: the same bytes.
+    // Every case read again through OWLandingOptions, its options set from the JSON: the same bytes. A number past
+    // int64 is set as the largest int64 holds, as the page reads it (a heads too large to hold reads as the largest);
+    // a bare int64_t(double) past the range is undefined, and MSVC gives INT64_MIN.
     for (const OWJsonValue* c : Cases()) {
         const OWJsonValue& o = OptionsOf(*c);
         if (c->Find("want")->Find("refused")) continue;  // the typed form cannot carry a string or a fraction
         OWLandingOptions typed;
         for (auto [key, into] : {std::pair<const char*, std::optional<int64_t>*>{"heads", &typed.heads},
                                  {"hops", &typed.hops}, {"size", &typed.size}})
-            if (const OWJsonValue* v = o.IsObject() ? o.Find(key) : nullptr; v && v->IsNumber())
-                *into = int64_t(v->AsDouble());
+            if (const OWJsonValue* v = o.IsObject() ? o.Find(key) : nullptr; v && v->IsNumber()) {
+                const double d = v->AsDouble();
+                *into = d >= 9223372036854775807.0 ? std::numeric_limits<int64_t>::max() : int64_t(d);
+            }
         OWWorldGraph g = GraphOf(*c->Find("graph"));
         t.Eq(Bytes(OWLanding::LandingOf(g, typed).ToJson()), Bytes(OWLanding::LandingOf(g, o).ToJson()),
              Str(*c, "name"));

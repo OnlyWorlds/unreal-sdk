@@ -7,6 +7,15 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWGraphOptions::reading_aids`, a fifth flag on `OWGraph::WorldGraph` (schema-dist serial 104, the lens profile's
+  "Out by default, a flag brings each back"): the reading aids, the charter, its guide and its domains (by the pair and
+  the mark `x_charter_of`), come back into an unlensed graph, each node marked `reading_aid`; without it they stay out,
+  counted `reading_aid`, as before. Any signed reader may ask it; a public reading (the owner reading as the public
+  too) is refused by name, last in the refusal order `hidden`, `proposed`, `rooms`, `map_space`, `reading_aids`. A
+  flag still never widens a lens, and a reading aid a lens keeps now carries the `reading_aid` mark, as a room element a
+  lens keeps carries `room`; a node's marks run `room`, `hidden`, `proposed`, `reading_aid`. `OWGraph::Flags()` lists
+  five. Parity with the TypeScript SDK's `readingAids` and the Python package's `reading_aids`. Core only: there is no
+  Blueprint graph door.
 - `OWOpeners::OpenersFor(tools, kind, address, surface, OWOpenersOptions{&body})` and `OpenersForJson(..., &options)`:
   no row for a tool that cannot open the element. The tools list's `open.element_skips` (`OWToolOpen::element_skips`)
   says what a tool's element door does not open, in the lens profile's graph section's words
@@ -28,6 +37,11 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.0-dist.104` (canonical `00.34.00` unchanged: no model or wire change). The lens profile gains
+  the graph's `reading_aids` flag (above; the lens fixture at 201 cases, 54 of them graph cases), and the landing
+  profile rules `orphan` and `near_orphan` by its own degree (a link to itself once, each place in a list once) and
+  reads a `heads` too large to hold as the largest (its fixture at 33 cases). `OWLanding::LandingOf` already read both
+  ways; its three new cases pass with no reader change.
 - Parity with the TypeScript SDK 4.123.2: `OWOpeners::OpenersFor` and `OpenersForJson` refuse a tools row whose
   `open.world` or `open.element` link does not begin with its scheme, or whose scheme (in any case) is `javascript:`,
   `data:`, `vbscript:`, `file:`, `blob:` or `about:`, a link that opens no app. The refusal is the reader's own for a

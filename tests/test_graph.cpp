@@ -55,7 +55,8 @@ OWGraphOptions OptionsOf(const OWJsonValue& c) {
     if (const OWJsonValue* lens = opt->Find("lens")) o.lens = *lens;
     if (const OWJsonValue* k = opt->Find("clock"); k && k->IsString()) o.clock = k->Text();
     for (auto [key, flag] : {std::pair<const char*, bool*>{"rooms", &o.rooms}, {"hidden", &o.hidden},
-                             {"proposed", &o.proposed}, {"map_space", &o.map_space}})
+                             {"proposed", &o.proposed}, {"map_space", &o.map_space},
+                             {"reading_aids", &o.reading_aids}})
         if (const OWJsonValue* v = opt->Find(key); v && v->IsBool()) *flag = v->AsBool();
     return o;
 }
@@ -76,7 +77,7 @@ OWWorldGraph Read(const char* world, const char* reader, const OWGraphOptions& o
 }  // namespace
 
 OW_TEST(graph_tables_are_the_fixtures) {
-    t.Eq(GraphCases().size(), size_t(49), "the fixture's 49 graph cases");
+    t.Eq(GraphCases().size(), size_t(54), "the fixture's 54 graph cases");
     t.Ok(List("graph_links") == OWGraph::DeclaredLinks(), "the declared links");
     t.Ok(List("graph_flags") == OWGraph::Flags(), "the flags");
     t.Ok(List("owner_only_flags") == OWGraph::OwnerOnlyFlags(), "the owner's flags");
@@ -160,7 +161,7 @@ OW_TEST(graph_a_refusal_comes_before_any_read) {
     t.Eq(g.refused, std::string("rooms"), "a public reader asking rooms, with no world to read");
     t.Eq(g.error, std::string(), "and no caller's mistake: the world was never read");
     OWGraphOptions all;
-    all.rooms = all.hidden = all.proposed = all.map_space = true;
+    all.rooms = all.hidden = all.proposed = all.map_space = all.reading_aids = true;
     t.Eq(Read(R"({"elements": []})", R"({"rung": "public"})", all).refused, std::string("hidden"),
          "every flag from a public reader: hidden is named first");
     t.Eq(Read(R"({"elements": []})", R"({"rung": "guest", "whole": []})", all).refused, std::string("hidden"), "a guest");
@@ -170,8 +171,43 @@ OW_TEST(graph_a_refusal_comes_before_any_read) {
          "proposed from a contributor, before rooms");
     t.Eq(Read(R"({"elements": []})", R"({"rung": "owner", "as": {"rung": "public"}})", rooms).refused,
          std::string("rooms"), "the owner reading as the public is judged by that rung");
-    t.Eq(Read(R"({"elements": []})", R"({"rung": "owner"})", all).refused, std::string(), "the owner may ask all four");
+    t.Eq(Read(R"({"elements": []})", R"({"rung": "owner"})", all).refused, std::string(), "the owner may ask all five");
     t.Eq(Read(R"({"elements": []})", R"({"rung": "contributor"})", rooms).refused, std::string(), "rooms from a contributor");
+    // reading_aids is last in the order (serial 104): map space is named before it, and it alone is named alone.
+    OWGraphOptions late;
+    late.map_space = late.reading_aids = true;
+    t.Eq(Read(R"({"elements": []})", R"({"rung": "public"})", late).refused, std::string("map_space"),
+         "map_space and reading_aids from a public reader: map_space is named first");
+    OWGraphOptions aids;
+    aids.reading_aids = true;
+    t.Eq(Read(R"({"no": "elements"})", R"({"rung": "public"})", aids).refused, std::string("reading_aids"),
+         "reading_aids alone from a public reader, before any read");
+    t.Eq(Read(R"({"elements": []})", R"({"rung": "owner", "as": {"rung": "public"}})", aids).refused,
+         std::string("reading_aids"), "the owner reading as the public, refused reading_aids");
+    t.Eq(Read(R"({"elements": []})", R"({"rung": "guest", "whole": []})", aids).refused, std::string(),
+         "reading_aids from a guest: any signed reader's");
+}
+
+OW_TEST(graph_a_reading_aid_carries_its_mark_last_and_is_out_by_its_first_unmet_kind) {
+    // A hidden charter, read by the owner: every mark that applies in the order room, hidden, proposed, reading_aid
+    // (keel's MARKS, npm's and Python's alike: reading_aid last; the page names the order of the first three only), and
+    // out of the graph by the first kind its flag does not bring back.
+    const char* world = R"({"elements": [
+        {"id": "ch", "type": "law", "name": "House Rules", "supertype": "Charter", "x_charter_of": "w1", "hidden": true},
+        {"id": "t", "type": "title", "name": "Keeper", "laws": ["ch"]}]})";
+    OWGraphOptions both;
+    both.hidden = both.reading_aids = true;
+    OWWorldGraph g = Read(world, R"({"rung": "owner"})", both);
+    t.Eq(g.nodes.size(), size_t(2), "both flags: the charter is a node");
+    t.Ok(!g.nodes.empty() && g.nodes[0].id == "ch" && g.nodes[0].marks == std::vector<std::string>{"hidden", "reading_aid"},
+         "marked hidden, then reading_aid");
+    OWGraphOptions hidden;
+    hidden.hidden = true;
+    using Counts = std::vector<std::pair<std::string, int64_t>>;
+    t.Ok(Read(world, R"({"rung": "owner"})", hidden).cut == Counts{{"reading_aid", 1}}, "hidden alone: out as reading_aid");
+    OWGraphOptions aids;
+    aids.reading_aids = true;
+    t.Ok(Read(world, R"({"rung": "owner"})", aids).cut == Counts{{"hidden", 1}}, "reading_aids alone: out as hidden");
 }
 
 OW_TEST(graph_a_callers_mistake_is_named) {
