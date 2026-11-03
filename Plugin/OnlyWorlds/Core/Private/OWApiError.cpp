@@ -182,4 +182,13 @@ bool OWApiError::IsRetryable() const {
     return status == 429 || status >= 500;
 }
 
+
+// Not written yet: the write helpers' declarations, so their tests build and run red first.
+bool OWApiError::IsProposed() const { return false; }
+bool OWApiError::IsPreconditionFailed() const { return false; }
+std::optional<OWJsonValue> OWApiError::Current() const { return std::nullopt; }
+bool OWApiError::IsIdConflict() const { return false; }
+bool OWApiError::IsIdempotencyConflict() const { return false; }
+bool OWApiError::IsKnownOfNotWritable() const { return false; }
+
 }  // namespace OnlyWorlds

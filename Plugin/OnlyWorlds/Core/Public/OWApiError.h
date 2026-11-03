@@ -8,7 +8,12 @@
 // (a 2xx whose body is not the answer the route documents). keel's envelope is {"error": {type, code, message, param,
 // doc_url}}; a body without the wrapper is read as the envelope itself, and the upload host's {"error": "<code>"} as
 // its code, as the Unity SDK's BuildError reads them.
+//
+// A write that became a proposal (202 with {proposal}: an agent seat's upsert, patch or link edit in a world that takes
+// its writes as proposals) is kind Api with status 202 and `proposal` set, IsProposed true: the element did not change,
+// and the write waits for a person. The Unity SDK's OWProposedError, an OWApiError of status 202.
 
+#include "OWJson.h"
 #include "OWTransport.h"
 
 #include <cstdint>
@@ -33,6 +38,8 @@ struct OWApiError {
     // when it was absent or unreadable. keel sends it on 503 server_busy, 429 rate_limited and quota_exceeded, and 409
     // idempotency_in_flight. The client never retries on its own.
     std::optional<int32_t> retry_after;
+    // On a write that became a proposal (IsProposed): the proposal row keel answered, as served; absent otherwise.
+    std::optional<OWJsonValue> proposal;
 
     // keel's answer as an error: the envelope read defensively (a gateway's HTML page is a message, never a parse
     // error), Retry-After read from the headers by any case against `now` (Unix seconds). Mirrors the TypeScript SDK's
@@ -73,6 +80,27 @@ struct OWApiError {
     // the copy holds that a walk from the start no longer names) or "view" (something left its view: drop it); absent
     // otherwise, and for any other word. Never empty a copy on your own. Mirrors the TypeScript SDK's `resyncReason`.
     std::optional<std::string> ResyncReason() const;
+    // A write became a proposal (status 202, `proposal` set): the element did not change; `proposal` is the row the
+    // owner or a co-builder accepts or declines. Not a failure to retry. Mirrors the TypeScript SDK's `isProposed`.
+    bool IsProposed() const;
+    // A conditional write's If-Match was stale (412 precondition_failed: a patch, a link edit or a delete): the element
+    // changed since the change_seq sent, and nothing was written. Current() is the element as it is now; decide from
+    // it, then send again with its change_seq. Mirrors the TypeScript SDK's `isPreconditionFailed`.
+    bool IsPreconditionFailed() const;
+    // The `current` object keel sends beside the envelope on a 412 (IsPreconditionFailed) or a 409 stale_proposal: the
+    // element as keel holds it now. Absent on any other answer, when keel sent none, or when the body is not JSON.
+    // Mirrors the TypeScript SDK's `OwPreconditionFailedError.current`.
+    std::optional<OWJsonValue> Current() const;
+    // The id is taken (409 id_conflict): a create whose element carried its id and already landed (the element is
+    // there), or a PUT whose id belongs to another world. Mirrors the TypeScript SDK's `isIdConflict`.
+    bool IsIdConflict() const;
+    // The same Idempotency-Key came with another body (409 idempotency_error): a key is for one write and its retries
+    // only. Mirrors the TypeScript SDK's `isIdempotencyConflict`.
+    bool IsIdempotencyConflict() const;
+    // keel refused a known-of stub's key on a write (422 known_of_not_writable). The client refuses a stub before
+    // sending and leaves the key out of every other body, so keel should never answer it this. Mirrors the TypeScript
+    // SDK's `isKnownOfNotWritable`.
+    bool IsKnownOfNotWritable() const;
     // Worth sending again later: a 429 or a 5xx, and the three 409s that clear by themselves; never a used-up daily
     // allowance or a service turned off. Mirrors the Unity SDK's IsRetryable (the TypeScript SDK names each code:
     // `isBusy`, `isRateLimited`, `isIdempotencyInFlight`).

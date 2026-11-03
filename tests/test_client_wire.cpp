@@ -1,11 +1,13 @@
-// Every request OWClient's read calls make, held to keel's own document, and every key the client reads held to what
-// keel serves. The client tests beside this one assert what the client SENDS, which cannot catch a client that sends
-// the wrong thing consistently; this asserts what keel SERVES: the path is one keel has, the method one it takes there,
-// every query parameter and header sent one keel declares on that operation, no body on a read; the other way round,
-// every key the client's answers read is one keel's answer declares, every field of the element bodies the core's
-// readers and the plugin's structs read (schema.json's base and the type's own, OWLens::FieldsOf) is one keel serves on
-// a list row and a get, and every error code an OWApiError helper names is one keel lists. The checks are the Unity
-// SDK's OWWireContractTests, those that apply to reads, as the Godot SDK's test_client_wire.gd ports them.
+// Every request OWClient's read and write calls make, held to keel's own document, and every key the client reads held
+// to what keel serves. The client tests beside this one assert what the client SENDS, which cannot catch a client that
+// sends the wrong thing consistently; this asserts what keel SERVES: the path is one keel has, the method one it takes
+// there, every query parameter and header sent one keel declares on that operation, no body on a read or a delete and a
+// JSON object on every other write, every body key one keel declares there (or one its body_patterns allow at the top
+// level), a bulk item's element as its type's create; the other way round, every key the client's answers read is one
+// keel's answer declares, every field of the element bodies the core's readers and the plugin's structs read
+// (schema.json's base and the type's own, OWLens::FieldsOf) is one keel serves on a list row and a get, and every error
+// code an OWApiError helper names is one keel lists. The checks are the Unity SDK's OWWireContractTests, those that
+// apply to these calls, as the Godot SDK's test_client_wire.gd ports them.
 //
 // The fixture is keel's published document as the Unity SDK's tools/refresh_wire.py reduces it, vendored byte for byte
 // from unity-sdk (Packages/com.onlyworlds.sdk/Tests/Editor/Fixtures/wire/keel-wire.json at f89f03a; fetched
@@ -175,17 +177,56 @@ OWHandler<T> Ignore() {
     return [](OWReply<T>) {};
 }
 
-// Every read call, every option given, on each credential: keel's requests, which the checks below judge.
+OWJsonValue Json(std::string_view text) { return OWJson::Parse(text).value; }
+
+// Every write, every option given, with bodies that hold each kind of key a write cleans or keeps: 7 requests.
+void Writes(OWClient& c, FakeTransport& fake) {
+    fake.body = "{}";
+    c.Create("character",
+             Json("{\"name\":\"Ana\",\"world\":\"w1\",\"created_at\":\"t\",\"background\":null,\"x_tool\":1}"), {},
+             Ignore<OWJsonValue>());
+    OWCreateOptions keyed;
+    keyed.idempotency_key = "k1";
+    c.Create("character", Json("{\"name\":\"Ana\"}"), keyed, Ignore<OWJsonValue>());
+    c.Upsert("character", "c1",
+             Json("{\"id\":\"c1\",\"name\":\"Ana\",\"type\":\"character\",\"change_seq\":4,\"friends\":[\"c2\"],"
+                  "\"birthplace\":null,\"level\":3}"),
+             Ignore<OWJsonValue>());
+    OWWriteOptions when;
+    when.if_match = 4;
+    c.Patch("character", "c1", Json("{\"name\":\"Bo\",\"birthplace\":\"l1\"}"), when, Ignore<OWJsonValue>());
+    c.Delete("character", "c1", when, Ignore<OWJsonValue>());
+    OWLinkEdit edit;
+    edit.add = std::vector<std::string>{"c2"};
+    edit.remove = std::vector<std::string>{"c3"};
+    c.EditLinks("character", "c1", "friends", edit, when, Ignore<OWJsonValue>());
+    fake.body = "{\"errors\":false,\"items\":[]}";
+    OWBulkOptions bulk;
+    bulk.atomic = true;
+    bulk.idempotency_key = "k2";
+    c.Bulk({{"character", Json("{\"name\":\"A\",\"updated_at\":\"t\"}")},
+            {"location", Json("{\"name\":\"Port\",\"parent_location\":null}")}},
+           bulk, Ignore<OWBulkResult>());
+    fake.body = "{}";
+}
+
+// Every read call and every write, every option given, on each credential: keel's requests, which the checks below
+// judge. An agent seat's client reads too, so a declaration sent on a read would be seen.
 const std::vector<OWRequest>& Record() {
     static const std::vector<OWRequest> calls = [] {
         auto fake = std::make_shared<FakeTransport>();
-        auto make = [&](const std::string& key, const std::string& pin, std::optional<std::string> world) {
+        auto make = [&](const std::string& key, const std::string& pin, std::optional<std::string> world,
+                        bool agent = false) {
             OWClientConfig config;
             config.api_key = key;
             config.api_pin = pin;
             config.world = std::move(world);
             config.base_url = Base;
             config.transport = fake;
+            if (agent) {
+                config.agent = true;
+                config.client = "wire-test";
+            }
             return std::make_unique<OWClient>(std::move(config));
         };
         OWListOptions every;
@@ -213,8 +254,9 @@ const std::vector<OWRequest>& Record() {
         feed.since = "4:069620b9-0794-708d-8000-42b0ea685f38";
         feed.after = "2026-10-22T00:00:00Z";
         for (auto [key, pin] : std::vector<std::pair<std::string, std::string>>{
-                 {"ow_w_test", "0000"}, {"0123456789", "0000"}, {"ow_r_test", ""}}) {
-            auto c = make(key, pin, std::nullopt);
+                 {"ow_w_test", "0000"}, {"0123456789", "0000"}, {"ow_r_test", ""}, {"ow_w_seat", "ow_s_x"}}) {
+            auto c = make(key, pin, std::nullopt, key == "ow_w_seat");
+            Writes(*c, *fake);
             fake->body = "{}";
             c->Health(Ignore<OWJsonValue>());
             c->GetWorld(Ignore<OWJsonValue>());
@@ -249,6 +291,7 @@ const std::vector<OWRequest>& Record() {
             OWListOptions parent;
             parent.filter = {{"parent_location", "p1"}};
             c->List("location", parent, Ignore<OWPage>());
+            Writes(*c, *fake);  // refused, nothing sent: neither writes
         }
         return fake->calls;
     }();
@@ -313,20 +356,81 @@ OW_TEST(client_wire_every_header_is_one_keel_declares) {
     }
 }
 
-OW_TEST(client_wire_no_read_sends_a_body) {
+OW_TEST(client_wire_no_read_sends_a_body_and_every_write_body_is_a_json_object) {
     for (const OWRequest& call : Record()) {
-        t.Ok(!call.body.has_value(), call.method + " " + call.url);
-        t.Ok(call.Header("Content-Type") == nullptr, call.method + " " + call.url + ": no body, no media type");
+        std::string label = call.method + " " + call.url;
+        if (call.method == "GET" || call.method == "DELETE") {
+            t.Ok(!call.body.has_value(), label);
+            t.Ok(call.Header("Content-Type") == nullptr, label + ": no body, no media type");
+            continue;
+        }
+        OWJsonParseResult parsed = OWJson::Parse(call.body.value_or(""));
+        t.Ok(parsed.ok && parsed.value.IsObject(), label + ": a JSON object");
+        t.Eq(call.Header("Content-Type") ? *call.Header("Content-Type") : std::string(), "application/json", label);
     }
 }
 
-OW_TEST(client_wire_the_recording_covers_every_read) {
+namespace {
+
+// The body keys keel declares on an operation: the top-level ones, or those under `prefix` ("items[].").
+std::vector<std::string> DeclaredBody(const OWJsonValue& op, const std::string& prefix = "") {
+    return Below(Strings(op.Find("body")), prefix);
+}
+// A top-level key keel's request schema allows by pattern (body_patterns: its extension keys), never a nested one.
+bool MatchesAPattern(const std::string& key, const OWJsonValue& op) {
+    for (const std::string& p : Strings(op.Find("body_patterns")))
+        if (std::regex_search(key, std::regex(p))) return true;
+    return false;
+}
+// The keys of `body` that are neither declared nor allowed by the operation's patterns (none for a nested object).
+std::string Undeclared(const OWJsonValue& body, const std::vector<std::string>& declared, const OWJsonValue* op) {
+    std::string out;
+    for (const std::string& k : body.Keys())
+        if (!Has(declared, k) && !(op && MatchesAPattern(k, *op))) out += (out.empty() ? "" : ", ") + k;
+    return out;
+}
+
+}  // namespace
+
+OW_TEST(client_wire_every_body_key_is_one_keel_declares) {
+    const OWJsonValue* paths = Wire().Find("paths");
+    size_t checked = 0;
+    for (const OWRequest& call : Record()) {
+        if (!call.body) continue;
+        std::string why;
+        const OWJsonValue* op = Find(call, &why);
+        if (!op) continue;
+        std::string label = call.method + " " + KeelPath(call);
+        t.Ok(op->Find("body") && op->Find("body")->IsArray(), label + ": keel declares a JSON body there");
+        OWJsonValue body = OWJson::Parse(*call.body).value;
+        t.Eq(Undeclared(body, DeclaredBody(*op), op), "", label + ": every key one keel declares on the body");
+        ++checked;
+        const OWJsonValue* items = body.Find("items");
+        if (!items) continue;
+        for (const OWJsonValue& item : items->Items()) {
+            t.Eq(Undeclared(item, DeclaredBody(*op, "items[]."), nullptr), "", label + ": an item's keys");
+            std::string type = item.Find("type") ? item.Find("type")->Text() : "";
+            const OWJsonValue* path = paths ? paths->Find("/api/v2/" + type) : nullptr;
+            const OWJsonValue* create = path ? path->Find("POST") : nullptr;
+            t.Ok(create != nullptr, label + ": keel creates a " + type);
+            const OWJsonValue* element = item.Find("element");
+            if (!create || !element) continue;
+            t.Eq(Undeclared(*element, DeclaredBody(*create), create), "",
+                 label + ": a " + type + " item's element, every key one POST /" + type + "/ declares");
+            ++checked;
+        }
+    }
+    t.Eq(checked, size_t(4 * (6 + 2)), "six bodies and two bulk items on each world key");
+}
+
+OW_TEST(client_wire_the_recording_covers_every_read_and_write) {
     // An empty recording would pass the checks above with nothing checked.
     const std::vector<OWRequest>& calls = Record();
-    t.Eq(calls.size(), size_t(3 * 12 + 6 + 5),
-         "12 requests on each world key (ListAll one page), 6 on an account token, 5 on no key (its roster refused)");
+    t.Eq(calls.size(), size_t(4 * (12 + 7) + 6 + 5),
+         "12 reads and 7 writes on each world key (ListAll one page), 6 reads on an account token, 5 on no key (its "
+         "roster refused); neither writes");
     std::set<std::string> paths;
-    size_t world = 0;
+    size_t world = 0, agent_pin_reads = 0;
     bool tag = false, pin = false, bearer = false, head = false, after = false;
     for (const OWRequest& c : calls) {
         paths.insert(c.method + " " + KeelPath(c));
@@ -336,11 +440,19 @@ OW_TEST(client_wire_the_recording_covers_every_read) {
         bearer = bearer || c.Header("Authorization");
         head = head || c.url.find("head=true") != std::string::npos;
         after = after || c.url.find("after=") != std::string::npos;
+        if (c.method == "GET" && c.Header("API-Pin") && c.Header("API-Key") && *c.Header("API-Key") == "ow_w_seat")
+            ++agent_pin_reads;
     }
     for (const char* p : {"GET /api/v2/health", "GET /api/v2/world", "GET /api/v2/me", "GET /api/v2/members",
                           "GET /api/v2/character", "GET /api/v2/location", "GET /api/v2/character/c1",
-                          "GET /api/v2/changes"})
+                          "GET /api/v2/changes", "POST /api/v2/character", "PUT /api/v2/character/c1",
+                          "PATCH /api/v2/character/c1", "DELETE /api/v2/character/c1",
+                          "POST /api/v2/character/c1/links/friends", "POST /api/v2/bulk"})
         t.Ok(paths.count(p) == 1, std::string(p) + " is recorded");
+    for (const char* h : {"If-Match", "Idempotency-Key", "X-OW-Client", "X-OW-Agent", "Content-Type"})
+        t.Ok(std::any_of(calls.begin(), calls.end(), [&](const OWRequest& c) { return c.Header(h) != nullptr; }),
+             std::string(h) + " is recorded");
+    t.Eq(agent_pin_reads, size_t(1), "the agent seat reads too (its /me alone with the PIN)");
     t.Eq(world, size_t(9), "the world reads of an account token and of no key");
     t.Ok(tag, "a tip read with a tag is recorded");
     t.Ok(pin, "a PIN is recorded");
@@ -394,6 +506,18 @@ OW_TEST(client_wire_the_changes_page_reads_what_keel_serves_and_every_key_of_a_r
     std::sort(rows.begin(), rows.end());
     std::sort(read.begin(), read.end());
     t.Eq(Joined(read), Joined(rows), "OWChange reads every key of a row, and only those");
+}
+
+OW_TEST(client_wire_the_bulk_result_reads_what_keel_serves_and_every_key_of_a_slot) {
+    std::vector<std::string> served = Response("/api/v2/bulk", "POST");
+    t.Ok(!served.empty(), "keel documents the bulk answer");
+    t.Ok(!OWBulkResult::Keys().empty(), "OWBulkResult reads keys");
+    for (const std::string& k : OWBulkResult::Keys()) t.Ok(Has(served, k), "OWBulkResult reads " + k + ", which keel serves");
+    std::vector<std::string> slots = Below(served, "items[].");
+    std::vector<std::string> read = OWBulkSlot::Keys();
+    std::sort(slots.begin(), slots.end());
+    std::sort(read.begin(), read.end());
+    t.Eq(Joined(read), Joined(slots), "OWBulkSlot reads every key of a slot, and only those");
 }
 
 OW_TEST(client_wire_the_reading_aids_are_the_packet_owcharter_served_reads) {

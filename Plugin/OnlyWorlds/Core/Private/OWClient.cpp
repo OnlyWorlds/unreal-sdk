@@ -583,4 +583,39 @@ void OWClient::ChangesHead(OWHandler<OWChangesPage> done) {
     });
 }
 
+
+// -- Not written yet: the writes' declarations, so their tests build and run red first. ----------------------------
+
+const char* const OWClient::DefaultClientName = "unreal-sdk";
+const std::string& OWClient::ClientName() const { static const std::string none; return none; }
+bool OWClient::Agent() const { return false; }
+const std::vector<std::string>& OWClient::ReadOnlyFields() { static const std::vector<std::string> none; return none; }
+bool OWClient::IsKnownOf(const OWJsonValue&) { return false; }
+OWJsonValue OWClient::Sanitize(const OWJsonValue& payload, std::string_view) { return payload; }
+const std::vector<std::string>& OWBulkSlot::Keys() { static const std::vector<std::string> none; return none; }
+const std::vector<std::string>& OWBulkResult::Keys() { static const std::vector<std::string> none; return none; }
+std::vector<size_t> OWBulkResult::Failed() const { return {}; }
+size_t OWBulkResult::SucceededCount() const { return 0; }
+bool OWBulkResult::AllSucceeded() const { return false; }
+void OWClient::Create(const std::string&, const OWJsonValue&, const OWCreateOptions&, OWHandler<OWJsonValue> done) {
+    Refuse(done, "Create: not written yet.");
+}
+void OWClient::Upsert(const std::string&, const std::string&, const OWJsonValue&, OWHandler<OWJsonValue> done) {
+    Refuse(done, "Upsert: not written yet.");
+}
+void OWClient::Patch(const std::string&, const std::string&, const OWJsonValue&, const OWWriteOptions&,
+                     OWHandler<OWJsonValue> done) {
+    Refuse(done, "Patch: not written yet.");
+}
+void OWClient::Delete(const std::string&, const std::string&, const OWWriteOptions&, OWHandler<OWJsonValue> done) {
+    Refuse(done, "Delete: not written yet.");
+}
+void OWClient::EditLinks(const std::string&, const std::string&, const std::string&, const OWLinkEdit&,
+                         const OWWriteOptions&, OWHandler<OWJsonValue> done) {
+    Refuse(done, "EditLinks: not written yet.");
+}
+void OWClient::Bulk(const std::vector<OWBulkItem>&, const OWBulkOptions&, OWHandler<OWBulkResult> done) {
+    Refuse(done, "Bulk: not written yet.");
+}
+
 }  // namespace OnlyWorlds

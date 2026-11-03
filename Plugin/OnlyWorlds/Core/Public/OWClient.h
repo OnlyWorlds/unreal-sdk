@@ -1,10 +1,11 @@
 #pragma once
 // A thin client for the OnlyWorlds v2 API (keel, onlyworlds.com): reads a world over the network as the core's JSON
 // values, the element bodies every reader here takes (OWLens, OWCharter, OWMessage) and the plugin's structs are made
-// from (OWFromJson). Deliberately thin: no cache, no sync state, no retry. What it holds is the wire's contract: which
-// header carries which credential, where the PIN goes and where it never goes, what a key may send at all (refused
-// here, nothing sent, rather than a 401 from keel), opaque cursors, the cursor walk driven by has_more, and keel's
-// error envelope as an OWApiError.
+// from (OWFromJson), and writes its elements back. Deliberately thin: no cache, no sync state, no retry. What it holds
+// is the wire's contract: which header carries which credential, where the PIN goes and where it never goes, what a key
+// may send at all (refused here, nothing sent, rather than a 401 from keel), opaque cursors, the cursor walk driven by
+// has_more, a write's body cleaned of what keel refuses (Sanitize), client-minted ids (OWId), and keel's error envelope
+// as an OWApiError.
 //
 //   OWClientConfig config;
 //   config.api_key = "ow_r_...";
@@ -25,8 +26,23 @@
 // as API-Pin only on GET /me among the reads (keel verifies a PIN wherever it is sent, at a cost) and on every request
 // of a legacy key; an account token (ow_a_) as a Bearer, never with the PIN, and only on the reads that name a world
 // with world= (set `world`) and the roster; no key at all reads a public world the same way, and with no world is the
-// bare client, which sends the health pulse alone. The health pulse carries no credential. Mirrors the TypeScript SDK's
-// `OwV2Client`.
+// bare client, which sends the health pulse alone. The health pulse carries no credential. The writes (Create, Upsert,
+// Patch, Delete, EditLinks, Bulk) go with the PIN, X-OW-Client (the config's `client`) and, on a client the config
+// declares an agent, X-OW-Agent; an account token and a keyless client write nothing (refused, nothing sent). Mirrors
+// the TypeScript SDK's `OwV2Client`.
+//
+//   OWClientConfig config;
+//   config.api_key = "ow_w_...";
+//   config.api_pin = "1234";
+//   config.client = "my-game";
+//   config.transport = my_transport;
+//   OWClient writer(config);
+//   writer.Create("character", ana, {}, [](OWReply<OWJsonValue> r) { /* r.value: Ana as keel wrote her */ });
+//   OWWriteOptions when;
+//   when.if_match = seq;                                  // the change_seq as read
+//   writer.Patch("character", id, level4, when, [](OWReply<OWJsonValue> r) {
+//       if (r.error && r.error->IsPreconditionFailed()) Show(*r.error->Current());   // someone wrote first
+//   });
 
 #include "OWApiError.h"
 #include "OWJson.h"
@@ -81,6 +97,98 @@ struct OWClientConfig {
     int64_t page_size = 100;
     // What the requests go through. Required: the core has no HTTP of its own.
     std::shared_ptr<OWTransport> transport;
+    // Declare this client an AI agent: every element write carries X-OW-Agent, and keel records it as agent-made (it
+    // stores that the header was there, never its value). It describes the caller, so only the caller sets it: off in
+    // a tool people use. An agent seat's key is recorded as an agent without it. Off by default.
+    bool agent = false;
+    // This client's own name, sent as X-OW-Client on every element write and on no read: keel stores it on the element
+    // (changed_client) and on a feed's delete row (deleted_client), so a reader can tell which tool made a change.
+    // Absent: OWClient::DefaultClientName. keel's rule, exact: lower case letters, digits and hyphens, 1 to 32
+    // characters ([a-z0-9-]{1,32}), no version ("atlas", not "atlas-1.76"); anything else, "" included, is refused when
+    // the client is built, nothing trimmed.
+    std::optional<std::string> client;
+};
+
+// A create's options. Mirrors the TypeScript SDK's `create` options.
+struct OWCreateOptions {
+    // Sent as Idempotency-Key when not empty; an element without an id then gets the id derived from it
+    // (OWId::Keyed, index 0), so a retry with the same key sends the same body and keel replays its first answer.
+    std::string idempotency_key;
+};
+
+// A conditional write's options (Patch, Delete, EditLinks). Mirrors the TypeScript SDK's `patch` options.
+struct OWWriteOptions {
+    // The element's change_seq as read, sent as If-Match (quoted): the write lands only if nobody changed the element
+    // since, else a 412 (OWApiError::IsPreconditionFailed). A whole number: a negative one is refused before sending.
+    // Absent: an unconditional write.
+    std::optional<int64_t> if_match;
+};
+
+// One link array's change: the ids to add and to remove, each sent only when given (an empty list is sent as one).
+// Mirrors the TypeScript SDK's `OwLinkEdit`.
+struct OWLinkEdit {
+    std::optional<std::vector<std::string>> add;
+    std::optional<std::vector<std::string>> remove;
+};
+
+// One element of a bulk write: its type's slug and the element (a JSON object; null is an empty one). Mirrors the
+// TypeScript SDK's `OwBulkItem`.
+struct OWBulkItem {
+    std::string type;
+    OWJsonValue element;
+};
+
+// A bulk write's options. Mirrors the TypeScript SDK's `bulk` options.
+struct OWBulkOptions {
+    // All or nothing: false by default, as keel's.
+    bool atomic = false;
+    // Sent as Idempotency-Key when not empty; an element without an id then gets the id derived from the key and its
+    // position (OWId::Keyed), so a retry sends the same body and keel replays (OWBulkResult::was_replay).
+    std::string idempotency_key;
+};
+
+// One item's outcome in an OWBulkResult. Mirrors the TypeScript SDK's `OwBulkItemResult`.
+struct OWBulkSlot {
+    int status = 0;  // the item's own HTTP status: 201 created, 200 updated, 202 a proposal, else its failure
+    std::string id;
+    // On a success: keel's timestamps, from which a sync baseline is set.
+    std::optional<std::string> created_at;
+    std::optional<std::string> updated_at;
+    // On a failure: the slot's error, kind Api, its status the slot's.
+    std::optional<OWApiError> error;
+    // On a 202: the proposal row the item became (the element did not change), as served.
+    std::optional<OWJsonValue> proposal;
+
+    // Any 2xx. After an atomic request whose `errors` is true nothing was written, yet the items that would have
+    // succeeded still say 201 with the ids they would have had: there this means "would have succeeded". Mirrors the
+    // Unity SDK's `OWBulkSlot.Succeeded` (the TypeScript SDK reads the status).
+    bool Succeeded() const { return status >= 200 && status < 300; }
+    // The item became a proposal (202): it counts as Succeeded, but nothing was written until a keeper accepts it.
+    // Mirrors the Unity SDK's `OWBulkSlot.IsProposed`.
+    bool IsProposed() const { return status == 202; }
+
+    // The keys this reads from a slot of keel's answer (held to keel's document by the wire tests).
+    static const std::vector<std::string>& Keys();
+};
+
+// What Bulk answers. keel answers 200 even when slots failed: each slot's status is where the truth lives, so check
+// Failed (or AllSucceeded) before trusting the write. Slots come back in the order of the items sent. Mirrors the
+// TypeScript SDK's `OwBulkResponse`.
+struct OWBulkResult {
+    bool errors = false;  // keel's own flag: some slot failed
+    std::vector<OWBulkSlot> items;
+    // keel replayed the first answer for this Idempotency-Key and wrote nothing (its Idempotent-Replay header, by any
+    // case). Never on the wire's body.
+    bool was_replay = false;
+
+    // The indices of the slots that did not succeed, in order. Mirrors the Unity SDK's `OWBulkResult.Failed`.
+    std::vector<size_t> Failed() const;
+    // The 2xx slots. Mirrors the Unity SDK's `OWBulkResult.SucceededCount`.
+    size_t SucceededCount() const;
+    // True when no slot failed and keel said none did. The Unity SDK's `ThrowIfAnyFailed` test, without the throw.
+    bool AllSucceeded() const;
+
+    static const std::vector<std::string>& Keys();
 };
 
 // One page's options, each sent only when given, in this order: limit, cursor, expand, fields, ids, created_by, name,
@@ -249,6 +357,77 @@ public:
     // 304 while nothing is held is an error of kind Api with status 304: the client never makes up a head. Mirrors the
     // TypeScript SDK's `changesHead`.
     void ChangesHead(OWHandler<OWChangesPage> done);
+
+    // -- Element writes ---------------------------------------------------------------------------------------------
+    //
+    // Each takes the element as a JSON object, never changed here: the body is a copy cleaned by Sanitize, written
+    // compact (numbers as JSON.stringify writes them). A known-of stub (IsKnownOf) is refused before sending: its empty
+    // fields are not the element's values, and writing it would blank them. Every write goes with the PIN, X-OW-Client,
+    // and X-OW-Agent on an agent client; an account token and a keyless client are refused, nothing sent. The type, the
+    // id and a link field are each one path segment, checked and escaped as the reads' are.
+
+    // POST /{type}/: create one element, answering it as keel wrote it (the body as served). An element with no id
+    // (absent, null or "") gets one minted here: a UUIDv7, or with options.idempotency_key the id derived from the key
+    // (OWId::Keyed, index 0), so a retry with the same key sends the same body and keel replays its first answer (24
+    // hours), writing nothing; the same key with another body is a 409 (IsIdempotencyConflict). The key goes as
+    // Idempotency-Key only when given. An unkeyed retry of an element without an id creates a second one; one that
+    // carries its id answers 409 id_conflict when it already landed (IsIdConflict). Never reuse a key for a new write:
+    // an undo that re-creates under the first key gets the old answer back. Mirrors the TypeScript SDK's `create`.
+    void Create(const std::string& type, const OWJsonValue& element, const OWCreateOptions& options,
+                OWHandler<OWJsonValue> done);
+    // PUT /{type}/{id}/: upsert by the caller's own id, creating the element under `id` or writing it whole: the
+    // local-first write. keel's document declares no Idempotency-Key or If-Match here, so none is sent. An agent seat's
+    // PUT on an existing element, in a world that takes its writes as proposals, answers 202: an error with IsProposed,
+    // and the element did not change. Mirrors the TypeScript SDK's `upsert`.
+    void Upsert(const std::string& type, const std::string& id, const OWJsonValue& element,
+                OWHandler<OWJsonValue> done);
+    // PATCH /{type}/{id}/: a partial update, answering the element whole. Destructive on the keys sent: whatever is in
+    // `partial` replaces what keel holds, so send only what changed; a key left out is left alone. Never PATCH a link
+    // array to add one id: it replaces the array whole, so a writer adding one erases what another added since; change
+    // it with EditLinks. options.if_match as OWWriteOptions says. A 202 is a proposal, as on Upsert; a stale If-Match is
+    // still a 412 first. Mirrors the TypeScript SDK's `patch`.
+    void Patch(const std::string& type, const std::string& id, const OWJsonValue& partial,
+               const OWWriteOptions& options, OWHandler<OWJsonValue> done);
+    // DELETE /{type}/{id}/: delete an element. keel writes a tombstone and takes the id out of every other element's
+    // links in the same write. Answers null (an element already gone is the same 204). options.if_match as on Patch: a
+    // stale one is a 412 and nothing is deleted. Never a proposal. Mirrors the TypeScript SDK's `delete`.
+    void Delete(const std::string& type, const std::string& id, const OWWriteOptions& options,
+                OWHandler<OWJsonValue> done);
+    // POST /{type}/{id}/links/{field} with {add, remove}: change one link array, merged by keel (ids already there or
+    // already gone are fine), answering the element whole. The one correct way to change a link array. options.if_match
+    // as on Patch: a link write moves the element too. A 202 is a proposal, as on Upsert. Mirrors the TypeScript SDK's
+    // `editLinks`.
+    void EditLinks(const std::string& type, const std::string& id, const std::string& field, const OWLinkEdit& edit,
+                   const OWWriteOptions& options, OWHandler<OWJsonValue> done);
+    // POST /bulk/: write many elements of mixed types in one request, {items: [{type, element}], atomic}. Each element
+    // is cleaned as a single write's is, and one without an id gets one by its position: under
+    // options.idempotency_key the id derived from the key and the position, so a retry sends the same body and replays
+    // (was_replay), else a fresh UUIDv7. keel answers 200 even when slots failed: read the slots. Refused, nothing
+    // sent: no items, an item without a type, an element that is not an object, a known-of stub (each named by its
+    // index). Mirrors the TypeScript SDK's `bulk`.
+    void Bulk(const std::vector<OWBulkItem>& items, const OWBulkOptions& options, OWHandler<OWBulkResult> done);
+
+    // The name sent as X-OW-Client when the config gives none.
+    static const char* const DefaultClientName;  // "unreal-sdk"
+    // The name this client sends as X-OW-Client on element writes.
+    const std::string& ClientName() const;
+    // True when the config declared this client an AI agent (X-OW-Agent on every element write).
+    bool Agent() const;
+
+    // The keys a write never sends: keel refuses them (a 422) or names them itself (world, from the key): world, type,
+    // created_at, updated_at, change_seq, known_of. A blacklist that must never become a whitelist: extension keys
+    // (x_*) pass through every write untouched. Mirrors the TypeScript SDK's `READ_ONLY_FIELDS`.
+    static const std::vector<std::string>& ReadOnlyFields();
+    // True for a known-of stub (known_of is the JSON true), never a whole element: absent, false or any other value is
+    // a whole element. Mirrors the TypeScript SDK's `isKnownOf`.
+    static bool IsKnownOf(const OWJsonValue& body);
+    // A write's body: a copy of `payload` with ReadOnlyFields left out and each key `type`'s schema declares a scalar
+    // string (the base name, description, supertype, subtype, image_url, and the type's own) sent as "" where it is
+    // null: "" is the wire's unset, and keel has no null to store (string-empty-is-unset). A single link's null, an
+    // x_* value and an absent key are left as they are (on a PATCH an absent key means "leave it alone"). Anything but
+    // an object is answered as given. Mirrors the TypeScript SDK's `sanitizePayload`, with the Unity SDK's null-string
+    // rule (`Sanitize`), which the TypeScript SDK has not.
+    static OWJsonValue Sanitize(const OWJsonValue& payload, std::string_view type);
 
     struct State;
 
