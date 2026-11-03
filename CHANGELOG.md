@@ -60,6 +60,9 @@ Nothing is released yet; the history before this file is in the git log.
   that refuses a known key as unknown, or the other way round, now fails the case where before the name alone passed
   it. Still 92 cases, the same bytes as the TypeScript SDK's (`85ef7dd`) and the Python package's (`b1a4a45`);
   nothing shipped changes.
+- `OWTools` repinned at the tools list's `f10afdc` (tools.json sha256 `ff5e7c67…`), the list the TypeScript SDK 4.131.0
+  bakes and the Python package pins: one new row, Tactical Tangle (`tangle`, listed, the API door only), with no
+  `open`, so the Open with menu offers it nowhere. No other row changed.
 - `OWMapSpace::WholeOf` reads a number written with a fraction or an exponent as whole only up to 2^53 - 1 (a double
   holds whole numbers exactly that far; past it the parse may have rounded it), where before it read any integral
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
