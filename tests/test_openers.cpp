@@ -1,7 +1,7 @@
 // OWOpeners on the npm SDK's and the Python package's shared fixture (tests/data/openers.fixture.json, the same bytes,
 // held by its sha256): every case through OpenersForJson, each expected row compared whole, each refusal by the address
-// refusal's reason or by the key its message names. Then OWTools::All(), the baked tools list, through the typed
-// OpenersFor.
+// refusal's reason or by the key its message names and its kind (an unknown key, worded "unknown key 'k'", or a refused
+// value). Then OWTools::All(), the baked tools list, through the typed OpenersFor.
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -23,7 +23,7 @@ namespace {
 
 // The npm SDK's test/fixtures/openers.fixture.json at 1ef974a (4.130.0: a signed-out visitor's account rows, 2 cases
 // more).
-const char* const FixtureSha256 = "b5c6afb76bf1ab2b95ee50641e2fd36344320d12fe0fd293d4f09fcf8cde7027";
+const char* const FixtureSha256 = "6b1911bd207220c6679ee9ac2e927e6b93f8cf54178aff115c60923ca5707eae";
 const size_t CaseCount = 92;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
@@ -105,8 +105,15 @@ OWJsonValue Answer(const OWJsonValue& c) {
         return One("refuse", refusal);
     }
     const OWJsonValue* refuse = c.Find("refuse");
-    if (refuse && Str(*refuse, "error") == "type" && r.message.find(Str(*refuse, "names")) != std::string::npos)
-        return One("refuse", *refuse);
+    if (refuse && Str(*refuse, "error") == "type" && r.message.find(Str(*refuse, "names")) != std::string::npos) {
+        // This package's own words for a key the object does not take; any other refusal is of a value.
+        const std::string names = Str(*refuse, "names");
+        const bool unknown = r.message.find("unknown key '" + names + "'") != std::string::npos;
+        refusal.Set("error", OWJsonValue::String("type"));
+        refusal.Set("names", OWJsonValue::String(names));
+        refusal.Set("kind", OWJsonValue::String(unknown ? "unknown_key" : "bad_value"));
+        return One("refuse", refusal);
+    }
     refusal.Set("error", OWJsonValue::String("type"));
     refusal.Set("message", OWJsonValue::String(r.message));
     return One("refuse", refusal);

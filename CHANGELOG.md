@@ -54,6 +54,12 @@ Nothing is released yet; the history before this file is in the git log.
   `UOWOpeners` gives the public Atlas and Lantern so worded (`FOWOpener::State`), each `Href` kept, as it gives a row
   that needs a connection. Parity with the TypeScript SDK 4.130.0 and the Python package 0.105.0: the shared openers
   fixture at 92 cases.
+- Tests only: the shared openers fixture's 24 type refusals each name their kind beside the key: `unknown_key` (a key
+  the object does not take, refused by name) or `bad_value` (a key it takes whose value it refuses, a missing one
+  included). `tests/test_openers.cpp` tells the two apart by the core's own words ("unknown key 'k'"), so a reader
+  that refuses a known key as unknown, or the other way round, now fails the case where before the name alone passed
+  it. Still 92 cases, the same bytes as the TypeScript SDK's (`85ef7dd`) and the Python package's (`b1a4a45`);
+  nothing shipped changes.
 - `OWMapSpace::WholeOf` reads a number written with a fraction or an exponent as whole only up to 2^53 - 1 (a double
   holds whole numbers exactly that far; past it the parse may have rounded it), where before it read any integral
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
