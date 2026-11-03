@@ -5,6 +5,10 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
+#include "UObject/Package.h"
+#include "UObject/SoftObjectPath.h"
+#include "UObject/StrongObjectPtr.h"
+#include "UObject/UnrealType.h"
 
 #include "OWAddressLibrary.h"
 #include "OWCalendarLibrary.h"
@@ -47,6 +51,69 @@ namespace
 			UE_LOG(LogOWBoot, Display, TEXT("OWBoot:   %s | %s | %s"), *Row.Name, *Row.Href,
 				Row.State.IsEmpty() ? TEXT("(opens now)") : *Row.State);
 		}
+	}
+
+	// The host's own graph, written by the editor module's commandlet (-run=OWMakeGraph) and cooked into the pak.
+	const TCHAR* const OWBootGraphDefault = TEXT("/Game/OW/BP_OWBootGraph.BP_OWBootGraph_C");
+
+	// The Blueprint class to run, from -OWGraph=<its soft class path> (an empty one names no class), or the host's own
+	// for a bare -OWGraph. False when neither is given.
+	bool GraphArg(FString& ClassPath)
+	{
+		const TCHAR* Cmd = FCommandLine::Get();
+		if (FParse::Value(Cmd, TEXT("-OWGraph="), ClassPath, /*bShouldStopOnSeparator*/ false)) return true;
+		ClassPath = OWBootGraphDefault;
+		return FParse::Param(Cmd, TEXT("OWGraph"));
+	}
+
+	// What the graph's ReadWorld answered, or why it could not be called.
+	struct FGraphAnswer
+	{
+		bool bCalled = false;
+		FString Missing;
+		int32 ElementCount = 0;
+		FString ElementName, Error;
+	};
+
+	// The class loaded by its soft path, and its ReadWorld(Path, Id) -> ElementCount, ElementName, Error called on an
+	// instance, its parameters set and read by property, as the plugin's graph tests call a compiled function
+	// (OWGraphTests.cpp, RunGraph): the frame is the parameters only, ProcessEvent makes the locals' frame itself.
+	FGraphAnswer CallGraph(const FString& ClassPath, const FString& WorldPath, const FString& ElementId)
+	{
+		FGraphAnswer Answer;
+		UClass* GraphClass = ClassPath.StartsWith(TEXT("/")) ? FSoftClassPath(ClassPath).TryLoadClass<UObject>() : nullptr;
+		if (!GraphClass)
+		{
+			Answer.Missing = TEXT("no such class (not cooked into the pak, or the path names none)");
+			return Answer;
+		}
+		UFunction* Fn = GraphClass->FindFunctionByName(TEXT("ReadWorld"));
+		FStrProperty* InPath = Fn ? CastField<FStrProperty>(Fn->FindPropertyByName(TEXT("Path"))) : nullptr;
+		FStrProperty* InId = Fn ? CastField<FStrProperty>(Fn->FindPropertyByName(TEXT("Id"))) : nullptr;
+		FIntProperty* OutCount = Fn ? CastField<FIntProperty>(Fn->FindPropertyByName(TEXT("ElementCount"))) : nullptr;
+		FStrProperty* OutName = Fn ? CastField<FStrProperty>(Fn->FindPropertyByName(TEXT("ElementName"))) : nullptr;
+		FStrProperty* OutError = Fn ? CastField<FStrProperty>(Fn->FindPropertyByName(TEXT("Error"))) : nullptr;
+		if (!InPath || !InId || !OutCount || !OutName || !OutError)
+		{
+			Answer.Missing = FString::Printf(TEXT("%s has no function ReadWorld(Path, Id) -> ElementCount, ElementName, Error"),
+				*GraphClass->GetPathName());
+			return Answer;
+		}
+
+		TStrongObjectPtr<UObject> Instance(NewObject<UObject>(GetTransientPackage(), GraphClass));
+		uint8* Frame = static_cast<uint8*>(FMemory::Malloc(FMath::Max<int32>(Fn->ParmsSize, 1), Fn->GetMinAlignment()));
+		FMemory::Memzero(Frame, Fn->ParmsSize);
+		for (TFieldIterator<FProperty> It(Fn); It && It->HasAnyPropertyFlags(CPF_Parm); ++It) It->InitializeValue_InContainer(Frame);
+		InPath->SetPropertyValue_InContainer(Frame, WorldPath);
+		InId->SetPropertyValue_InContainer(Frame, ElementId);
+		Instance->ProcessEvent(Fn, Frame);
+		Answer.bCalled = true;
+		Answer.ElementCount = OutCount->GetPropertyValue_InContainer(Frame);
+		Answer.ElementName = OutName->GetPropertyValue_InContainer(Frame);
+		Answer.Error = OutError->GetPropertyValue_InContainer(Frame);
+		for (TFieldIterator<FProperty> It(Fn); It && It->HasAnyPropertyFlags(CPF_Parm); ++It) It->DestroyValue_InContainer(Frame);
+		FMemory::Free(Frame);
+		return Answer;
 	}
 
 	void Quit(uint8 Code)
@@ -174,6 +241,30 @@ bool UOWBootSubsystem::Run(float DeltaTime)
 	if (!bOffline) UE_LOG(LogOWBoot, Display, TEXT("OWBoot: open with (offline) refused: %s"), *Reason);
 	LogRows(TEXT("offline"), Offline);
 	bHeld &= bOnline && bOffline && Online.Num() > 0 && Online.Num() == Offline.Num();
+
+	// With -OWGraph, the same world read again by a Blueprint graph cooked into the pak (it opens the folder itself,
+	// through UOWLibrary::OpenWorldFolder): its count and that element's name must be the C++ reading's. The reading
+	// is taken first, so nothing of this world is touched once the graph's class is loaded.
+	FString GraphClassPath;
+	if (GraphArg(GraphClassPath))
+	{
+		const int32 CppCount = World->GetElementCount();
+		const FString CppName = World->GetElementName(Id);
+		const FGraphAnswer Answer = CallGraph(GraphClassPath, Path, Id);
+		if (!Answer.bCalled)
+		{
+			UE_LOG(LogOWBoot, Display, TEXT("OWBoot: graph %s: %s"), *GraphClassPath, *Answer.Missing);
+			UE_LOG(LogOWBoot, Display, TEXT("OWBoot: done, exit 4"));
+			Quit(4);
+			return false;
+		}
+		const bool bAgrees = Answer.Error.IsEmpty() && Answer.ElementCount == CppCount && Answer.ElementName == CppName;
+		UE_LOG(LogOWBoot, Display, TEXT("OWBoot: graph %s: ReadWorld(%s) -> %d elements, %s \"%s\"%s; C++ read %d, \"%s\" (%s)"),
+			*GraphClassPath, *Path, Answer.ElementCount, *Id, *Answer.ElementName,
+			Answer.Error.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(", error \"%s\""), *Answer.Error), CppCount, *CppName,
+			bAgrees ? TEXT("agrees") : TEXT("disagrees"));
+		bHeld &= bAgrees;
+	}
 
 	const uint8 Code = bHeld ? 0 : 3;
 	UE_LOG(LogOWBoot, Display, TEXT("OWBoot: done, exit %d"), Code);
