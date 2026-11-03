@@ -203,6 +203,12 @@ its PDB), and the plugin runs in it: exit 0 on Moppetopia's folder, 2 on a world
 writes no `OWBoot:` lines and no log file (the host's target keeps the engine's default, no logging in Shipping), so
 there the exit code is the reading.
 
+Copied the way the opening says (`Plugin/OnlyWorlds/`'s `Core/`, `Source/` and `.uplugin` into a fresh copy of the
+host's `Plugins/OnlyWorlds/`, with no `AdditionalPluginDirectories`), the plugin builds from nothing, packages with the
+same BuildCookRun, and the game finds it at `OWHost/Plugins/OnlyWorlds/` in the staged folder: Moppetopia's folder read
+whole (310 elements, 22 types, exit 0), a missing world refused (exit 2). Its automation tests need the repository
+around it: they read the conformance set at `../../codegen/schema-dist/` from the plugin (`OWTestPaths.h`).
+
 `codegen/schema-dist/` is vendored verbatim; never edit it, nor `codegen/tools/tools.json` (the tools list at the
 commit `codegen/tools-pin.json` names). Under `Plugin/OnlyWorlds/`, `Core/Private/OWUnicodeData.generated.cpp` is
 written by `codegen/generate.py`, `Core/Private/OWTools.generated.cpp` by `codegen/generate_tools.py`,
