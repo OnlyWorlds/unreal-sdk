@@ -62,7 +62,7 @@ namespace
 	// The frames a latent test waits for its answers before it fails.
 	constexpr int32 WaitFrames = 200;
 
-	const char* const Base = "http://keel.test/api/v2";
+	const char* const KeelBase = "http://keel.test/api/v2";
 
 	// -- the fake transport --------------------------------------------------------------------------------------------
 
@@ -137,7 +137,7 @@ namespace
 	// A request as "<path after the base>|Name=Value; Name=Value", the headers in the order sent.
 	FString Shown(const OWRequest& R)
 	{
-		const std::string Prefix(Base);
+		const std::string Prefix(KeelBase);
 		std::string Out = R.url.rfind(Prefix, 0) == 0 ? R.url.substr(Prefix.size()) : R.url;
 		Out += "|";
 		for (size_t I = 0; I < R.headers.size(); ++I) Out += (I ? "; " : "") + R.headers[I].first + "=" + R.headers[I].second;
@@ -150,7 +150,7 @@ namespace
 		C.ApiKey = Key;
 		C.ApiPin = Pin;
 		C.World = World;
-		C.BaseUrl = Str(std::string(Base) + "/");  // the trailing slash trimmed by the core
+		C.BaseUrl = Str(std::string(KeelBase) + "/");  // the trailing slash trimmed by the core
 		return C;
 	}
 
@@ -907,7 +907,7 @@ bool FOWClientNodesReflectionTest::RunTest(const FString& Parameters)
 		const UScriptStruct* S = FOWClientConfig::StaticStruct();
 		OWBlueprintTest::SetMember<FStrProperty>(*this, S, Data, TEXT("ApiKey"), TEXT("ow_r_test"));
 		OWBlueprintTest::SetMember<FStrProperty>(*this, S, Data, TEXT("ApiPin"), TEXT("1234"));
-		OWBlueprintTest::SetMember<FStrProperty>(*this, S, Data, TEXT("BaseUrl"), Str(std::string(Base)));
+		OWBlueprintTest::SetMember<FStrProperty>(*this, S, Data, TEXT("BaseUrl"), Str(std::string(KeelBase)));
 		OWBlueprintTest::SetMember<FInt64Property>(*this, S, Data, TEXT("PageSize"), int64(100));
 		UOWClientRead::StaticClass()->GetDefaultObject()->ProcessEvent(Factory, Frame);
 		const FObjectProperty* Ret = CastField<FObjectProperty>(Factory->GetReturnProperty());
