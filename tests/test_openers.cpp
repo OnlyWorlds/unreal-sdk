@@ -21,10 +21,10 @@ using owtest::P;
 
 namespace {
 
-// The npm SDK's test/fixtures/openers.fixture.json at 1ef974a (4.130.0: a signed-out visitor's account rows, 2 cases
-// more).
-const char* const FixtureSha256 = "6b1911bd207220c6679ee9ac2e927e6b93f8cf54178aff115c60923ca5707eae";
-const size_t CaseCount = 92;
+// The npm SDK's test/fixtures/openers.fixture.json at 8f2986b (4.132.0: element_types, the types a tool's element door
+// opens, 8 cases more), read at v4.132.2.
+const char* const FixtureSha256 = "7c84e4f624fb7ecc7eca1e56b1d9807196a5055e359e0a1c26f2065c9808e0d5";
+const size_t CaseCount = 100;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";
