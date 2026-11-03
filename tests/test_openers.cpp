@@ -632,3 +632,47 @@ OW_TEST(openers_element_types_offer_a_tool_on_its_kinds_only) {
     t.Ok(w.ok && Ids(w) == std::vector<std::string>{"onlyworlds", "kite"}, "a world's menu reads no types: " + w.message);
 }
 
+// The baked list at 60a590e: Tactical Tangle opens a world or a Character, needs an account, and skips rooms, hidden
+// and proposed elements; on any other type it is not offered. Atlas, Lantern and Little Lens open every type.
+OW_TEST(openers_the_baked_list_offers_tactical_tangle_on_a_world_and_a_character_only) {
+    const OWTool* tangle = nullptr;
+    for (const OWTool& x : OWTools::All()) {
+        if (x.id == "tangle") tangle = &x;
+        else t.Ok(x.open && !x.open->element_types, x.id + ": opens every type");
+    }
+    t.Ok(tangle && tangle->rung == "listed" && tangle->open && tangle->open->world && tangle->open->element,
+         "Tactical Tangle is listed, with a world door and an element door");
+    if (!tangle || !tangle->open) return;
+    t.Ok(tangle->open->needs && *tangle->open->needs == "account", "it needs an account");
+    t.Ok(tangle->open->element_types == std::vector<std::string>{"character"}, "it opens Characters");
+    t.Ok(tangle->open->element_skips == std::vector<std::string>{"room", "hidden", "proposed"},
+         "skipping rooms, hidden and proposed elements");
+    auto offered = [](const OWOpenersResult& r) {
+        for (const OWOpener& o : r.rows)
+            if (o.id == "tangle") return o.href;
+        return NotOffered;
+    };
+    OWAddressParts world;
+    world.form = OWAddress::Human;
+    world.world = World;
+    t.Eq(offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::World, world, Member(true))),
+         "https://tangle.onlyworlds.com/#/open/" + World, "a world's menu");
+    for (const char* type : OWAddress::TypeWords) {
+        const std::string want = std::string(type) == "character"
+                                     ? "https://tangle.onlyworlds.com/#/open/" + World + "/element/" + Element
+                                     : NotOffered;
+        t.Eq(offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf(type), Member(true))), want, type);
+    }
+    OWJsonParseResult hidden =
+        OWJson::Parse("{\"id\": \"" + Element + "\", \"type\": \"character\", \"name\": \"Ana\", \"hidden\": true}");
+    OWOpenersOptions options;
+    options.element = &hidden.value;
+    t.Eq(offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf("character"), Member(true), options)),
+         NotOffered, "a hidden Character");
+    OWOpenerSurface pub;
+    pub.audience = OWOpeners::Public;
+    OWOpenersResult visitor = OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf("character"), pub);
+    t.Ok(visitor.ok && !visitor.rows.empty() && visitor.rows.back().id == "tangle" &&
+             visitor.rows.back().state.value_or("") == OWOpeners::NeedsAnAccount,
+         "the public's Character menu: Tangle last, Needs an account");
+}

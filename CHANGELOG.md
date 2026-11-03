@@ -181,6 +181,13 @@ Nothing is released yet; the history before this file is in the git log.
 - `OWTools` repinned at the tools list's `f10afdc` (tools.json sha256 `ff5e7c67…`), the list the TypeScript SDK 4.131.0
   bakes and the Python package pins: one new row, Tactical Tangle (`tangle`, listed, the API door only), with no
   `open`, so the Open with menu offers it nowhere. No other row changed.
+- `OWTools` repinned at the tools list's `60a590e` (tools.json sha256 `e9e8ad9d…`), the list the TypeScript SDK 4.132.1
+  bakes and the Python package 0.106.1 pins: Tactical Tangle opens a world or a Character. Its row gains a world door
+  and an element door (`needs` `account`, `element_types` `["character"]`, skipping rooms, hidden and proposed
+  elements), so the Open with menu offers it on a world's menu and on a Character's, and on no other type. Atlas,
+  Lantern and Little Lens gain `element_types: null` in the list (the list's `d0e52c4`), which bakes as before: no menu
+  of theirs changes. `generate_tools.py` bakes a list of type words. On Blueprints, a Character's menu and the world's
+  have five rows where they had four.
 - `OWMapSpace::WholeOf` reads a number written with a fraction or an exponent as whole only up to 2^53 - 1 (a double
   holds whole numbers exactly that far; past it the parse may have rounded it), where before it read any integral
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's

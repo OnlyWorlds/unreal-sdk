@@ -65,6 +65,15 @@ def row(t: dict[str, Any]) -> str:
             if not (isinstance(skips, list) and all(isinstance(v, str) for v in skips)):
                 die(f"row {rid!r} open.element_skips is {skips!r}; this generator bakes a list of words or null")
             parts.append("{" + ", ".join(json.dumps(v) for v in skips) + "}")
+        types = o.get("element_types")
+        if types is not None:
+            # The type words the element door opens (open.element_types), in the list's own order; absent or null
+            # bakes none (every type), so a row without the key bakes as before.
+            if not (isinstance(types, list) and all(isinstance(v, str) for v in types)):
+                die(f"row {rid!r} open.element_types is {types!r}; this generator bakes a list of words or null")
+            if skips is None:
+                parts.append("{}")
+            parts.append("std::vector<std::string>{" + ", ".join(json.dumps(v) for v in types) + "}")
         door = "OWToolOpen{" + ", ".join(parts) + "}"
     else:
         die(f"row {rid!r} open is {o!r}; an object or null")
