@@ -14,7 +14,10 @@
 // no door for this kind, is not there. On an element, a tool with only a world door is a row to its world door that
 // says "Opens the world". On an element given as the options' element (the element as served, the mark flat on it), a
 // row whose open.element_skips names a mark the element carries (ElementMarks(), each read as OWGraph::WorldGraph
-// reads it: MarksOf) is not there: its door cannot open it. A world door alone opens the world, so it stays. For the
+// reads it: MarksOf) is not there: its door cannot open it. A world door alone opens the world, so it stays. On an
+// element's menu, a row whose open.element_types is a list that does not hold the address's type word is not there
+// either, world door or not: the tool opens other kinds of element, so its world is not offered from this one (the
+// type is read from the address, so no element body is needed; a world's menu reads no element types). For the
 // public audience (the signed-out reader) a row whose needs is "device" is not there, since a visitor's device holds no
 // world of this one's, and a row whose needs is "account" is there and says it needs one.
 // A lens and a moment on the address ride on no href.
@@ -35,8 +38,8 @@
 // reason is empty and message names the rest (the npm SDK's TypeError): a kind that is neither, an element's openers
 // asked of an address with no element, an unknown key on the address, the surface or the options, a missing or unknown
 // audience, a surface value of the wrong type, an element given for a world's menu or naming another element than the
-// address, a tools row that is not one (a needs or an element_skips word outside the list's format, or skips on a row
-// with no element door, included).
+// address, a tools row that is not one (a needs, an element_skips or an element_types word outside the list's format,
+// an empty or repeating element_types, or skips or element_types on a row with no element door, included).
 
 #include "OWAddress.h"
 #include "OWJson.h"
@@ -54,11 +57,15 @@ namespace OnlyWorlds {
 // public page offers those rows, and an "account" row only as one that opens nothing ("Needs an account").
 // element_skips is what the element door does not open, in the lens profile's graph section's words (ElementMarks():
 // room, hidden, proposed, map_space, reading_aid); empty when it opens every element, and on a list older than the key.
+// element_types is the element types the element door opens, as type words (OWAddress::TypeWords: "character"), each
+// once; absent (the list's null, or a list older than the key) when it opens every type. Only on a row with an element
+// door, and never an empty list.
 struct OWToolOpen {
     std::optional<std::string> world;
     std::optional<std::string> element;
     std::optional<std::string> needs;
     std::vector<std::string> element_skips = {};
+    std::optional<std::vector<std::string>> element_types = std::nullopt;
 };
 
 // The keys of one tools list row that OpenersFor reads; the list's other keys are not kept.

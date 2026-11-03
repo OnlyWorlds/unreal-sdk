@@ -100,7 +100,8 @@ public:
 	/**
 	 * The rows for an element of the world (by its id and its type), or for the world itself when ElementId is "". An
 	 * element's menu reads the element itself (ServedElement): a tool whose element door skips a mark it carries
-	 * (room, hidden, proposed, map space, a reading aid: the list's element_skips) is not there.
+	 * (room, hidden, proposed, map space, a reading aid: the list's element_skips) is not there, nor is a tool whose
+	 * element door opens other types (the list's element_types: Tactical Tangle opens Characters), world door and all.
 	 */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Open with")
 	static bool OpenersFor(const UOWWorld* World, const FString& ElementId, const FOWOpenerSurface& Surface,
@@ -111,7 +112,9 @@ public:
 
 	/**
 	 * The rows for an address (one ParseAddress read, or parts): an element's when it gives an id, else its world's.
-	 * Form "" is the site's (human). The whole address is checked as a writer checks it, its lens and moment too.
+	 * Form "" is the site's (human). The whole address is checked as a writer checks it, its lens and moment too. No
+	 * element is read, so no row is left out for a mark; a tool whose element door opens other types than the address's
+	 * is left out (element_types).
 	 */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Open with")
 	static bool OpenersForAddress(const FOWAddress& Address, const FOWOpenerSurface& Surface, TArray<FOWOpener>& Rows,

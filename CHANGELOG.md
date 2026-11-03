@@ -151,6 +151,16 @@ Nothing is released yet; the history before this file is in the git log.
   its body, with the folder's type when the body declares none), so a Map, Pin or Marker of Sikelia has no Little
   Lens row; held on all 20,570 of its elements, as a member and as the public, against the core. `OpenersForAddress`
   has no element and gives every row; the fixture's 22 cases that carry one are named as not carried there.
+- A tool that opens one kind of element is offered only on that kind. The tools list's `open.element_types`
+  (`OWToolOpen::element_types`, absent for the list's `null`) is the element types its element door opens, as type
+  words (`character`); on an element's menu, `OWOpeners::OpenersFor` and `OpenersForJson` leave out a row whose list
+  does not hold the address's type word, world door or not: the tool opens other kinds, so its world is not offered
+  from this element either. The type is read from the address, so no element body is needed; a world's menu reads no
+  types. Refused by name, as a row that is not one: a word outside the 22 (`OWAddress::TypeWords`, an uppercase one
+  included), an empty list, a repeat, a list that is not one of strings, and `element_types` on a row with no element
+  door. A row without the key reads as before. On Blueprints, `UOWOpeners::OpenersFor` and `OpenersForAddress` both
+  leave the row out (each passes the address's type). Parity with the TypeScript SDK 4.132.0 and the Python package
+  0.106.0: the shared openers fixture at 100 cases, the same bytes.
 
 ### Changed
 

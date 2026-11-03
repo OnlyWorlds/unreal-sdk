@@ -153,6 +153,27 @@ std::optional<OWOpenersResult> CheckTemplate(const std::string& row, const char*
     return std::nullopt;
 }
 
+// The tools list's refusal of an element_types that is not one: got is what the row holds, as written.
+OWOpenersResult TypesMistake(const std::string& row, const std::string& got) {
+    std::string words;
+    for (const char* t : OWAddress::TypeWords) words += (words.empty() ? "" : ", ") + std::string(t);
+    return Mistake("tool " + row + ": open.element_types is null or a non-empty list of distinct type words (" + words +
+                   "); got " + got);
+}
+
+// A list of words as JSON writes it, on one line.
+std::string Words(const std::vector<std::string>& words) {
+    std::string out;
+    for (const std::string& w : words) out += (out.empty() ? "" : ", ") + Quoted(w);
+    return "[" + out + "]";
+}
+
+bool IsTypeWord(const std::string& word) {
+    for (const char* t : OWAddress::TypeWords)
+        if (word == t) return true;
+    return false;
+}
+
 // The rows, with the address, kind and audience already checked; a link template that is not one (CheckTemplate) or a
 // needs outside the list's format is refused here, in the list's order, as the npm SDK refuses it.
 OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::string& page, const std::string& world,
@@ -186,6 +207,16 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
             }
         if (!o.element && !o.element_skips.empty())
             return Mistake("tool " + r.id + ": open.element_skips names what an element door leaves out, and the row has none");
+        // A list of the 22 type words, each once, or absent for every type; never an empty list.
+        if (o.element_types) {
+            const std::vector<std::string>& types = *o.element_types;
+            bool fits = !types.empty();
+            for (size_t k = 0; fits && k < types.size(); ++k)
+                fits = IsTypeWord(types[k]) && std::find(types.begin(), types.begin() + k, types[k]) == types.begin() + k;
+            if (!fits) return TypesMistake(r.id, Words(types));
+        }
+        if (!o.element && o.element_types)
+            return Mistake("tool " + r.id + ": open.element_types names what an element door opens, and the row has none");
         if (r.rung != Listed) continue;
         // The public is the signed-out reader: a visitor's device holds no world of this one's, so a row that needs the
         // device is not there; a row that needs an account is, and says so.
@@ -197,6 +228,10 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
         if (element && std::any_of(marks.begin(), marks.end(), [&](const std::string& m) {
                 return std::find(o.element_skips.begin(), o.element_skips.end(), m) != o.element_skips.end();
             }))
+            continue;
+        // A tool that opens other kinds of element is no door for this one, and offers no world fallback either.
+        if (element && o.element_types &&
+            std::find(o.element_types->begin(), o.element_types->end(), type) == o.element_types->end())
             continue;
         // The first that holds. A word the row needs (it cannot open now) comes before "Opens the world" (it opens,
         // somewhere else), so a world door alone that needs a sign-in says the sign-in.
@@ -429,6 +464,21 @@ OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, 
                 if (!words)
                     return Mistake("tool " + tool.id + ": open.element_skips is a list of room, hidden, proposed, map_space, reading_aid; got " +
                                    Show(*v));
+            }
+            // A list of strings, absent or null for every type; which words, and each once, is Rows' check.
+            if (const OWJsonValue* v = o->Find("element_types"); v && !v->IsNull()) {
+                std::vector<std::string> types;
+                bool words = v->IsArray();
+                if (words)
+                    for (const OWJsonValue& word : v->Items()) {
+                        if (!word.IsString()) {
+                            words = false;
+                            break;
+                        }
+                        types.push_back(word.Text());
+                    }
+                if (!words) return TypesMistake(tool.id, Show(*v));
+                door.element_types = std::move(types);
             }
             tool.open = door;
         }

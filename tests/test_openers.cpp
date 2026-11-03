@@ -195,6 +195,16 @@ OW_TEST(openers_a_reading_and_the_parts_give_the_same_rows_as_json) {
             open.Set("world", opt(x.open->world));
             open.Set("element", opt(x.open->element));
             open.Set("needs", opt(x.open->needs));
+            OWJsonValue skips = OWJsonValue::Array();
+            for (const std::string& w : x.open->element_skips) skips.Push(OWJsonValue::String(w));
+            open.Set("element_skips", skips);
+            if (x.open->element_types) {
+                OWJsonValue types = OWJsonValue::Array();
+                for (const std::string& w : *x.open->element_types) types.Push(OWJsonValue::String(w));
+                open.Set("element_types", types);
+            } else {
+                open.Set("element_types", OWJsonValue::Null());
+            }
             row.Set("open", open);
         } else {
             row.Set("open", OWJsonValue::Null());
@@ -525,3 +535,100 @@ OW_TEST(openers_every_skip_word_leaves_a_door_out_exactly_when_the_graph_reads_t
     const std::vector<std::string>& marks = OWOpeners::ElementMarks();
     t.Ok(seen == std::set<std::string>(marks.begin(), marks.end()), "every word met at least once");
 }
+
+// -- element_types beside the fixture ---------------------------------------------------------------------------
+
+namespace {
+
+OWTool Kite(std::optional<std::vector<std::string>> types, bool element_door = true) {
+    OWTool x;
+    x.id = "kite";
+    x.name = "Kite";
+    x.url = "https://kite.example";
+    x.client = "kite";
+    x.rung = "listed";
+    x.open = OWToolOpen{"https://kite.example/{world}",
+                        element_door ? std::optional<std::string>("https://kite.example/{world}/{id}") : std::nullopt,
+                        std::nullopt, {}, std::move(types)};
+    return x;
+}
+
+OWAddressParts ElementOf(const char* type) {
+    OWAddressParts p;
+    p.form = OWAddress::Human;
+    p.world = World;
+    p.type = type;
+    p.id = Element;
+    return p;
+}
+
+std::vector<std::string> Ids(const OWOpenersResult& r) {
+    std::vector<std::string> ids;
+    for (const OWOpener& o : r.rows) ids.push_back(o.id);
+    return ids;
+}
+
+const std::string NotOffered = "(not offered)";
+
+}  // namespace
+
+// A row built in code is refused as the JSON form refuses it: a repeat (which no fixture case holds; the npm SDK and
+// the Python package refuse it by name), a word outside the 22, an uppercase one, an empty list, and types on a row
+// with only a world door.
+OW_TEST(openers_element_types_that_are_not_a_list_of_distinct_type_words_are_refused_a_row_built_in_code_too) {
+    const std::string types = "tool kite: open.element_types is null or a non-empty list of distinct type words (";
+    const std::vector<std::vector<std::string>> bad{
+        {"character", "character"}, {"dragon"}, {"Character"}, {}, {"location", "character", "location"}};
+    for (const std::vector<std::string>& words : bad) {
+        OWOpenersResult r = OWOpeners::OpenersFor({Kite(words)}, OWOpeners::Element, ElementOf("character"), Member(true));
+        t.Ok(!r.ok && r.reason.empty() && r.rows.empty() && r.message.find(types) != std::string::npos,
+             std::to_string(words.size()) + " words: refused: " + r.message);
+    }
+    OWAddressParts world;
+    world.form = OWAddress::Human;
+    world.world = World;
+    OWOpenersResult door =
+        OWOpeners::OpenersFor({Kite(std::vector<std::string>{"character"}, false)}, OWOpeners::World, world, Member(true));
+    t.Ok(!door.ok &&
+             door.message.find("tool kite: open.element_types names what an element door opens, and the row has none") !=
+                 std::string::npos,
+         "types on a row with no element door, refused on a world's menu too: " + door.message);
+    const std::string head = "[{\"id\": \"kite\", \"name\": \"Kite\", \"rung\": \"listed\", \"open\": "
+                             "{\"world\": \"https://kite.example/{world}\", \"element\": \"https://kite.example/{world}/{id}\", "
+                             "\"needs\": null";
+    OWJsonParseResult address = OWJson::Parse("{\"form\": \"human\", \"world\": \"" + World + "\"}");
+    OWJsonParseResult surface = OWJson::Parse("{\"audience\": \"member\"}");
+    for (const char* v : {"\"character\"", "[7]", "{}", "[\"character\", \"character\"]", "true", "[]"}) {
+        OWJsonParseResult tools = OWJson::Parse(head + ", \"element_types\": " + v + "}}]");
+        OWOpenersResult j = OWOpeners::OpenersForJson(tools.value, OWOpeners::World, address.value, surface.value);
+        t.Ok(tools.ok && !j.ok && j.reason.empty() && j.message.find(types) != std::string::npos,
+             std::string(v) + ": refused: " + j.message);
+    }
+    // Null, or no key at all (a list older than the key), is every type.
+    OWJsonParseResult zone =
+        OWJson::Parse("{\"form\": \"human\", \"world\": \"" + World + "\", \"type\": \"zone\", \"id\": \"" + Element + "\"}");
+    for (const char* v : {", \"element_types\": null", ""}) {
+        OWJsonParseResult tools = OWJson::Parse(head + v + "}}]");
+        OWOpenersResult j = OWOpeners::OpenersForJson(tools.value, OWOpeners::Element, zone.value, surface.value);
+        t.Ok(j.ok && Ids(j) == std::vector<std::string>{"onlyworlds", "kite"},
+             std::string("element_types ") + (*v ? "null" : "absent") + ": a Zone's menu offers it: " + j.message);
+    }
+}
+
+// On an element, a list leaves out every other type, world door and all; a world's menu reads no types.
+OW_TEST(openers_element_types_offer_a_tool_on_its_kinds_only) {
+    const std::vector<OWTool> tools{Kite(std::vector<std::string>{"character", "creature"})};
+    for (const char* type : OWAddress::TypeWords) {
+        OWOpenersResult r = OWOpeners::OpenersFor(tools, OWOpeners::Element, ElementOf(type), Member(true));
+        const bool kin = std::string(type) == "character" || std::string(type) == "creature";
+        const std::vector<std::string> want =
+            kin ? std::vector<std::string>{"onlyworlds", "kite"} : std::vector<std::string>{"onlyworlds"};
+        t.Ok(r.ok && Ids(r) == want, std::string(type) + (kin ? ": offered" : ": left out") + " " + r.message);
+    }
+    OWAddressParts world;
+    world.form = OWAddress::Human;
+    world.world = World;
+    OWOpenersResult w = OWOpeners::OpenersFor(tools, OWOpeners::World, world, Member(true));
+    t.Ok(w.ok && Ids(w) == std::vector<std::string>{"onlyworlds", "kite"}, "a world's menu reads no types: " + w.message);
+}
+

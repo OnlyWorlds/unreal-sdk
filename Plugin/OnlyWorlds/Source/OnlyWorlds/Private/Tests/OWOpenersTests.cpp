@@ -454,8 +454,8 @@ bool FOWOpenersAddressTest::RunTest(const FString& Parameters)
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	TestEqual(TEXT("92 cases"), static_cast<int32>(Cases->Items().size()), 92);
-	TestEqual(TEXT("the row cases carried"), RowCases, 42);
+	TestEqual(TEXT("100 cases"), static_cast<int32>(Cases->Items().size()), 100);
+	TestEqual(TEXT("the row cases carried"), RowCases, 46);
 	TestEqual(TEXT("the address refusals carried"), Refusals, 6);
 	TestEqual(TEXT("cases failed"), Failed, 0);
 	AddInfo(FString::Printf(TEXT("openers fixture: %d row cases and %d address refusals through the Blueprint path; not carried (%d): %s"),
