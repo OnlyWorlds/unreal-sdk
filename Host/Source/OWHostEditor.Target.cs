@@ -8,5 +8,6 @@ public class OWHostEditorTarget : TargetRules
 		DefaultBuildSettings = BuildSettingsVersion.V7;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
 		ExtraModuleNames.Add("OWHost");
+		ExtraModuleNames.Add("OWHostEditor");
 	}
 }

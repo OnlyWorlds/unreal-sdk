@@ -198,6 +198,28 @@ element's Open with rows for a member in a game online and offline, and `done, e
 when every reading held, 2 for a refused or missing world (the reader's reason logged), 3 for a reading that did not
 hold. The log is also in the staged folder's `OWHost/Saved/Logs/OWHost.log`.
 
+A Blueprint graph saved as an asset, cooked and run by the game: the host's editor-only module
+(`Host/Source/OWHostEditor/`, `"Type": "Editor"`, never in a game build) has a commandlet that writes two graphs into
+`Host/Content/OW/`, built as `OWGraphTests.cpp` builds its graphs but in real packages, compiled by the Kismet compiler
+and saved. `BP_OWBootGraph`'s one function, `ReadWorld(Path, Id) -> ElementCount, ElementName, Error`, opens the world
+folder through `UOWLibrary::OpenWorldFolder` and reads the opened world's `GetElementCount` and `GetElementName(Id)`;
+`BP_OWBootGraphWrong` wires `GetWorldName` into `ElementName` instead, a graph that compiles and answers wrong. The
+folder is generated, never committed (`.gitignore`), and `Host/Config/DefaultGame.ini` cooks it although no map
+references it (`DirectoriesToAlwaysCook`, `/Game/OW`). Run the commandlet after the editor target is built and before
+BuildCookRun:
+
+```
+"%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "%CD%\Host\OWHost.uproject" -run=OWMakeGraph ^
+    -unattended -nosplash -nop4               # exit 0 when both graphs are compiled and saved
+```
+
+Given `-OWGraph` beside `-OWWorld` (bare: `BP_OWBootGraph`; `-OWGraph=<a soft class path>`: that class, such as
+`/Game/OW/BP_OWBootGraphWrong.BP_OWBootGraphWrong_C`), the game, after its other readings, loads the class, calls
+`ReadWorld` on an instance with the world's path and the first element's id, and logs the graph's answer beside the
+C++ reading on an `OWBoot:` line: exit 3 when they differ, 4 when the class or its `ReadWorld` is not there (not
+cooked, or the path names none). The graph reads a world folder only: given an `.owworld` file it answers the folder
+reader's refusal, and the run exits 3. Without `-OWGraph`, nothing changes.
+
 `-clientconfig=Shipping` builds, cooks and stages the same way (`OWHost-Win64-Shipping.exe`, about 600 MB staged with
 its PDB), and the plugin runs in it: exit 0 on Moppetopia's folder, 2 on a world that is not there. A Shipping game
 writes no `OWBoot:` lines and no log file (the host's target keeps the engine's default, no logging in Shipping), so
@@ -221,8 +243,9 @@ regenerate, never edit.
 - A runtime actor that lays a Map out in a level: the frame is built by a test, in the editor, with a material made
   in code. A packaged game would need a material asset (the plugin ships no content yet).
 - Writing a struct back into an element (edits go through `UOWWorld`'s field setters for now).
-- A Blueprint graph saved as an asset, or one built in the editor's UI: the graphs that run are built in code by the
-  tests; the calendar's `GetWorldCalendars` and `BreakdownStep`, the openers' `OpenersFor` and every `UOWMessages`,
+- A Blueprint graph built in the editor's UI: the graphs that run are built in code, by the tests and by the host's
+  `-run=OWMakeGraph` (whose saved graph the packaged game runs, `OpenWorldFolder`, `GetElementCount` and
+  `GetElementName` alone); the calendar's `GetWorldCalendars` and `BreakdownStep`, the openers' `OpenersFor` and every `UOWMessages`,
   `UOWLens`, `UOWGraph` and `UOWCharter` call are held through reflection only, not in a graph. The client's nodes are placed on a graph for their pins but
   never compiled or run in one: one is activated through reflection, the rest from C++.
 - The Open with menu over a tools list other than the baked one (`OWOpeners::OpenersForJson` is in the core only).

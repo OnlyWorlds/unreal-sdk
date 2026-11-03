@@ -9,7 +9,10 @@ __pycache__/
 /Host/Saved/
 /Host/DerivedDataCache/
 /Host/.vs/
-# What the editor writes into a project on its first start (the host needs neither)
-/Host/Config/
+# What the editor writes into a project on its first start (the host needs none of it), but the one config file the
+# packaged game needs (DefaultGame.ini: the graphs' folder always cooked)
+/Host/Config/*
+!/Host/Config/DefaultGame.ini
+# The host's content: generated, never committed (Content/OW/, the Blueprint graphs -run=OWMakeGraph writes)
 /Host/Content/
 /Host/*.sln

@@ -7,6 +7,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- A Blueprint graph saved as an asset, cooked into the pak and run by the packaged game. The host gains an
+  editor-only module, `OWHostEditor`, whose commandlet (`-run=OWMakeGraph`) writes `/Game/OW/BP_OWBootGraph`
+  (`ReadWorld(Path, Id) -> ElementCount, ElementName, Error` through `UOWLibrary::OpenWorldFolder` and the opened
+  world's `GetElementCount` and `GetElementName`) and `/Game/OW/BP_OWBootGraphWrong` (the world's name wired into
+  `ElementName`, a graph that compiles and answers wrong). `Host/Config/DefaultGame.ini` cooks `/Game/OW` although
+  no map references it; the folder is generated and ignored. The game's `-OWGraph` (bare, or `=<a soft class path>`)
+  calls the graph after its own readings and compares the two: exit 3 when they differ, a new exit 4 when the class or
+  its `ReadWorld` is not there.
 - The API client's element writes on Blueprints, on the read nodes' base: `UOWClientWrite` (`CreateElement`,
   `UpsertElement`, `PatchElement`, `DeleteElement`, `EditElementLinks`) and `UOWClientBulk` (`BulkWrite`), each an
   async node with `OnSuccess` and `OnFailure`, the element in and out as JSON text, `If-Match` as `bHasIfMatch` and
