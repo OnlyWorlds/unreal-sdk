@@ -220,6 +220,12 @@ C++ reading on an `OWBoot:` line: exit 3 when they differ, 4 when the class or i
 cooked, or the path names none). The graph reads a world folder only: given an `.owworld` file it answers the folder
 reader's refusal, and the run exits 3. Without `-OWGraph`, nothing changes.
 
+Run in a Development package after the commandlet: on Moppetopia's folder the saved graph answers 310 elements and
+"Splashworth's Glimpse", the same as the C++ path (exit 0); the wrong graph answers the world's name, "Moppetopia"
+(exit 3); a class not in the pak, a class without `ReadWorld` and an `.owworld` file exit 4, 4 and 3. From Git Bash,
+set `MSYS_NO_PATHCONV=1`, or it rewrites `/Game/...` into a Windows path and every class reads as missing. An empty
+`-OWGraph=` takes the next switch as its value (exit 4, the message naming that switch).
+
 `-clientconfig=Shipping` builds, cooks and stages the same way (`OWHost-Win64-Shipping.exe`, about 600 MB staged with
 its PDB), and the plugin runs in it: exit 0 on Moppetopia's folder, 2 on a world that is not there. A Shipping game
 writes no `OWBoot:` lines and no log file (the host's target keeps the engine's default, no logging in Shipping), so
