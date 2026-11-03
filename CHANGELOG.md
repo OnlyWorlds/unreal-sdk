@@ -7,6 +7,22 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- The lens, its graph and the charter on Blueprints, over an opened world read as the core reads a snapshot (every
+  element as served, world.json's `time_current` as its now, the hidden mark on each body). `UOWLens`: `GetLenses`,
+  `IsLens`, `IsTemplate`, `LensesFor` (the membership's choice, else the Character's `x_lens_uses`), `IsHidden`,
+  `IsProposed`, `IsRoomElement`, `IsReadingAid`, `DateOf`, and `Resolve` (a lens by id) and `ResolveJson` (a lens body
+  as JSON text) for an `FOWLensReader` (`EOWLensRung`, `Character`, a guest's `Whole` and `KnownOf`, `bOwnerCounts`)
+  and `FOWLensOptions` (`AsOf`, `Clock`, `MembersJson`), answering an `FOWLensReading` (`Kept`, `KnownOf`, `Rows` as
+  JSON text, `Cut` of `FOWLensCut`, `NotesIgnored`, `Mail` of `FOWLensMail`, `Unreadable`). `UOWGraph`: `Read` (the
+  core's `WorldGraph`; `FOWGraphOptions`: a lens by id or body, its reading, the five flags) answering an
+  `FOWWorldGraph` (`FOWGraphNode`, `FOWGraphEdge`, `EdgesCut`, `Cut`, `Unreadable`), a flag from the wrong rung refused
+  by its word; `DegreeOf` and `OutDegreeOf` (`FOWGraphDegree`). `UOWCharter`: `CharterOf` and `DomainsOf` over the world
+  (`bOpen` for a world open to anyone), `ReadingAidsOf` over a front door's packet as JSON text (the `ReadMe` node's
+  answer), `IsCharterElement`, `ReadingAidOf`, answering an `FOWReadingAids` (`FOWCharterLaw`, `FOWCharterGuide`,
+  `FOWCharterDomain`, `FOWCharterHub`, and a served strand as JSON text). The names are the Unity SDK's, the behaviour
+  the core's. Held by automation tests on worlds built in memory, every case of the lens profile's fixture (201) and
+  of the charter profile's (27) through the libraries, every function through reflection as a graph calls it, and
+  Sikelia's graph against the core's. The plugin now has 50 structs (`OnlyWorlds.Graph.Pins` counts them).
 - The API client's read calls on Blueprints: an async node per call of `OWClient`, each with `OnSuccess` and
   `OnFailure`. `UOWClientRead` (`ReadHealth`, `ReadWorld`, `ReadMe`, `ReadMembers`, `ReadElement`: the body as JSON text),
   `UOWClientList` (`ListElements`: a page's rows as JSON text, `bHasMore`, `NextCursor`), `UOWClientListAll`
