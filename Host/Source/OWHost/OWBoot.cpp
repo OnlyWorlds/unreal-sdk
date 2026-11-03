@@ -2,6 +2,7 @@
 
 #include "HAL/PlatformMisc.h"
 #include "Interfaces/IPluginManager.h"
+#include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
@@ -12,6 +13,7 @@
 
 #include "OWAddressLibrary.h"
 #include "OWCalendarLibrary.h"
+#include "OWFrame.h"
 #include "OWLibrary.h"
 #include "OWModels.h"
 #include "OWOpenersLibrary.h"
@@ -114,6 +116,26 @@ namespace
 		for (TFieldIterator<FProperty> It(Fn); It && It->HasAnyPropertyFlags(CPF_Parm); ++It) It->DestroyValue_InContainer(Frame);
 		FMemory::Free(Frame);
 		return Answer;
+	}
+
+	// The frame's PNG, from -OWFrame=<path> (quoted when it holds a space; a relative path is taken from the project's
+	// folder, in a packaged game the staged OWHost/). False when the switch is not there. Path is "" when the switch
+	// names no PNG: bare, empty (which takes the next switch as its value) or a path not ending in .png; Given is what
+	// the command line held.
+	bool FrameArg(FString& Path, FString& Given)
+	{
+		const TCHAR* Cmd = FCommandLine::Get();
+		Path.Empty();
+		Given.Empty();
+		if (!FParse::Value(Cmd, TEXT("-OWFrame="), Given, /*bShouldStopOnSeparator*/ false))
+		{
+			return FParse::Param(Cmd, TEXT("OWFrame"));
+		}
+		if (!Given.IsEmpty() && !Given.StartsWith(TEXT("-")) && Given.EndsWith(TEXT(".png"), ESearchCase::IgnoreCase))
+		{
+			Path = FPaths::IsRelative(Given) ? FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), Given) : Given;
+		}
+		return true;
 	}
 
 	void Quit(uint8 Code)
@@ -264,6 +286,42 @@ bool UOWBootSubsystem::Run(float DeltaTime)
 			Answer.Error.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(", error \"%s\""), *Answer.Error), CppCount, *CppName,
 			bAgrees ? TEXT("agrees") : TEXT("disagrees"));
 		bHeld &= bAgrees;
+	}
+
+	// With -OWFrame, the world's root Map drawn, after every reading: refused with exit 5, and no file written, when
+	// the switch names no PNG, the game cannot render (-nullrhi) or the world holds no root Map with a size.
+	FString FramePath, FrameGiven;
+	if (FrameArg(FramePath, FrameGiven))
+	{
+		FOWMap Map;
+		TArray<FOWPin> Pins;
+		FString FrameRefusal;
+		if (FramePath.IsEmpty())
+		{
+			FrameRefusal = FString::Printf(TEXT("-OWFrame needs =<a .png path> (given \"%s\")"), *FrameGiven);
+		}
+		else if (!FApp::CanEverRender())
+		{
+			FrameRefusal = TEXT("no renderer (-nullrhi): run with -RenderOffscreen, or with a window");
+		}
+		else if (!OWFrame::RootMap(World, Map, Pins))
+		{
+			FrameRefusal = TEXT("the world holds no root Map (a Map with no parent_map)");
+		}
+		else if (Map.Width <= 0 || Map.Height <= 0)
+		{
+			FrameRefusal = FString::Printf(TEXT("the root Map %s \"%s\" has no width and height (%lld x %lld)"), *Map.Id, *Map.Name,
+				Map.Width, Map.Height);
+		}
+		else
+		{
+			FrameRefusal = FString::Printf(TEXT("root Map %s \"%s\" (%lld x %lld, %d pins): drawing is not built yet"), *Map.Id,
+				*Map.Name, Map.Width, Map.Height, Pins.Num());
+		}
+		UE_LOG(LogOWBoot, Display, TEXT("OWBoot: frame: %s; nothing written"), *FrameRefusal);
+		UE_LOG(LogOWBoot, Display, TEXT("OWBoot: done, exit 5"));
+		Quit(5);
+		return false;
 	}
 
 	const uint8 Code = bHeld ? 0 : 3;

@@ -4,7 +4,9 @@
 // (lines "OWBoot: ..."), and quits by itself: exit 0 when every reading held, 2 when the world is refused or missing,
 // 3 when a reading did not hold. Given -OWGraph too (bare: the host's own /Game/OW/BP_OWBootGraph; =<a soft class
 // path>: that class), a Blueprint graph cooked into the pak reads the same world folder, and its answers must be the C++
-// reading's (3 when they are not); 4 when that class, or its ReadWorld function, is not there. Without -OWWorld the
+// reading's (3 when they are not); 4 when that class, or its ReadWorld function, is not there. Given -OWFrame=<a .png
+// path> too, the world's root Map is drawn after the readings and its frame written there; 5, and no file written,
+// when it cannot be drawn (no PNG path, no renderer under -nullrhi, no root Map with a size). Without -OWWorld the
 // subsystem is never made, so the editor and its tests never see it.
 
 #include "Containers/Ticker.h"
