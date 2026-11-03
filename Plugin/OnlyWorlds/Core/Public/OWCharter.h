@@ -105,7 +105,9 @@ std::string FirstLine(std::string_view text);
 // The world's reading aids as `reader` sees them (the profile's charterOf). Pure: nothing is stored or written.
 //
 // `world` is what OWLens::Resolve takes: `elements` (the bodies as the owner is served them), `hidden` (the ids the
-// hidden mark keeps), and `open`: true for a world open to anyone. `reader` is a lens reader (`rung` owner,
+// hidden mark keeps), and `open`: true for a world open to anyone, which is the World's `public_read` (the standard's
+// field on world.yaml; the charter profile, serial 107: world.json's for a folder, the world GET's over the API, and
+// the fixture's `open` is the same thing). `reader` is a lens reader (`rung` owner,
 // contributor, guest with its `whole` and `known_of`, or public; on an owner, `as`). A public reader of a world not
 // open to anyone reads nothing.
 //

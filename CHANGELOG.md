@@ -193,6 +193,13 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.107` (canonical `00.34.00` unchanged: no model, wire, fixture or walk change). Two
+  profile pages' prose: the charter page names its `open` as the World's `public_read` (the standard's field: read
+  from world.json in a folder, from the world GET over the API; the fixture's `open` is the same thing), and the
+  map-space page says a reader's integer range is what it holds exactly. `OWCharter::CharterOf`'s `open` key and
+  `UOWCharter::CharterOf` and `DomainsOf`'s `bOpen` say so in their doc comments; no code changed. `OWMapSpace` already
+  reads that way (an integer literal exactly within int64; a fraction or an exponent whole only to 2^53 - 1). Parity
+  with the TypeScript SDK 4.132.2 and the Python package 0.106.2.
 - Schema pin to `v0.34.0-dist.106` (canonical `00.34.00` unchanged: no model or wire change). The map-space page
   rules readings I to K and four sentences from what the engine ports found; its fixture moves from 24 cases to 34.
 - `OWMapSpace::MapSpaceOf` reads two rows of one type with one id as the last one served for Markers and Pins too, as

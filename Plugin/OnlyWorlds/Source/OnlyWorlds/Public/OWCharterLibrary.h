@@ -136,14 +136,15 @@ public:
 	/**
 	 * The world's reading aids as the reader sees them (the profile's charterOf): the newest marked Charter it sees,
 	 * read whole as stored; the newest marked Guide; every marked Domain it sees, as it is served each. bOpen: the world
-	 * is open to anyone (only then does a Public reader read anything of it). Pure. Mirrors the Unity SDK's
-	 * OWCharter.CharterOf.
+	 * is open to anyone (only then does a Public reader read anything of it), which is the World's public_read, the
+	 * standard's field on world.yaml (the charter profile, serial 107): pass world.json's public_read for a folder, the
+	 * world GET's over the API, and nothing else. Pure. Mirrors the Unity SDK's OWCharter.CharterOf.
 	 */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Charter")
 	static bool CharterOf(const UOWWorld* World, const FOWLensReader& Reader, bool bOpen, FOWReadingAids& ReadingAids,
 		FString& Reason);
 
-	/** The Domains alone, as CharterOf lists them. Mirrors the Unity SDK's OWCharter.DomainsOf. */
+	/** The Domains alone, as CharterOf lists them; bOpen is the World's public_read, as there. Mirrors the Unity SDK's OWCharter.DomainsOf. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Charter")
 	static bool DomainsOf(const UOWWorld* World, const FOWLensReader& Reader, bool bOpen, TArray<FOWCharterDomain>& Domains,
 		FString& Reason);
