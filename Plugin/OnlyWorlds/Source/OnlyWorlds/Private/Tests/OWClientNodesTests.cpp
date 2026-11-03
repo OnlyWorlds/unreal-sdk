@@ -28,6 +28,7 @@
 #include "OWWorldObject.h"
 #include "OWBlueprintCall.h"
 #include "OWClientNodesProbe.h"
+#include "OWFakeTransport.h"
 
 #if WITH_EDITOR
 #include "EdGraph/EdGraph.h"
@@ -64,49 +65,9 @@ namespace
 
 	const char* const KeelBase = "http://keel.test/api/v2";
 
-	// -- the fake transport --------------------------------------------------------------------------------------------
+	// -- the fake transport (OWFakeTransport.h, shared with the write nodes' tests) ----------------------------------
 
-	// Records every request and answers each from the script, in order (Fallback when it runs out). Inside Send by
-	// default; with bLater, held until Pump, as the HTTP module answers on a later tick. Times 2 answers each request
-	// twice, a transport that breaks the seam's contract.
-	struct FFake : OnlyWorlds::OWTransport
-	{
-		std::vector<OWRequest> Sent;
-		std::deque<OWResponse> Script;
-		OWResponse Fallback;
-		bool bLater = false;
-		int32 Times = 1;
-		std::vector<std::pair<OWResponseHandler, OWResponse>> Held;
-
-		void Send(OWRequest Request, OWResponseHandler Done) override
-		{
-			Sent.push_back(std::move(Request));
-			OWResponse Reply = Fallback;
-			if (!Script.empty())
-			{
-				Reply = std::move(Script.front());
-				Script.pop_front();
-			}
-			if (bLater)
-			{
-				Held.emplace_back(std::move(Done), std::move(Reply));
-				return;
-			}
-			for (int32 I = 0; I < Times; ++I) Done(Reply);
-		}
-
-		// Answers every request held now (one sent while answering waits for the next Pump); how many it answered.
-		int32 Pump()
-		{
-			std::vector<std::pair<OWResponseHandler, OWResponse>> Now = std::move(Held);
-			Held.clear();
-			for (std::pair<OWResponseHandler, OWResponse>& H : Now)
-			{
-				for (int32 I = 0; I < Times; ++I) H.first(H.second);
-			}
-			return static_cast<int32>(Now.size());
-		}
-	};
+	using FFake = OWClientNodesTest::FFakeTransport;
 
 	OWResponse Answer(int Status, const char* Body)
 	{
