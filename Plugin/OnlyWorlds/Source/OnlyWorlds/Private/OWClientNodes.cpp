@@ -69,6 +69,54 @@ namespace
 		Out.bRetryable = E.IsRetryable();
 		Out.ResyncReason = TextOr(E.ResyncReason());
 		Out.Line = Str(E.ToString());
+		Out.bIsProposed = E.IsProposed();
+		Out.Proposal = E.proposal ? JsonText(*E.proposal) : FString();
+		const std::optional<OWJsonValue> Now = E.Current();
+		Out.Current = Now ? JsonText(*Now) : FString();
+		return Out;
+	}
+
+	// A refusal the node makes itself, in the core's form: kind Refused, its line "OnlyWorlds refused: ...".
+	template <typename T>
+	OnlyWorlds::OWReply<T> RefusedReply(const std::string& Why)
+	{
+		OnlyWorlds::OWReply<T> Out;
+		Out.error = OnlyWorlds::OWApiError::Of(OnlyWorlds::OWApiError::Kind::Refused, Why);
+		return Out;
+	}
+
+	// An element's JSON text as the core's value: "" is null (the core then refuses it, or a bulk reads it as an empty
+	// element); text that is not JSON leaves Why saying so, named by where and which pin, for the node to refuse.
+	OWJsonValue BodyOf(const FString& Text, const std::string& Where, const char* Pin, std::string& Why)
+	{
+		if (Text.IsEmpty()) return OWJsonValue();
+		const std::string Bytes = Utf8(Text);
+		OnlyWorlds::OWJsonParseResult Parsed = OnlyWorlds::OWJson::Parse(std::string_view(Bytes));
+		if (Parsed.ok) return std::move(Parsed.value);
+		Why = Where + ": " + Pin + " is not JSON text: " + Parsed.error + ". Nothing was sent.";
+		return OWJsonValue();
+	}
+
+	FOWBulkResult BulkResultOf(const OnlyWorlds::OWBulkResult& R)
+	{
+		FOWBulkResult Out;
+		Out.bErrors = R.errors;
+		Out.bWasReplay = R.was_replay;
+		for (const OnlyWorlds::OWBulkSlot& S : R.items)
+		{
+			FOWBulkSlot& Row = Out.Items.AddDefaulted_GetRef();
+			Row.Status = S.status;
+			Row.Id = Str(S.id);
+			Row.CreatedAt = TextOr(S.created_at);
+			Row.UpdatedAt = TextOr(S.updated_at);
+			Row.bSucceeded = S.Succeeded();
+			Row.bIsProposed = S.IsProposed();
+			if (S.error) Row.Error = ErrorOf(*S.error);
+			Row.Proposal = S.proposal ? JsonText(*S.proposal) : FString();
+		}
+		for (const size_t I : R.Failed()) Out.Failed.Add(static_cast<int32>(I));
+		Out.SucceededCount = static_cast<int32>(R.SucceededCount());
+		Out.bAllSucceeded = R.AllSucceeded();
 		return Out;
 	}
 
@@ -141,6 +189,9 @@ OnlyWorlds::OWClient* UOWClientNode::Begin()
 	if (!Settings.World.IsEmpty()) Core.world = Utf8(Settings.World);
 	Core.base_url = Settings.BaseUrl.IsEmpty() ? std::string(OnlyWorlds::OWClient::DefaultBaseUrl) : Utf8(Settings.BaseUrl);
 	Core.page_size = Settings.PageSize;
+	// "" is the core's own name; anything else goes to the core, which refuses a name that is not keel's shape.
+	if (!Settings.Client.IsEmpty()) Core.client = Utf8(Settings.Client);
+	Core.agent = Settings.bAgent;
 	Core.transport = Transport ? Transport : FOWHttpTransport::Make();
 	Client = std::make_unique<OnlyWorlds::OWClient>(std::move(Core));
 
@@ -324,5 +375,182 @@ void UOWClientChanges::Answer(OnlyWorlds::OWReply<OnlyWorlds::OWChangesPage> Rep
 	if (!Answering()) return;
 	if (Reply.Ok()) OnSuccess.Broadcast(PageOf(Reply.value), FOWApiError());
 	else OnFailure.Broadcast(FOWChangesPage(), ErrorOf(*Reply.error));
+	Release();
+}
+
+// -- UOWClientWrite ---------------------------------------------------------------------------------------------------
+
+UOWClientWrite* UOWClientWrite::Make(const FOWClientConfig& Config, EWrite Which, const FString& Type, const FString& Id)
+{
+	UOWClientWrite* Node = NewObject<UOWClientWrite>();
+	Node->Settings = Config;
+	Node->Write = Which;
+	Node->ElementType = Type;
+	Node->ElementId = Id;
+	return Node;
+}
+
+UOWClientWrite* UOWClientWrite::CreateElement(const FOWClientConfig& Config, const FString& Type, const FString& ElementJson,
+	const FString& IdempotencyKey)
+{
+	UOWClientWrite* Node = Make(Config, EWrite::Create, Type, FString());
+	Node->BodyText = ElementJson;
+	Node->KeyText = IdempotencyKey;
+	return Node;
+}
+
+UOWClientWrite* UOWClientWrite::UpsertElement(const FOWClientConfig& Config, const FString& Type, const FString& Id,
+	const FString& ElementJson)
+{
+	UOWClientWrite* Node = Make(Config, EWrite::Upsert, Type, Id);
+	Node->BodyText = ElementJson;
+	return Node;
+}
+
+UOWClientWrite* UOWClientWrite::PatchElement(const FOWClientConfig& Config, const FString& Type, const FString& Id,
+	const FString& PartialJson, bool bHasIfMatch, int64 IfMatch)
+{
+	UOWClientWrite* Node = Make(Config, EWrite::Patch, Type, Id);
+	Node->BodyText = PartialJson;
+	Node->bConditional = bHasIfMatch;
+	Node->ChangeSeq = IfMatch;
+	return Node;
+}
+
+UOWClientWrite* UOWClientWrite::DeleteElement(const FOWClientConfig& Config, const FString& Type, const FString& Id, bool bHasIfMatch,
+	int64 IfMatch)
+{
+	UOWClientWrite* Node = Make(Config, EWrite::Delete, Type, Id);
+	Node->bConditional = bHasIfMatch;
+	Node->ChangeSeq = IfMatch;
+	return Node;
+}
+
+UOWClientWrite* UOWClientWrite::EditElementLinks(const FOWClientConfig& Config, const FString& Type, const FString& Id,
+	const FString& Field, const TArray<FString>& Add, const TArray<FString>& Remove, bool bHasIfMatch, int64 IfMatch)
+{
+	UOWClientWrite* Node = Make(Config, EWrite::Links, Type, Id);
+	Node->LinkField = Field;
+	Node->AddIds = Add;
+	Node->RemoveIds = Remove;
+	Node->bConditional = bHasIfMatch;
+	Node->ChangeSeq = IfMatch;
+	return Node;
+}
+
+void UOWClientWrite::Activate()
+{
+	OnlyWorlds::OWClient* C = Begin();
+	if (!C) return;
+	TWeakObjectPtr<UOWClientWrite> Self(this);
+	auto Done = [Self](OnlyWorlds::OWReply<OWJsonValue> Reply)
+	{
+		if (UOWClientWrite* Node = Self.Get()) Node->Answer(std::move(Reply));
+	};
+	const std::string TypeWord = Utf8(ElementType);
+	const std::string IdText = Utf8(ElementId);
+	OnlyWorlds::OWWriteOptions When;
+	if (bConditional) When.if_match = ChangeSeq;
+	// The element's text is read here, unless the core refuses before it reads a body (a client it would not build, a
+	// negative If-Match): its refusal then comes first, as it would in C++.
+	const bool bParse = C->Error().empty() && !(bConditional && ChangeSeq < 0);
+	std::string Why;
+	switch (Write)
+	{
+	case EWrite::Create:
+	{
+		OWJsonValue Body = bParse ? BodyOf(BodyText, "create", "ElementJson", Why) : OWJsonValue();
+		if (!Why.empty()) return Answer(RefusedReply<OWJsonValue>(Why));
+		OnlyWorlds::OWCreateOptions O;
+		O.idempotency_key = Utf8(KeyText);
+		C->Create(TypeWord, Body, O, Done);
+		break;
+	}
+	case EWrite::Upsert:
+	{
+		OWJsonValue Body = bParse ? BodyOf(BodyText, "upsert", "ElementJson", Why) : OWJsonValue();
+		if (!Why.empty()) return Answer(RefusedReply<OWJsonValue>(Why));
+		C->Upsert(TypeWord, IdText, Body, Done);
+		break;
+	}
+	case EWrite::Patch:
+	{
+		OWJsonValue Body = bParse ? BodyOf(BodyText, "patch", "PartialJson", Why) : OWJsonValue();
+		if (!Why.empty()) return Answer(RefusedReply<OWJsonValue>(Why));
+		C->Patch(TypeWord, IdText, Body, When, Done);
+		break;
+	}
+	case EWrite::Delete:
+		C->Delete(TypeWord, IdText, When, Done);
+		break;
+	case EWrite::Links:
+	{
+		// An empty list is not sent: the core sends a list only when given.
+		OnlyWorlds::OWLinkEdit Change;
+		if (AddIds.Num() > 0) Change.add = Utf8s(AddIds);
+		if (RemoveIds.Num() > 0) Change.remove = Utf8s(RemoveIds);
+		C->EditLinks(TypeWord, IdText, Utf8(LinkField), Change, When, Done);
+		break;
+	}
+	}
+}
+
+void UOWClientWrite::Answer(OnlyWorlds::OWReply<OWJsonValue> Reply)
+{
+	if (!Answering()) return;
+	// A delete answers null: no element, "".
+	if (Reply.Ok()) OnSuccess.Broadcast(Reply.value.IsNull() ? FString() : JsonText(Reply.value), FOWApiError());
+	else OnFailure.Broadcast(FString(), ErrorOf(*Reply.error));
+	Release();
+}
+
+// -- UOWClientBulk ----------------------------------------------------------------------------------------------------
+
+UOWClientBulk* UOWClientBulk::BulkWrite(const FOWClientConfig& Config, const TArray<FOWBulkItem>& Items, bool bAtomic,
+	const FString& IdempotencyKey)
+{
+	UOWClientBulk* Node = NewObject<UOWClientBulk>();
+	Node->Settings = Config;
+	Node->BulkItems = Items;
+	Node->bAllOrNothing = bAtomic;
+	Node->KeyText = IdempotencyKey;
+	return Node;
+}
+
+void UOWClientBulk::Activate()
+{
+	OnlyWorlds::OWClient* C = Begin();
+	if (!C) return;
+	TWeakObjectPtr<UOWClientBulk> Self(this);
+	// Each element's text is read here, in order, until an item the core refuses on its own (no type, not an object,
+	// a known-of stub) or a client it would not build: from there the core's refusal comes first, as it would in C++.
+	bool bParse = C->Error().empty();
+	std::vector<OnlyWorlds::OWBulkItem> Writes;
+	Writes.reserve(BulkItems.Num());
+	for (int32 I = 0; I < BulkItems.Num(); ++I)
+	{
+		OnlyWorlds::OWBulkItem& One = Writes.emplace_back();
+		One.type = Utf8(BulkItems[I].Type);
+		if (One.type.empty()) bParse = false;
+		if (!bParse) continue;
+		std::string Why;
+		One.element = BodyOf(BulkItems[I].ElementJson, "bulk: items[" + std::to_string(I) + "]", "ElementJson", Why);
+		if (!Why.empty()) return Answer(RefusedReply<OnlyWorlds::OWBulkResult>(Why));
+		if ((!One.element.IsNull() && !One.element.IsObject()) || OnlyWorlds::OWClient::IsKnownOf(One.element)) bParse = false;
+	}
+	OnlyWorlds::OWBulkOptions O;
+	O.atomic = bAllOrNothing;
+	O.idempotency_key = Utf8(KeyText);
+	C->Bulk(Writes, O, [Self](OnlyWorlds::OWReply<OnlyWorlds::OWBulkResult> Reply)
+	{
+		if (UOWClientBulk* Node = Self.Get()) Node->Answer(std::move(Reply));
+	});
+}
+
+void UOWClientBulk::Answer(OnlyWorlds::OWReply<OnlyWorlds::OWBulkResult> Reply)
+{
+	if (!Answering()) return;
+	if (Reply.Ok()) OnSuccess.Broadcast(BulkResultOf(Reply.value), FOWApiError());
+	else OnFailure.Broadcast(FOWBulkResult(), ErrorOf(*Reply.error));
 	Release();
 }

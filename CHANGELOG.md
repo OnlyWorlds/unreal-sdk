@@ -7,6 +7,16 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- The API client's element writes on Blueprints, on the read nodes' base: `UOWClientWrite` (`CreateElement`,
+  `UpsertElement`, `PatchElement`, `DeleteElement`, `EditElementLinks`) and `UOWClientBulk` (`BulkWrite`), each an
+  async node with `OnSuccess` and `OnFailure`, the element in and out as JSON text, `If-Match` as `bHasIfMatch` and
+  `IfMatch`, `IdempotencyKey` on a create and a bulk. A bulk answers an `FOWBulkResult` (`bErrors`, `Items` of
+  `FOWBulkSlot`, `bWasReplay`, `Failed`, `SucceededCount`, `bAllSucceeded`); its items are `FOWBulkItem`s.
+  `FOWClientConfig` gains `Client` (X-OW-Client, `""` for `unreal-sdk`) and `bAgent` (X-OW-Agent); `FOWApiError`
+  gains `bIsProposed` and `Proposal` (a 202 proposal, as the core reports it: an error of status 202) and `Current`
+  (a 412's element now). The core's refusals reach `OnFailure` with nothing sent; so does element text that is not
+  JSON, the node's own. Held by `OnlyWorlds.Client.WriteNodes.*` through the read nodes' fake transport, now shared
+  (`Private/Tests/OWFakeTransport.h`). The plugin now has 53 structs.
 - The element writes in the core's API client: `OWClient::Create`, `Upsert`, `Patch`, `Delete`, `EditLinks` and
   `Bulk`, ported from the Unity SDK's `OWClient` and held to keel's wire document. Each body is a copy cleaned by
   `OWClient::Sanitize` (`ReadOnlyFields` left out, a null scalar string sent as `""`, extension keys untouched) and
@@ -21,7 +31,7 @@ Nothing is released yet; the history before this file is in the git log.
   on `OWApiError`: `proposal` and `IsProposed` (a 202 on an upsert, a patch or a link edit, kind `Api`),
   `IsPreconditionFailed` with `Current()`, `IsIdConflict`, `IsIdempotencyConflict`, `IsKnownOfNotWritable`. The
   wire tests now record every write on every world key and an agent seat, and hold each body key to what keel
-  declares on that operation (a bulk item's element to its type's create). Not on Blueprints yet.
+  declares on that operation (a bulk item's element to its type's create). On Blueprints: the entry above.
 - The lens, its graph and the charter on Blueprints, over an opened world read as the core reads a snapshot (every
   element as served, world.json's `time_current` as its now, the hidden mark on each body). `UOWLens`: `GetLenses`,
   `IsLens`, `IsTemplate`, `LensesFor` (the membership's choice, else the Character's `x_lens_uses`), `IsHidden`,

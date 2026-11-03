@@ -1,9 +1,14 @@
 #pragma once
-// The API client's read calls on Blueprints: one async node per call of the core's OWClient (Health, GetWorld, Me,
-// Members, Get, List, ListAll, Changes, ChangesHead), each with OnSuccess and OnFailure. The core does the work: the
-// credential rules, what a key may send at all (refused here, nothing sent), the cursor walk, keel's error envelope.
+// The API client on Blueprints: one async node per call of the core's OWClient, each with OnSuccess and OnFailure.
+// The reads (Health, GetWorld, Me, Members, Get, List, ListAll, Changes, ChangesHead) and the element writes (Create,
+// Upsert, Patch, Delete, EditLinks, Bulk). The core does the work: the credential rules, what a key may send at all
+// (refused here, nothing sent), the cursor walk, a write's body cleaned and its id minted, keel's error envelope.
 // Each node builds its own client from an FOWClientConfig and sends through FOWHttpTransport (Unreal's HTTP), so it
 // answers later, on the game thread; a refusal answers at once, inside the node's activation.
+//
+// A write takes its element as JSON text and answers the element keel wrote as JSON text. A write that became a
+// proposal (a 202: an agent seat's upsert, patch or link edit in a world that takes its writes as proposals) is
+// OnFailure with Error.bIsProposed and the row in Error.Proposal, as the core reports it: the element did not change.
 //
 // An element comes back as its body's JSON text, the form UOWWorld::GetElementJson gives a folder's element: the
 // plugin has no Blueprint shape for an element that is not in an opened world (the FOW<Type> structs are read out of
@@ -67,6 +72,14 @@ struct ONLYWORLDS_API FOWClientConfig
 	/** Elements a page (keel clamps a list at 1000 silently; the change feed takes at most 1000). 0 or less: 100. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
 	int64 PageSize = 100;
+
+	/** This tool's name, sent as X-OW-Client on every element write and on no read; keel stores it on what the write changed. Lower case letters, digits and hyphens, 1 to 32 ("my-game", no version), else every call refuses. "" for the core's own, unreal-sdk. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
+	FString Client;
+
+	/** Declare this client an AI agent: every element write carries X-OW-Agent, and keel records the change as agent-made. Only the caller knows: off in a tool people use. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
+	bool bAgent = false;
 };
 
 /** Why a call has no value: the core's OWApiError, keel's envelope or the client's own word. Empty (Kind None) on OnSuccess. */
@@ -125,6 +138,18 @@ struct ONLYWORLDS_API FOWApiError
 	/** The line it prints: "OnlyWorlds API 404 [not_found] (field: id): No such character.", "OnlyWorlds refused: ...", "OnlyWorlds transport: ...". */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
 	FString Line;
+
+	/** A write became a proposal (Kind Api, Status 202): the element did not change, and the write waits for the owner or a co-builder. Not a failure to retry. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	bool bIsProposed = false;
+
+	/** With bIsProposed, the proposal row keel answered, as JSON text; "" otherwise. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Proposal;
+
+	/** On a 412 (a stale If-Match: Code precondition_failed) or a 409 stale_proposal, the element as keel holds it now, as JSON text: decide from it, then write again with its change_seq. "" otherwise. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Current;
 };
 
 /** One page's options, each sent only when given, in the core's order. The core's OWListOptions. */
@@ -272,10 +297,94 @@ struct ONLYWORLDS_API FOWChangesPage
 	bool bUnchanged = false;
 };
 
+/** One element of a bulk write: its type's word and the element as JSON text. The core's OWBulkItem. */
+USTRUCT(BlueprintType)
+struct ONLYWORLDS_API FOWBulkItem
+{
+	GENERATED_BODY()
+
+	/** The element's type word ("character"). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
+	FString Type;
+
+	/** The element as JSON text, a JSON object; one without an id gets one by its position. "" is an empty element. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
+	FString ElementJson;
+};
+
+/** One item's outcome in a bulk write, in the order the items were sent. The core's OWBulkSlot. */
+USTRUCT(BlueprintType)
+struct ONLYWORLDS_API FOWBulkSlot
+{
+	GENERATED_BODY()
+
+	/** The item's own HTTP status: 201 created, 200 updated, 202 a proposal, else its failure. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	int32 Status = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Id;
+
+	/** On a success: keel's timestamps; "" otherwise. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString CreatedAt;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString UpdatedAt;
+
+	/** Any 2xx, a proposal too. After an atomic write whose bErrors is true nothing was written: there it means "would have succeeded". */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	bool bSucceeded = false;
+
+	/** The item became a proposal (202): it counts as bSucceeded, but nothing was written until a keeper accepts it. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	bool bIsProposed = false;
+
+	/** On a failure: the slot's error, Kind Api, its Status the slot's; empty (Kind None) otherwise. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FOWApiError Error;
+
+	/** With bIsProposed, the proposal row as JSON text; "" otherwise. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Proposal;
+};
+
+/** What a bulk write answers. keel answers 200 even when slots failed: read bAllSucceeded, or Failed, before trusting the write. The core's OWBulkResult. */
+USTRUCT(BlueprintType)
+struct ONLYWORLDS_API FOWBulkResult
+{
+	GENERATED_BODY()
+
+	/** keel's own flag: some slot failed. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	bool bErrors = false;
+
+	/** One slot per item, in the order sent. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	TArray<FOWBulkSlot> Items;
+
+	/** keel replayed its first answer for this IdempotencyKey and wrote nothing. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	bool bWasReplay = false;
+
+	/** The indices of the slots that did not succeed, in order. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	TArray<int32> Failed;
+
+	/** The 2xx slots, proposals included. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	int32 SucceededCount = 0;
+
+	/** No slot failed, and keel said none did. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	bool bAllSucceeded = false;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOWJsonAnswer, const FString&, Json, const FOWApiError&, Error);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOWPageAnswer, const TArray<FString>&, Elements, bool, bHasMore, const FString&, NextCursor, const FOWApiError&, Error);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOWElementsAnswer, const TArray<FString>&, Elements, const FOWApiError&, Error);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOWChangesAnswer, const FOWChangesPage&, Page, const FOWApiError&, Error);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOWBulkAnswer, const FOWBulkResult&, Outcome, const FOWApiError&, Error);
 
 /**
  * What every client node shares: its config, its client, its transport, and its keep. Activated, a node is kept (in
@@ -440,4 +549,95 @@ private:
 	bool bHead = false;
 	FString SinceCursor;
 	FString AfterTime;
+};
+
+/**
+ * The element writes that answer one element: create, upsert, patch, delete, a link edit. Each goes with the PIN and
+ * X-OW-Client (the config's Client), and X-OW-Agent on a config declared an agent; an account token and no key write
+ * nothing (refused, nothing sent). The element goes in as JSON text, cleaned by the core before it is sent (the
+ * read-only keys left out, a null string field sent as ""); a known-of stub is refused. Text that is not JSON is
+ * refused by the node itself, kind Refused, nothing sent.
+ */
+UCLASS()
+class ONLYWORLDS_API UOWClientWrite : public UOWClientNode
+{
+	GENERATED_BODY()
+
+public:
+	/** The element as keel wrote it, as JSON text ("" after a delete), or "" and why (Error; a proposal is Error.bIsProposed). */
+	UPROPERTY(BlueprintAssignable, Category = "OnlyWorlds|Client")
+	FOWJsonAnswer OnSuccess;
+
+	UPROPERTY(BlueprintAssignable, Category = "OnlyWorlds|Client")
+	FOWJsonAnswer OnFailure;
+
+	/** POST /{type}/: create one element. One with no id gets one: a new UUIDv7, or under IdempotencyKey the id derived from the key, so a retry with the same key sends the same body and keel replays its first answer. IdempotencyKey "" for none; never reuse a key for a new write. The core's Create. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
+	static UOWClientWrite* CreateElement(const FOWClientConfig& Config, const FString& Type, const FString& ElementJson,
+		const FString& IdempotencyKey);
+
+	/** PUT /{type}/{id}/: create the element under Id, or write it whole. An agent seat's upsert may become a proposal. The core's Upsert. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
+	static UOWClientWrite* UpsertElement(const FOWClientConfig& Config, const FString& Type, const FString& Id, const FString& ElementJson);
+
+	/** PATCH /{type}/{id}/: replace the keys PartialJson sends, leave the rest alone. Never a link array to add one id: use EditElementLinks. With bHasIfMatch, IfMatch (the change_seq as read, a whole number) is sent as If-Match: a stale one is a 412, Error.Current the element now. May become a proposal. The core's Patch. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
+	static UOWClientWrite* PatchElement(const FOWClientConfig& Config, const FString& Type, const FString& Id, const FString& PartialJson,
+		bool bHasIfMatch, int64 IfMatch);
+
+	/** DELETE /{type}/{id}/: keel writes a tombstone and takes the id out of every other element's links. Json is "". If-Match as on PatchElement. Never a proposal. The core's Delete. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
+	static UOWClientWrite* DeleteElement(const FOWClientConfig& Config, const FString& Type, const FString& Id, bool bHasIfMatch, int64 IfMatch);
+
+	/** POST /{type}/{id}/links/{field}: add and remove ids in one link array, merged by keel: the one correct way to change a link array. An empty list is not sent. If-Match as on PatchElement. May become a proposal. The core's EditLinks. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true", AutoCreateRefTerm = "Add,Remove"))
+	static UOWClientWrite* EditElementLinks(const FOWClientConfig& Config, const FString& Type, const FString& Id, const FString& Field,
+		const TArray<FString>& Add, const TArray<FString>& Remove, bool bHasIfMatch, int64 IfMatch);
+
+	virtual void Activate() override;
+
+private:
+	enum class EWrite : uint8 { Create, Upsert, Patch, Delete, Links };
+
+	static UOWClientWrite* Make(const FOWClientConfig& Config, EWrite Which, const FString& Type, const FString& Id);
+	void Answer(OnlyWorlds::OWReply<OnlyWorlds::OWJsonValue> Reply);
+
+	EWrite Write = EWrite::Create;
+	FString ElementType;
+	FString ElementId;
+	FString LinkField;
+	FString BodyText;
+	FString KeyText;
+	TArray<FString> AddIds;
+	TArray<FString> RemoveIds;
+	bool bConditional = false;
+	int64 ChangeSeq = 0;
+};
+
+/** Many elements of mixed types in one write. */
+UCLASS()
+class ONLYWORLDS_API UOWClientBulk : public UOWClientNode
+{
+	GENERATED_BODY()
+
+public:
+	/** The slots (keel answers 200 even when slots failed: read Outcome.bAllSucceeded), or an empty outcome and why. */
+	UPROPERTY(BlueprintAssignable, Category = "OnlyWorlds|Client")
+	FOWBulkAnswer OnSuccess;
+
+	UPROPERTY(BlueprintAssignable, Category = "OnlyWorlds|Client")
+	FOWBulkAnswer OnFailure;
+
+	/** POST /bulk/: write Items in one request; bAtomic all or nothing. Each element is cleaned as a single write's is; one without an id gets one by its position (under IdempotencyKey the key's, so a retry replays: Outcome.bWasReplay). Refused, nothing sent: no items, an item without a type, an element that is not a JSON object, a known-of stub. The core's Bulk. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true", AutoCreateRefTerm = "Items"))
+	static UOWClientBulk* BulkWrite(const FOWClientConfig& Config, const TArray<FOWBulkItem>& Items, bool bAtomic, const FString& IdempotencyKey);
+
+	virtual void Activate() override;
+
+private:
+	void Answer(OnlyWorlds::OWReply<OnlyWorlds::OWBulkResult> Reply);
+
+	TArray<FOWBulkItem> BulkItems;
+	bool bAllOrNothing = false;
+	FString KeyText;
 };
