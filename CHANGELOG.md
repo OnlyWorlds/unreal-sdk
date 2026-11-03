@@ -7,6 +7,19 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- A struct's JSON merged into its element as read, so an upsert keeps what a struct cannot hold (schema-dist's
+  `extension-passthrough`: extensions merged back on write, never dropped). `UOWElementJson::MergeElementJson(
+  ElementJson, StructJson, Merged, Reason)`, pure, hand-written, one function for every type
+  (`Public/OWElementJsonLibrary.h`; the merge itself `OWModelWrite::Merge`): the element's JSON as read
+  (`UOWWorld::GetElementJson`, or a read node's) with each key of a `Get<Type>Json` door's JSON laid over it in place,
+  and every other key kept in its place and order (extensions, a newer schema's keys, `type`, `world`, the server's
+  stamps, which the write nodes strip or keel drops). An unset over a set value lands; over an unset or absent one the
+  read's form is kept, and an integer of the same value keeps the read's spelling, so an unchanged struct merges back
+  to the element as read. A key the read lacks and the struct sets is appended. The read's id when the struct's is
+  `""`; two different ids, an id that is not a string, and text that is not a JSON object on either side are `false`
+  with a `Reason` naming the side. Each door's tooltip now names the merge. Held by `OnlyWorlds.Models.Merge.RoundTrip`
+  (every element of Sikelia and Moppetopia), `.Changes`, `.Ids`, `.Refusals`, `.Upsert` (the body sent carries the
+  extensions and none of the read-only keys) and `.Function`.
 - A generated struct back to its element's JSON, so a graph can write what it read. `OWToJson(const FOW<Type>&)`
   per type (`OWModelsJson.h`, beside `OWFromJson`), for C++, and on Blueprints `UOWElements::Get<Type>Json(<Type>)`,
   pure, the text a write node takes (`GetCharacterJson`, ...: 22 new functions, no new struct). Every schema field is

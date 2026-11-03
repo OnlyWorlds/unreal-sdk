@@ -2507,7 +2507,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Ability")
 	static bool FindAbility(const UOWWorld* World, const FString& Id, FOWAbility& Ability);
 
-	/** The Ability as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Ability as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Ability")
 	static FString GetAbilityJson(const FOWAbility& Ability);
 
@@ -2519,7 +2519,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Collective")
 	static bool FindCollective(const UOWWorld* World, const FString& Id, FOWCollective& Collective);
 
-	/** The Collective as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Collective as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Collective")
 	static FString GetCollectiveJson(const FOWCollective& Collective);
 
@@ -2531,7 +2531,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Character")
 	static bool FindCharacter(const UOWWorld* World, const FString& Id, FOWCharacter& Character);
 
-	/** The Character as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Character as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Character")
 	static FString GetCharacterJson(const FOWCharacter& Character);
 
@@ -2543,7 +2543,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Construct")
 	static bool FindConstruct(const UOWWorld* World, const FString& Id, FOWConstruct& Construct);
 
-	/** The Construct as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Construct as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Construct")
 	static FString GetConstructJson(const FOWConstruct& Construct);
 
@@ -2555,7 +2555,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Creature")
 	static bool FindCreature(const UOWWorld* World, const FString& Id, FOWCreature& Creature);
 
-	/** The Creature as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Creature as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Creature")
 	static FString GetCreatureJson(const FOWCreature& Creature);
 
@@ -2567,7 +2567,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Event")
 	static bool FindEvent(const UOWWorld* World, const FString& Id, FOWEvent& Event);
 
-	/** The Event as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Event as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Event")
 	static FString GetEventJson(const FOWEvent& Event);
 
@@ -2579,7 +2579,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Family")
 	static bool FindFamily(const UOWWorld* World, const FString& Id, FOWFamily& Family);
 
-	/** The Family as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Family as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Family")
 	static FString GetFamilyJson(const FOWFamily& Family);
 
@@ -2591,7 +2591,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Institution")
 	static bool FindInstitution(const UOWWorld* World, const FString& Id, FOWInstitution& Institution);
 
-	/** The Institution as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Institution as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Institution")
 	static FString GetInstitutionJson(const FOWInstitution& Institution);
 
@@ -2603,7 +2603,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Language")
 	static bool FindLanguage(const UOWWorld* World, const FString& Id, FOWLanguage& Language);
 
-	/** The Language as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Language as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Language")
 	static FString GetLanguageJson(const FOWLanguage& Language);
 
@@ -2615,7 +2615,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Law")
 	static bool FindLaw(const UOWWorld* World, const FString& Id, FOWLaw& Law);
 
-	/** The Law as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Law as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Law")
 	static FString GetLawJson(const FOWLaw& Law);
 
@@ -2627,7 +2627,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Location")
 	static bool FindLocation(const UOWWorld* World, const FString& Id, FOWLocation& Location);
 
-	/** The Location as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Location as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Location")
 	static FString GetLocationJson(const FOWLocation& Location);
 
@@ -2639,7 +2639,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Map")
 	static bool FindMap(const UOWWorld* World, const FString& Id, FOWMap& Map);
 
-	/** The Map as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Map as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Map")
 	static FString GetMapJson(const FOWMap& Map);
 
@@ -2651,7 +2651,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Marker")
 	static bool FindMarker(const UOWWorld* World, const FString& Id, FOWMarker& Marker);
 
-	/** The Marker as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Marker as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Marker")
 	static FString GetMarkerJson(const FOWMarker& Marker);
 
@@ -2663,7 +2663,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Narrative")
 	static bool FindNarrative(const UOWWorld* World, const FString& Id, FOWNarrative& Narrative);
 
-	/** The Narrative as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Narrative as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Narrative")
 	static FString GetNarrativeJson(const FOWNarrative& Narrative);
 
@@ -2675,7 +2675,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Object")
 	static bool FindObject(const UOWWorld* World, const FString& Id, FOWObject& Object);
 
-	/** The Object as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Object as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Object")
 	static FString GetObjectJson(const FOWObject& Object);
 
@@ -2687,7 +2687,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Phenomenon")
 	static bool FindPhenomenon(const UOWWorld* World, const FString& Id, FOWPhenomenon& Phenomenon);
 
-	/** The Phenomenon as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Phenomenon as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Phenomenon")
 	static FString GetPhenomenonJson(const FOWPhenomenon& Phenomenon);
 
@@ -2699,7 +2699,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Pin")
 	static bool FindPin(const UOWWorld* World, const FString& Id, FOWPin& Pin);
 
-	/** The Pin as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Pin as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Pin")
 	static FString GetPinJson(const FOWPin& Pin);
 
@@ -2711,7 +2711,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Relation")
 	static bool FindRelation(const UOWWorld* World, const FString& Id, FOWRelation& Relation);
 
-	/** The Relation as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Relation as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Relation")
 	static FString GetRelationJson(const FOWRelation& Relation);
 
@@ -2723,7 +2723,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Species")
 	static bool FindSpecies(const UOWWorld* World, const FString& Id, FOWSpecies& Species);
 
-	/** The Species as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Species as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Species")
 	static FString GetSpeciesJson(const FOWSpecies& Species);
 
@@ -2735,7 +2735,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Title")
 	static bool FindTitle(const UOWWorld* World, const FString& Id, FOWTitle& Title);
 
-	/** The Title as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Title as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Title")
 	static FString GetTitleJson(const FOWTitle& Title);
 
@@ -2747,7 +2747,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Trait")
 	static bool FindTrait(const UOWWorld* World, const FString& Id, FOWTrait& Trait);
 
-	/** The Trait as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Trait as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Trait")
 	static FString GetTraitJson(const FOWTrait& Trait);
 
@@ -2759,7 +2759,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Zone")
 	static bool FindZone(const UOWWorld* World, const FString& Id, FOWZone& Zone);
 
-	/** The Zone as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement writes the element whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field it sends, link lists whole). */
+	/** The Zone as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Zone")
 	static FString GetZoneJson(const FOWZone& Zone);
 };

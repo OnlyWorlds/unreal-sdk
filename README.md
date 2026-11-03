@@ -68,7 +68,7 @@ for (const OWOpener& row : menu.rows) AddItem(row.name, row.href, row.state.valu
 | `FOWHttpTransport` | the core client's transport on Unreal's own HTTP (`FHttpModule`): `Config.transport = FOWHttpTransport::Make();`, and each `OnlyWorlds::OWClient` call answers once, on the game thread. The engine follows a redirect before the transport sees it (curl, `CURLOPT_FOLLOWLOCATION`), so a followed answer is refused as a failure: point the client at `https://www.onlyworlds.com/api/v2` (its default), which redirects no API call (`OnlyWorldsLive.Client.Redirect`) |
 | `UOWClientRead`, `UOWClientList`, `UOWClientListAll`, `UOWClientChanges` | the API client's read calls on Blueprints, one async node each, with `OnSuccess` and `OnFailure` (one signature per node, its value pins and an `FOWApiError`): `ReadHealth`, `ReadWorld`, `ReadMe`, `ReadMembers`, `ReadElement(Config, Type, Id, Expand, Fields, ViewAs)` (each a body as JSON text, the form `UOWWorld::GetElementJson` gives), `ListElements(Config, Type, Options)` (`Elements`, each row's JSON text, `bHasMore`, `NextCursor`), `ListAllElements(Config, Type, Options)` (every page by `has_more`, or no half list), `ReadChanges(Config, Since, After)` and `ReadChangesHead(Config)` (an `FOWChangesPage`: `Cursor`, `Changes` of `FOWChange`, an upsert's element as JSON text, `Head`, `Epoch` with `bHasEpoch`). `ReadMembers` answers the roster as the JSON array `UOWMessages` takes as `MembersJson`, so a graph wires one into the other. `FOWClientConfig`: `ApiKey`, `ApiPin`, `World` (for an account token or no key), `BaseUrl` (`""` the default), `PageSize`, and for the writes `Client` (sent as `X-OW-Client`; `""` the core's `unreal-sdk`) and `bAgent` (`X-OW-Agent`); `FOWListOptions` is the core's `OWListOptions`, its filters a map. Each node is its own `OWClient` on `FOWHttpTransport`, so it answers later, on the game thread; the core's refusals (a config it will not build, a call the key may not send, a value that is not one path segment) answer at once, inside the activation, kind `Refused`, nothing sent. An `FOWApiError` carries `Kind` (`None` on `OnSuccess`, `Api`, `Transport`, `Refused`, `Answer`), `Status`, keel's `Type`, `Code`, `Message`, `Param`, `DocUrl`, `RawBody`, `RetryAfter` with `bHasRetryAfter`, `bRetryable`, `ResyncReason`, `Line`, and for a write `bIsProposed` with `Proposal` (a 202: the row as JSON text) and `Current` (a 412's element now, as JSON text). A node is kept (in the root set) from its activation until it answered, once; C++ may hand one another transport with `SetTransport` before it is activated. Never keep a key or a PIN in an asset |
 | `UOWClientWrite`, `UOWClientBulk` | the API client's element writes on Blueprints, one async node each on the read nodes' base (`UOWClientNode`: the same config, keep, transport seam and `FOWApiError`), with `OnSuccess` and `OnFailure`: `CreateElement(Config, Type, ElementJson, IdempotencyKey)`, `UpsertElement(Config, Type, Id, ElementJson)`, `PatchElement(Config, Type, Id, PartialJson, bHasIfMatch, IfMatch)`, `DeleteElement(Config, Type, Id, bHasIfMatch, IfMatch)` and `EditElementLinks(Config, Type, Id, Field, Add, Remove, bHasIfMatch, IfMatch)` (`Json`, the element as keel wrote it as JSON text, `""` after a delete), and `BulkWrite(Config, Items, bAtomic, IdempotencyKey)` (`Items` of `FOWBulkItem`: `Type`, `ElementJson`; `Outcome`, an `FOWBulkResult`: `bErrors`, `Items` of `FOWBulkSlot` (`Status`, `Id`, `CreatedAt`, `UpdatedAt`, `bSucceeded`, `bIsProposed`, `Error`, `Proposal`), `bWasReplay`, `Failed` (the indices), `SucceededCount`, `bAllSucceeded`). The element goes in as JSON text and the core does the rest: the body cleaned by `Sanitize`, an id minted for an element without one (under the key, the keyed id, so a retry replays), the PIN, `X-OW-Client`, `X-OW-Agent`, `If-Match` (the `change_seq` as read, sent only with `bHasIfMatch`), `Idempotency-Key` (`""` for none), an empty link list not sent. A write that became a proposal (a 202 on an upsert, a patch or a link edit) is `OnFailure` with `Error.bIsProposed` and the row in `Error.Proposal`; a stale `If-Match` is `OnFailure`, status 412, with `Error.Current`; a bulk is `OnSuccess` whenever keel answers 200, its slots saying what landed. Refused at once, nothing sent: everything the core refuses (an account token or no key, a config it will not build, a value that is not one path segment, a negative `IfMatch`, an element that is not an object or is a known-of stub, an empty bulk, an item without a type) and, the node's own word, element text that is not JSON. A read key's write and a write key's without a PIN are sent, as the core sends them: keel answers those |
-| `FOW<Type>`, `UOWElements` | one `USTRUCT(BlueprintType)` per element type (`FOWCharacter`, `FOWPin`, ...), and the library that reads them out of a world: `GetAll<Types>(World)`, `Find<Type>(World, Id, Out)`, and gives one back as the JSON text a write node takes: `Get<Type>Json(<Type>)`, pure (`GetCharacterJson(Character)`, ...; `CreateElement`, `UpsertElement`, `PatchElement`, a `BulkWrite` item). For C++, `OWFromJson(Body, Out)` and `OWToJson(Struct)` on the core's `OWJsonValue` (`OWModelsJson.h`). Generated from schema-dist's `schema.json` |
+| `FOW<Type>`, `UOWElements`, `UOWElementJson` | one `USTRUCT(BlueprintType)` per element type (`FOWCharacter`, `FOWPin`, ...), and the library that reads them out of a world: `GetAll<Types>(World)`, `Find<Type>(World, Id, Out)`, and gives one back as the JSON text a write node takes: `Get<Type>Json(<Type>)`, pure (`GetCharacterJson(Character)`, ...; `CreateElement`, `UpsertElement`, `PatchElement`, a `BulkWrite` item). For C++, `OWFromJson(Body, Out)` and `OWToJson(Struct)` on the core's `OWJsonValue` (`OWModelsJson.h`). Generated from schema-dist's `schema.json`. Beside it, hand-written, `UOWElementJson::MergeElementJson(ElementJson, StructJson, Merged, Reason)`, pure: a door's JSON laid over the element's JSON as read (`UOWWorld::GetElementJson`, or a read node's `Json`), every other key kept in its place, so an `UpsertElement` of `Merged` writes the struct's fields and keeps the element's extensions (below) |
 
 Members are PascalCase (`birth_date` -> `BirthDate`, `STR` -> `Str`). A string field is an `FString` (`""` for unset),
 an integer two members, `bool bHas<Field>` and `int64 <Field>` (`false` and `0` for null or a missing key, so a set
@@ -84,8 +84,20 @@ nor `type` or the server's stamps, and the id is left out when it is `""` (a cre
 written as its digits, so `4255.0` in a file comes back `4255`, and a number that is not a whole one (which reads as
 unset) comes back `null`. A struct holds no extension key (`x_*`, `atlas_*`, `shadow_*`) and no field a newer schema
 adds: `UpsertElement` (keel's PUT) writes an element whole, so a struct's JSON sent there clears the extensions keel
-holds for it; `PatchElement` keeps them (it replaces only the keys sent, though a link list whole). A Patch is the
-write for a struct read out of a world; an Upsert of one is for an element that has no extensions to lose.
+holds for it; `PatchElement` keeps them (it replaces only the keys sent, though a link list whole).
+
+To upsert a struct read out of a world, merge it first: `MergeElementJson(ElementJson, StructJson, Merged, Reason)`
+answers the element as read with each key of the struct's JSON laid over it in place, and every other key kept in its
+place and order: the extensions, the keys a newer schema adds, `type`, `world` and the server's stamps (the write
+nodes' `Sanitize` strips `world`, `type`, `created_at`, `updated_at`, `change_seq` and `known_of` before sending;
+keel drops `created_by` and the other echoed stamps). A struct's unset (`""`, `null`, `[]`) lands over a set value (a
+cleared field means it), but over an unset or absent one the read's form is kept, and an integer of the same value
+keeps the read's spelling (`180.0`), so an unchanged struct merges back to the element as read (byte for byte when the
+read is `GetElementJson`'s text: `Merged` is written in the same form). A key the read lacks and the struct sets is
+added at the end. The id is the read's when the struct's is `""`; two different ids, an id that is not a string, or
+text on either side that is not a JSON object are `false` with `Reason` (`element: `, `struct: `, `id: `) and `Merged`
+`""`. A known-of stub merged stays a stub (`known_of` kept), so the write node refuses it; a body served with
+`x_served_trimmed` keeps the mark, and keel refuses it by name rather than the hidden ids being dropped.
 
 ## Build and test
 
@@ -192,6 +204,15 @@ The automation tests (`OnlyWorlds.*`):
   its type's struct in and a string out. `Node`: a struct made member by member, its door called through reflection,
   and the text handed to `UpsertElement`, `PatchElement`, `CreateElement` and `BulkWrite`: each body sent (the fake
   transport) is the door's JSON as a value.
+- `OnlyWorlds.Models.Merge.RoundTrip`, `.Changes`, `.Ids`, `.Refusals`, `.Upsert`, `.Function`: the merge.
+  `RoundTrip`: every element of both worlds as read (`GetElementJson`), through `Find<Type>`, unchanged, its door and
+  `MergeElementJson`, each called as a Blueprint calls it: the merge is the element as read, as a value and as text
+  (the extension keys kept are counted). `Changes`: on one Character, changed fields land in place, a cleared string
+  `""`, a cleared link and integer `null`, a field set where the read had none at the end, an unset where it had none
+  stays absent, and the extensions, stamps, a null string and `180.0` are kept. `Ids` and `Refusals`: the id's rules
+  and each refusal's side. `Upsert`: the merge's text through `UpsertElement` (the fake transport) sends the extensions
+  and none of the six read-only keys, the door's text alone sends no extension, and a known-of stub's merge is refused
+  with nothing sent. `Function`: its pins.
 - `OnlyWorlds.Frame.MoppetopiaRootMap` needs a renderer (`-RenderOffscreen` instead of `-nullrhi`; a `-nullrhi`
   run leaves it out): the world's root Map as a plane carrying its image, the Pins as markers, captured from above to
   `Host/Saved/OWFrames/moppetopia-root-map.png`.
@@ -286,9 +307,7 @@ regenerate, never edit.
   hidden mark is read from each body) and the charter's `open` read from world.json by the door itself (`bOpen` is the caller's: the World's `public_read`).
 - The strand on Blueprints: `OWStrand::StrandOf` is in the core only; a front door's strand rides on
   `FOWReadingAids.StrandJson` as JSON text.
-- A struct's write that keeps what the struct cannot hold: `Get<Type>Json` gives the schema's fields alone, so an
-  `UpsertElement` of it clears the element's extensions (`PatchElement` keeps them). No call merges a struct into the
-  element's own JSON as read, and none gives a patch of only the fields a graph changed.
+- A patch of only the fields a graph changed: `Get<Type>Json` gives every schema field, merged or not.
   No client node, read or write, can be cancelled or given its own timeout (the transport's 30 seconds hold).
 - An element read over the API as its `FOW<Type>` struct: the nodes answer each element as JSON text, and no Blueprint
   call turns that text into a struct or places it in a world (`OWFromJson` does it in C++). `UOWMessages` reads an

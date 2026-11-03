@@ -21,4 +21,14 @@ namespace OWModelWrite
 
 	/** A body as the JSON text a write node takes, the form UOWWorld::GetElementJson gives (number texts kept). */
 	FString Text(const OnlyWorlds::OWJsonValue& Body);
+
+	/**
+	 * A struct's body laid over its element as read (UOWElementJson::MergeElementJson): Out is AsRead with each key of
+	 * FromStruct set in place (appended when AsRead lacks it), but where FromStruct's value is unset (null, "", []) and
+	 * AsRead's is unset or absent, and where both are numbers of the same value (CanonicalNumber): there the read's is
+	 * kept. The id is FromStruct's only when it is not "" or null. False with Why, Out untouched: either side not an
+	 * object ("element: ", "struct: "), an id that is neither a string nor null, two different ids ("id: ").
+	 */
+	bool Merge(const OnlyWorlds::OWJsonValue& AsRead, const OnlyWorlds::OWJsonValue& FromStruct, OnlyWorlds::OWJsonValue& Out,
+		FString& Why);
 }

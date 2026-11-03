@@ -169,9 +169,10 @@ def emit_h(schema: dict, tag: str) -> str:
                 f"\tstatic bool Find{p}(const UOWWorld* World, const FString& Id, {s}& {p});", "",
                 f"\t/** The {p} as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a "
                 "BulkWrite item): every schema field, an unset one as keel serves it (\"\", null, []), never world, "
-                "the id left out when \"\". A struct holds no extension key (x_*): UpsertElement writes the element "
-                "whole and clears the extensions keel holds for it; PatchElement keeps them (and replaces every field "
-                "it sends, link lists whole). */",
+                "the id left out when \"\". A struct holds no extension key (x_*): UpsertElement of this text alone "
+                "writes the element whole and clears the extensions keel holds for it. Merge it into the element as "
+                "read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them "
+                "too (and replaces every field it sends, link lists whole). */",
                 f'\tUFUNCTION(BlueprintPure, Category = "OnlyWorlds|{p}")',
                 f"\tstatic FString Get{p}Json(const {s}& {p});", ""]
     out[-1:] = ["};", ""]
