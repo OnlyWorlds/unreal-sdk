@@ -61,6 +61,7 @@ for (const OWOpener& row : menu.rows) AddItem(row.name, row.href, row.state.valu
 | `UOWAddresses` | the address profile on Blueprints: `ParseAddress(Text, Address, Reason)` reads an `ow://` link or a site URL into an `FOWAddress` (form, world, type, id, lens, moment, and a reading's `bWorldIsSlug` and `bCanonical`), `WriteAddress(Address, Text, Reason)` writes one. A part is given when its string is not empty or its `bHas` flag is set, so an empty string can refuse as that part would; the moment is an `int64` given by `bHasMoment` alone, past 32 bits `bad_moment`. A refusal is `false` and the profile's reason |
 | `UOWOpeners` | the Open with menu on Blueprints, over the baked tools list: `OpenersFor(World, ElementId, Surface, Rows, Reason)` for an element of an opened world (`""` for the world itself) and `OpenersForAddress(Address, Surface, Rows, Reason)` for an address (an element's rows when it gives an id). `FOWOpenerSurface`: `Audience` (`Public` by default, the signed-out reader: Atlas and Lantern say "Needs an account"), `Tool`, `SignIn` (`Unknown`, `SignedIn`, `SignedOut`), `bBrowser` (false by default: a game), `bPhone`, `bOnline` (true by default; false offline, a web row then says "Needs a connection"). Each `FOWOpener` row: `Id`, `Name`, `Href`, `State` (`""` for none; a row that says "Needs a connection" or "Needs an account" keeps its `Href` and opens nothing: draw it disabled) |
 | `UOWNames` | the names profile on Blueprints: `TypeWord(World, Type, Supertype, bMany, Word)`, the world's own word for a type from `x_names` on its World, or `false` for the standard's name (`Supertype` `""` for none) |
+| `UOWMessages` | the message profile on Blueprints, over an opened world, each element asked by its id as the API serves it (a body that names no type takes its folder's): `GetMessages(World)` and `GetNotes(World)` (ids in `created_at` order), `IsMessage`, `IsNote`, `RecipientsOf`, `IsAddressedTo`, `IsToEveryone(World, MessageId, bKeyless)`, `HasUnseenRecipients(World, MessageId, bKeyless)` (an `EOWUnseenRecipients`: `Yes`, `No`, or `Unknown` for a keyless reader), `IsSentBy`, `ThreadOf(World, RootId)`; against the world's members list as JSON text (what `OWClient::Members` answers; `""` for no list) `SenderStatus(World, MessageId, MembersJson, Sender, Reason)` (an `FOWSender`: `Status`, one of `Verified`, `Mismatch`, `Unverifiable`, `Unseen`; `Claimed`; `WrittenBy` on a mismatch), `EditedBy(World, MessageId, MembersJson, Edited, Reason)` (an `FOWEdited`: `bEdited`, `By`), `ReadMarkOf(World, CharacterId, MembersJson, bKeyless, MarkId, Reason)`, `UnreadFor(World, CharacterId, ReadMarkId, MembersJson, Unread, Reason)` and `NoteOf(World, CharacterId, MembersJson, NoteId, Reason)`, an id `""` for none. A call that reads the members list or a read mark refuses as `false` and the reason (`no world`, `no element <id> in this world`, `members: ` and where the text does not parse); every other call reads an id the world does not hold as the profile's no |
 | `FOWHttpTransport` | the core client's transport on Unreal's own HTTP (`FHttpModule`): `Config.transport = FOWHttpTransport::Make();`, and each `OnlyWorlds::OWClient` call answers once, on the game thread. The engine follows a redirect before the transport sees it (curl, `CURLOPT_FOLLOWLOCATION`), so a followed answer is refused as a failure: point the client at `https://www.onlyworlds.com/api/v2` (its default), which redirects no API call (`OnlyWorldsLive.Client.Redirect`) |
 | `FOW<Type>`, `UOWElements` | one `USTRUCT(BlueprintType)` per element type (`FOWCharacter`, `FOWPin`, ...), and the library that reads them out of a world: `GetAll<Types>(World)`, `Find<Type>(World, Id, Out)`. Generated from schema-dist's `schema.json` |
 
@@ -122,8 +123,14 @@ The automation tests (`OnlyWorlds.*`):
   in the three spellings and read back, and its Open with rows and type words as the core gives them; the openers
   fixture's (`tests/data/`) 35 row cases (the core's rows for the baked list, the fixture's first row) and 6 address
   refusals; the names fixture's 29 cases placed on Moppetopia's World.
+- `OnlyWorlds.Messages.World`, `.Fixture`, `.Beside`, `.Sikelia`: each `UOWMessages` function called the same way, its
+  enums read by number and its structs member by member. A world built in memory (two bodies that name no type, read
+  as their folder's), every answer and refusal written out; the message profile's 88 fixture cases and 76 of the 79
+  readings beside it (`tests/data/message-beside-the-fixture.json`; the other three hold what no world holds: a list
+  as a body, a number as an id, a list as a read mark), each case placed in a world of its own and asked by id; and
+  every element of Sikelia against the core.
 - `OnlyWorlds.Graph.Pins`, `.Run`, `.Integers` (editor only): Blueprints built in code. `Pins` places a Break and a
-  Make node on each of the plugin's 28 structs: every member gets a pin, the 70 integer pairs a bool and an Integer64
+  Make node on each of the plugin's 30 structs: every member gets a pin, the 70 integer pairs a bool and an Integer64
   on both. `Run` builds one function graph
   of real K2 nodes (`ParseAddress` -> Break -> Make -> `WriteAddress` and `OpenersForAddress`, `FormatStep`,
   `TypeWord`), compiles it with the Kismet compiler (no error, no warning), and calls it once per element of Sikelia
@@ -171,14 +178,15 @@ regenerate, never edit.
   in code. A packaged game would need a material asset (the plugin ships no content yet).
 - Writing a struct back into an element (edits go through `UOWWorld`'s field setters for now).
 - A Blueprint graph saved as an asset, or one built in the editor's UI: the graphs that run are built in code by the
-  tests; the calendar's `GetWorldCalendars` and `BreakdownStep` and the openers' `OpenersFor` are held through
-  reflection only, not in a graph.
+  tests; the calendar's `GetWorldCalendars` and `BreakdownStep`, the openers' `OpenersFor` and every `UOWMessages`
+  call are held through reflection only, not in a graph.
 - The Open with menu over a tools list other than the baked one (`OWOpeners::OpenersForJson` is in the core only).
 - The element's skips through an address on Blueprints: `UOWOpeners::OpenersForAddress` has no element to read, so
   its rows are every row; `UOWOpeners::OpenersFor` on an opened world reads the element and leaves the skipped rows out.
 - The lens, its graph and the charter on Blueprints: `OWLens`, `OWGraph` and `OWCharter` are in the core only.
 - The API client on Blueprints: `OWClient` and `FOWHttpTransport` are C++ only, with no async Blueprint node yet,
   and the client reads only (no writes).
-- The message profile on Blueprints: the core reads it, and the client's `Members` now gives the members list that
-  proves a sender, but no Blueprint call joins them yet.
+- The members list from the API on Blueprints: `UOWMessages` takes it as JSON text, and only the C++ client's
+  `Members` fetches it (the client has no Blueprint node yet). `UOWMessages` reads an opened world only: a message
+  served by the API and not in a world has no Blueprint call.
 - Any platform other than Win64, and any engine other than 5.8.

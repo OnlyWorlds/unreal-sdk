@@ -7,6 +7,17 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- The message profile on Blueprints: `UOWMessages`, over an opened world, each element asked by its id as the API
+  serves it (a body that names no type takes its folder's). `GetMessages` and `GetNotes` (ids in `created_at` order),
+  `IsMessage`, `IsNote`, `RecipientsOf`, `IsAddressedTo`, `IsToEveryone`, `HasUnseenRecipients` (`EOWUnseenRecipients`:
+  `Yes`, `No`, `Unknown` for a keyless reader), `IsSentBy`, `ThreadOf`; and against the members list as JSON text (what
+  `OWClient::Members` answers; `""` for no list) `SenderStatus` (`FOWSender`: an `EOWSenderStatus`, `Claimed`,
+  `WrittenBy`), `EditedBy` (`FOWEdited`), `ReadMarkOf`, `UnreadFor` and `NoteOf`. A call that reads the members list or
+  a read mark refuses as `false` and the reason (no world, no such element, members text that does not parse); every
+  other call reads an id the world does not hold as the profile's no. The names are the Unity SDK's `OWMessage`'s, the
+  behaviour the core's. Held by automation tests that call every function through reflection as a graph does: a world
+  built in memory, the profile's 88 fixture cases and 76 of the 79 readings beside it, and every element of Sikelia.
+  The plugin now has 30 structs (`OnlyWorlds.Graph.Pins` counts them).
 - `OWMapSpace::MapSpaceOf(elements)`, the map-space profile's reader (schema-dist serial 105, `profiles/map-space.md`):
   over the elements as served, `{maps, zones, pins, out}` in the Map's pixels, z an elevation and never a height. A
   Map's frame (`width` and `height` measured from its own points, marked `extent: "points"`, when not written whole;
