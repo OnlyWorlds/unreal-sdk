@@ -1,7 +1,16 @@
 #include "OWBoot.h"
 
+#include "Components/SceneCaptureComponent2D.h"
+#include "Engine/Engine.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/Texture2D.h"
+#include "Engine/World.h"
+#include "HAL/FileManager.h"
 #include "HAL/PlatformMisc.h"
+#include "HAL/PlatformTime.h"
 #include "Interfaces/IPluginManager.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Materials/MaterialInterface.h"
 #include "Misc/App.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -138,6 +147,13 @@ namespace
 		return true;
 	}
 
+	// The material the frame is drawn with, written by the editor module's commandlet (-run=OWMakeFrame,
+	// OWMakeFrameCommandlet.cpp) and cooked into the pak: MapImage (a texture) times Tint (a colour), unlit.
+	const TCHAR* const OWFrameMaterial = TEXT("/Game/OW/M_OWFrame.M_OWFrame");
+
+	// How long the frame waits for its meshes' scene proxies before it shoots what there is.
+	constexpr double OWFrameWaitSeconds = 60.0;
+
 	void Quit(uint8 Code)
 	{
 		// A non-forced exit leaves the game's loop cleanly and returns 0 whatever code it is given; only a forced exit
@@ -161,11 +177,15 @@ void UOWBootSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UOWBootSubsystem::Deinitialize()
 {
 	FTSTicker::RemoveTicker(Tick);
+	// A game closed while its frame waited: the frame's world goes with it.
+	if (FrameWorld && GEngine) OWFrame::EndFrameWorld(FrameWorld);
+	FrameWorld = nullptr;
 	Super::Deinitialize();
 }
 
 bool UOWBootSubsystem::Run(float DeltaTime)
 {
+	if (FrameWorld) return Frame();
 	FString Path;
 	WorldArg(Path);
 	const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("OnlyWorlds"));
@@ -289,16 +309,17 @@ bool UOWBootSubsystem::Run(float DeltaTime)
 	}
 
 	// With -OWFrame, the world's root Map drawn, after every reading: refused with exit 5, and no file written, when
-	// the switch names no PNG, the game cannot render (-nullrhi) or the world holds no root Map with a size.
-	FString FramePath, FrameGiven;
-	if (FrameArg(FramePath, FrameGiven))
+	// the switch names no PNG, the game cannot render (-nullrhi), the world holds no root Map with a size, or the
+	// material or the meshes are not in the pak. Else the scene is laid out, and the frame waits for it (Frame).
+	FString PngPath, PngGiven;
+	if (FrameArg(PngPath, PngGiven))
 	{
 		FOWMap Map;
 		TArray<FOWPin> Pins;
 		FString FrameRefusal;
-		if (FramePath.IsEmpty())
+		if (PngPath.IsEmpty())
 		{
-			FrameRefusal = FString::Printf(TEXT("-OWFrame needs =<a .png path> (given \"%s\")"), *FrameGiven);
+			FrameRefusal = FString::Printf(TEXT("-OWFrame needs =<a .png path> (given \"%s\")"), *PngGiven);
 		}
 		else if (!FApp::CanEverRender())
 		{
@@ -313,18 +334,121 @@ bool UOWBootSubsystem::Run(float DeltaTime)
 			FrameRefusal = FString::Printf(TEXT("the root Map %s \"%s\" has no width and height (%lld x %lld)"), *Map.Id, *Map.Name,
 				Map.Width, Map.Height);
 		}
-		else
+		// What the cook put in the pak, loaded only once the frame can be drawn at all.
+		UMaterialInterface* Base = FrameRefusal.IsEmpty() ? LoadObject<UMaterialInterface>(nullptr, OWFrameMaterial) : nullptr;
+		UStaticMesh* Plane = FrameRefusal.IsEmpty() ? LoadObject<UStaticMesh>(nullptr, OWFrame::PlanePath) : nullptr;
+		UStaticMesh* Sphere = FrameRefusal.IsEmpty() ? LoadObject<UStaticMesh>(nullptr, OWFrame::SpherePath) : nullptr;
+		if (FrameRefusal.IsEmpty() && !Base)
 		{
-			FrameRefusal = FString::Printf(TEXT("root Map %s \"%s\" (%lld x %lld, %d pins): drawing is not built yet"), *Map.Id,
-				*Map.Name, Map.Width, Map.Height, Pins.Num());
+			FrameRefusal = FString::Printf(TEXT("the material %s is not in the pak (run -run=OWMakeFrame before the cook)"),
+				OWFrameMaterial);
 		}
-		UE_LOG(LogOWBoot, Display, TEXT("OWBoot: frame: %s; nothing written"), *FrameRefusal);
+		else if (FrameRefusal.IsEmpty() && (!Plane || !Sphere))
+		{
+			FrameRefusal = FString::Printf(TEXT("the engine's %s or %s is not in the pak (DefaultGame.ini cooks /Engine/BasicShapes)"),
+				OWFrame::PlanePath, OWFrame::SpherePath);
+		}
+		if (!FrameRefusal.IsEmpty())
+		{
+			UE_LOG(LogOWBoot, Display, TEXT("OWBoot: frame: %s; nothing written"), *FrameRefusal);
+			UE_LOG(LogOWBoot, Display, TEXT("OWBoot: done, exit 5"));
+			Quit(5);
+			return false;
+		}
+
+		// The scene the frame test shoots (OWFrame.h), in a world of its own, dressed with the cooked material: the
+		// map's image on the plane (or the test's sand colour when the map has none), red on the markers.
+		FrameImage = OWFrame::MapImage(World, Map.Id, FrameImageFile);
+		UMaterialInstanceDynamic* OnPlane = UMaterialInstanceDynamic::Create(Base, this);
+		if (FrameImage) OnPlane->SetTextureParameterValue(TEXT("MapImage"), FrameImage.Get());
+		else OnPlane->SetVectorParameterValue(TEXT("Tint"), FLinearColor(0.8f, 0.75f, 0.6f));
+		UMaterialInstanceDynamic* OnMarkers = UMaterialInstanceDynamic::Create(Base, this);
+		OnMarkers->SetVectorParameterValue(TEXT("Tint"), FLinearColor(1.f, 0.f, 0.f));
+		FrameMaterials.Reset();
+		FrameMaterials.Add(OnPlane);
+		FrameMaterials.Add(OnMarkers);
+
+		FrameWorld = OWFrame::NewFrameWorld(TEXT("OWBootFrame"));
+		OWFrame::LayOut(FrameWorld, Map, Pins, Plane, Sphere, OnPlane, OnMarkers);
+		FrameCapture = OWFrame::PlaceCamera(FrameWorld, Map);
+		FrameMap = Map;
+		FramePins = Pins;
+		FramePath = PngPath;
+		bReadingsHeld = bHeld;
+		FrameSince = FPlatformTime::Seconds();
+		FrameTicks = 0;
+		const FString ImageWords = FrameImage
+			? FString::Printf(TEXT("%s (%d x %d)"), *FrameImageFile, FrameImage->GetSizeX(), FrameImage->GetSizeY())
+			: FString(TEXT("none (a plain plane)"));
+		UE_LOG(LogOWBoot, Display, TEXT("OWBoot: frame: root Map %s \"%s\" %lld x %lld, %d pins, image %s; %d meshes laid out"),
+			*Map.Id, *Map.Name, Map.Width, Map.Height, Pins.Num(), *ImageWords, Pins.Num() + 1);
+		return Frame();
+	}
+
+	const uint8 Code = bHeld ? 0 : 3;
+	UE_LOG(LogOWBoot, Display, TEXT("OWBoot: done, exit %d"), Code);
+	Quit(Code);
+	return false;
+}
+
+bool UOWBootSubsystem::Frame()
+{
+	++FrameTicks;
+	const int32 Waiting = OWFrame::MeshesWaiting(FrameWorld);
+	const double Waited = FPlatformTime::Seconds() - FrameSince;
+	if (Waiting > 0 && Waited < OWFrameWaitSeconds) return true;
+	const FString WaitWords = Waiting == 0
+		? FString(TEXT("every mesh has its scene proxy"))
+		: FString::Printf(TEXT("%d of %d meshes still have no scene proxy; shooting what there is"), Waiting, FramePins.Num() + 1);
+	UE_LOG(LogOWBoot, Display, TEXT("OWBoot: frame: %s after %d ticks (%.1f s)"), *WaitWords, FrameTicks, Waited);
+
+	TArray<FColor> Pixels;
+	const bool bShot = OWFrame::Shoot(FrameCapture, Pixels);
+	OWFrame::EndFrameWorld(FrameWorld);
+	FrameWorld = nullptr;
+	FrameCapture = nullptr;
+	FrameMaterials.Reset();
+	if (!bShot)
+	{
+		UE_LOG(LogOWBoot, Display, TEXT("OWBoot: frame: the frame's pixels could not be read (%d, not %d x %d); nothing written"),
+			Pixels.Num(), OWFrame::FrameW, OWFrame::FrameH);
 		UE_LOG(LogOWBoot, Display, TEXT("OWBoot: done, exit 5"));
 		Quit(5);
 		return false;
 	}
+	if (!OWFrame::SavePng(Pixels, FramePath))
+	{
+		UE_LOG(LogOWBoot, Display, TEXT("OWBoot: frame: the write to %s failed"), *FramePath);
+		UE_LOG(LogOWBoot, Display, TEXT("OWBoot: done, exit 5"));
+		Quit(5);
+		return false;
+	}
+	UE_LOG(LogOWBoot, Display, TEXT("OWBoot: frame: wrote %s (%d x %d, %lld bytes)"), *FramePath, OWFrame::FrameW, OWFrame::FrameH,
+		IFileManager::Get().FileSize(*FramePath));
 
-	const uint8 Code = bHeld ? 0 : 3;
+	// The frame read as the frame test reads its own: each marker where its pin's coordinates put it (red: R above 150,
+	// G and B below 90), and the plane many colours, not one.
+	const double W = static_cast<double>(FrameMap.Width);
+	const double H = static_cast<double>(FrameMap.Height);
+	int32 Found = 0;
+	for (const FOWPin& P : FramePins)
+	{
+		const int32 X = FMath::Clamp(FMath::RoundToInt32(P.X / W * OWFrame::FrameW), 0, OWFrame::FrameW - 1);
+		const int32 Y = FMath::Clamp(FMath::RoundToInt32((1.0 - P.Y / H) * OWFrame::FrameH), 0, OWFrame::FrameH - 1);
+		const FColor C = Pixels[Y * OWFrame::FrameW + X];
+		if (C.R > 150 && C.G < 90 && C.B < 90) ++Found;
+		else UE_LOG(LogOWBoot, Display, TEXT("OWBoot: frame:   pin %s \"%s\" at (%lld, %lld): pixel (%d, %d) is %s, not a marker"),
+			*P.Id, *P.Name, P.X, P.Y, X, Y, *C.ToString());
+	}
+	TSet<uint32> Distinct;
+	for (int32 i = 0; i < Pixels.Num(); i += 97) Distinct.Add(Pixels[i].ToPackedARGB());
+	const int32 Least = FrameImage ? 200 : 2;
+	const bool bFrameHeld = Found == FramePins.Num() && Distinct.Num() > Least;
+	UE_LOG(LogOWBoot, Display,
+		TEXT("OWBoot: frame: %d of %d markers where their pins put them, %d distinct colours in a sample of %d pixels (more than %d wanted): %s"),
+		Found, FramePins.Num(), Distinct.Num(), Pixels.Num() / 97, Least, bFrameHeld ? TEXT("held") : TEXT("did not hold"));
+
+	const uint8 Code = bReadingsHeld && bFrameHeld ? 0 : 3;
 	UE_LOG(LogOWBoot, Display, TEXT("OWBoot: done, exit %d"), Code);
 	Quit(Code);
 	return false;

@@ -7,6 +7,19 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- A world drawn by the packaged game. The plugin's frame scene moves out of the frame test into the runtime,
+  `OWFrame` (`Public/OWFrame.h`, C++): `RootMap` (the Map with no `parent_map`, its Pins with an x and a y),
+  `MapImage` (the first `.png` under `media/<map id>/base-image/` among the world's files, a folder's or an
+  `.owworld` file's, as a transient texture), `NewFrameWorld` and `EndFrameWorld`, `LayOut` (the plane and one sphere
+  per pin, with the caller's materials), `PlaceCamera`, `MeshesWaiting`, `Shoot` and `SavePng`.
+  `OnlyWorlds.Frame.MoppetopiaRootMap` builds its frame through them and asserts what it asserted before. The host's
+  game takes `-OWFrame=<a .png path>` beside `-OWWorld`: after its readings it lays the root Map out with a material
+  cooked into the pak, waits for its meshes' scene proxies (a cooked game makes one only once the pipeline states have
+  precached), shoots, writes the PNG, and finds each marker again in its pixels (exit 3 when one is not there). A new
+  exit 5, with nothing written, when it cannot draw: no PNG path, no renderer (`-nullrhi`), no root Map with a size,
+  the material or the engine's meshes not in the pak, a write that fails. The material, `/Game/OW/M_OWFrame` (unlit,
+  `MapImage` times `Tint`), is written by a new commandlet in the host's editor module (`-run=OWMakeFrame`);
+  `Host/Config/DefaultGame.ini` also cooks `/Engine/BasicShapes`, which the frame loads by path.
 - A struct's JSON merged into its element as read, so an upsert keeps what a struct cannot hold (schema-dist's
   `extension-passthrough`: extensions merged back on write, never dropped). `UOWElementJson::MergeElementJson(
   ElementJson, StructJson, Merged, Reason)`, pure, hand-written, one function for every type

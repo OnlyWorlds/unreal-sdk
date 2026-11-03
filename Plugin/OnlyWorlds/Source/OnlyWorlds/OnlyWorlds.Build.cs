@@ -23,8 +23,8 @@ public class OnlyWorlds : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
 		// zlib: the engine's own (ThirdParty/zlib/1.3), the same one build.cmd links. Projects: IPluginManager, so
-		// the tests find the conformance set beside the plugin. RenderCore and ImageCore: the frame test's capture
-		// and PNG. HTTP: FOWHttpTransport, the core client's transport.
+		// the tests find the conformance set beside the plugin. RenderCore and ImageCore: the frame's capture and
+		// PNG (OWFrame.cpp, shot by the frame test and by a packaged game). HTTP: FOWHttpTransport, the core client's transport.
 		PrivateDependencyModuleNames.AddRange(new string[] { "zlib", "Projects", "RenderCore", "ImageCore", "HTTP" });
 
 		// The graph tests only (Private/Tests/OWGraphTests.cpp, all of it under WITH_EDITOR): a Blueprint built, its

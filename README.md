@@ -215,7 +215,8 @@ The automation tests (`OnlyWorlds.*`):
   with nothing sent. `Function`: its pins.
 - `OnlyWorlds.Frame.MoppetopiaRootMap` needs a renderer (`-RenderOffscreen` instead of `-nullrhi`; a `-nullrhi`
   run leaves it out): the world's root Map as a plane carrying its image, the Pins as markers, captured from above to
-  `Host/Saved/OWFrames/moppetopia-root-map.png`.
+  `Host/Saved/OWFrames/moppetopia-root-map.png`. The scene is the plugin's (`Public/OWFrame.h`, the one the packaged
+  game's `-OWFrame` shoots); the test makes its two materials in code.
 
 The core's runner and the world tests read two real worlds from this machine when present (`OW_SIKELIA`,
 `OW_MOPPETOPIA`). In the core's runner a missing world is a named skip; in the automation tests it fails.
@@ -268,6 +269,31 @@ Run in a Development package after the commandlet: on Moppetopia's folder the sa
 set `MSYS_NO_PATHCONV=1`, or it rewrites `/Game/...` into a Windows path and every class reads as missing. An empty
 `-OWGraph=` takes the next switch as its value (exit 4, the message naming that switch).
 
+A world drawn by the game: `-OWFrame=<a .png path>` beside `-OWWorld` (a relative path from the staged `OWHost/`)
+draws the world's root Map after the other readings, the frame test's scene (`OWFrame.h`: a plane carrying the map's
+image, one red sphere per Pin with an x and a y, a capture straight above, 1800 x 1200), and writes it there. A game
+cannot make a material, so the host's editor module writes one, `/Game/OW/M_OWFrame` (unlit, emissive the texture
+parameter `MapImage` times the colour `Tint`), into `Host/Content/OW/`, cooked with the graphs; the engine's plane and
+sphere, loaded by path, are cooked by `DefaultGame.ini`'s `/Engine/BasicShapes` line. Run the commandlet after the
+editor target is built and before BuildCookRun, and the game with a renderer:
+
+```
+"%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "%CD%\Host\OWHost.uproject" -run=OWMakeFrame ^
+    -unattended -nosplash -nop4               # exit 0 when the material is saved
+Host\Saved\StagedBuilds\Windows\OWHost.exe -OWWorld=<a world folder or an .owworld file> -OWFrame=<a .png path> ^
+    -RenderOffscreen -unattended -nosplash -nosound -stdout -FullStdOutLogOutput
+```
+
+The map's image is the first `.png` under `media/<map id>/base-image/` among the world's files, from a folder or an
+`.owworld` file alike; a map without one is a plain sand-coloured plane. A cooked game makes a mesh's scene proxy only
+once its pipeline states have precached, so the frame waits, tick by tick, until every mesh has one (60 s at most),
+then shoots. It logs the map, the image, the wait, `wrote <path> (1800 x 1200, N bytes)`, and how many markers it finds
+again in its own pixels where their pins put them: exit 0 when every one is there and the plane holds more than 200
+colours (2 without an image), 3 when not (the frame still written). Exit 5, and no file written, when it cannot draw:
+`-OWFrame` bare, empty or not a `.png` path, no renderer (`-nullrhi`), no root Map (a Map with no `parent_map`) or one
+without a width and a height, the material or the meshes not in the pak, pixels that cannot be read, a write that
+fails. A refused world (2) and a missing graph (4) end the run before the frame. Without `-OWFrame`, nothing changes.
+
 `-clientconfig=Shipping` builds, cooks and stages the same way (`OWHost-Win64-Shipping.exe`, about 600 MB staged with
 its PDB), and the plugin runs in it: exit 0 on Moppetopia's folder, 2 on a world that is not there. A Shipping game
 writes no `OWBoot:` lines and no log file (the host's target keeps the engine's default, no logging in Shipping), so
@@ -288,8 +314,9 @@ regenerate, never edit.
 
 ## Not built yet
 
-- A runtime actor that lays a Map out in a level: the frame is built by a test, in the editor, with a material made
-  in code. A packaged game would need a material asset (the plugin ships no content yet).
+- A Map laid out in a level on Blueprints, or as an actor a level keeps: `OWFrame` (C++) lays one out in a world of
+  its own and shoots it once, with materials its caller gives (the plugin ships no content; the host cooks its own).
+  Child maps, Markers and Zones are not drawn.
 - Writing a struct back into an opened world's element (edits go through `UOWWorld`'s field setters for now; a
   struct goes out over the API through `Get<Type>Json`).
 - A Blueprint graph built in the editor's UI: the graphs that run are built in code, by the tests and by the host's
