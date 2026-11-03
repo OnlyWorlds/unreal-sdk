@@ -165,9 +165,9 @@ const Unit* UnitAt(const std::vector<Unit>& units, size_t at) {
     return nullptr;
 }
 
-// The functions a request path is handed through, each named with the place its path is: Request's own and the helper
-// that passes its path on. A path handed to any other function is a helper the scan does not read.
-const std::vector<std::pair<std::string, size_t>> PathTakers = {{"Request", 2}, {"ObjectRequest", 1}};
+// The functions a request path is handed through, each named with the place its path is: Request's own and the helpers
+// that pass their path on (a read's, a write's). A path handed to any other function is a helper the scan does not read.
+const std::vector<std::pair<std::string, size_t>> PathTakers = {{"Request", 2}, {"ObjectRequest", 1}, {"ElementWrite", 2}};
 
 // A path the scan can read: a quoted literal of path characters alone, or the variable `path`.
 const std::regex PathLiteral(R"re(^"(/[a-z_]+)*/"$)re");
@@ -304,15 +304,16 @@ OW_TEST(path_segments_source_every_value_checked) {
     if (source.empty()) return t.Fail("the client's source did not load: " + P().root + ClientSource);
     Scan scan = ScanClient(source);
     t.Eq(Join(scan.problems), std::string(), "every request path a literal or built from literals and Seg(), refused at once");
-    // A scan that lost its shape fails rather than passing empty: the nine request calls (Health, GetWorld, Me,
-    // Members, the helper's own, List, Get, Changes, ChangesHead), the two built paths (List's and Get's), the one
-    // helper, both path takers defined, the URL's two lines.
-    t.Ok(scan.calls >= 9, "found " + std::to_string(scan.calls) + " request calls; the scan lost its shape");
-    t.Ok(scan.built >= 2, "found " + std::to_string(scan.built) + " built paths; the scan lost its shape");
-    t.Eq(Join(std::vector<std::string>(scan.forwarders.begin(), scan.forwarders.end())), Join({"ObjectRequest"}),
-         "the functions that hand their path on");
-    t.Eq(Join(std::vector<std::string>(scan.takers.begin(), scan.takers.end())), Join({"ObjectRequest", "Request"}),
-         "the path takers defined");
+    // A scan that lost its shape fails rather than passing empty: the sixteen request calls (Health, GetWorld, Me,
+    // Members, the read helper's own, List, Get, Changes, ChangesHead; Create, Upsert, Patch, EditLinks, the write
+    // helper's own, Delete, Bulk), the seven built paths (List's, Get's and each write's but Bulk's literal), the two
+    // helpers, the three path takers defined, the URL's two lines.
+    t.Ok(scan.calls >= 16, "found " + std::to_string(scan.calls) + " request calls; the scan lost its shape");
+    t.Ok(scan.built >= 7, "found " + std::to_string(scan.built) + " built paths; the scan lost its shape");
+    t.Eq(Join(std::vector<std::string>(scan.forwarders.begin(), scan.forwarders.end())),
+         Join({"ElementWrite", "ObjectRequest"}), "the functions that hand their path on");
+    t.Eq(Join(std::vector<std::string>(scan.takers.begin(), scan.takers.end())),
+         Join({"ElementWrite", "ObjectRequest", "Request"}), "the path takers defined");
     t.Eq(scan.url_lines, 2, "the URL built in two lines");
 }
 

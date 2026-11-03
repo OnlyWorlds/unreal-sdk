@@ -1,5 +1,7 @@
 #include "OWClient.h"
 
+#include "OWId.h"
+#include "OWLens.h"
 #include "OWUnicode.h"
 
 #include <algorithm>
@@ -20,6 +22,9 @@ struct OWClient::State {
     OWKeyKind kind = OWKeyKind::None;
     std::optional<std::string> world;
     std::shared_ptr<OWTransport> transport;
+    // The name sent as X-OW-Client on element writes, and whether X-OW-Agent goes with them.
+    std::string client_name;
+    bool agent = false;
     // The last tip read's ETag ("" when it sent none) and the tip its 200 answered, which a 304 hands back.
     std::string head_tag;
     std::optional<OWChangesPage> head_held;
@@ -154,7 +159,44 @@ struct How {
     std::string if_none_match;
     // A 304 is answered, not an error (the tip read reads the status).
     bool not_modified = false;
+    // The JSON body, compact, sent with Content-Type: application/json; absent on a read and a delete.
+    std::optional<std::string> body;
+    // Sent as Idempotency-Key when not empty (a create, a bulk).
+    std::string idempotency_key;
+    // A change_seq sent as If-Match, quoted (a patch, a delete, a link edit).
+    std::optional<int64_t> if_match;
+    // An element write: X-OW-Client, and X-OW-Agent on an agent client, the operations keel's document declares both on.
+    bool write = false;
+    // A write keel may answer 202 with {proposal} (an upsert, a patch, a link edit): a 202 is then a proposal, never
+    // the element.
+    bool proposable = false;
+    // An empty 2xx body (or white space) answers null rather than an error (a delete's 204).
+    bool allow_empty = false;
 };
+
+bool OnlyWhite(const std::string& s) {
+    return std::all_of(s.begin(), s.end(), [](char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; });
+}
+
+// A 202 on a write that may become a proposal: kind Api, status 202, the row in `proposal` (the Unity SDK's
+// OWProposedError). A 202 whose body holds no proposal is kind Answer: never the element, never a made-up proposal.
+OWApiError Proposed(const OWResponse& response, const std::string& route) {
+    OWJsonParseResult parsed = OWJson::Parse(response.body);
+    const OWJsonValue* row = parsed.ok && parsed.value.IsObject() ? parsed.value.Find("proposal") : nullptr;
+    if (!row || !row->IsObject()) {
+        return OWApiError::Of(OWApiError::Kind::Answer,
+                              route + " answered 202 without a proposal: the write was not applied, and the answer is "
+                                      "not an element",
+                              202, response.body);
+    }
+    OWApiError e = OWApiError::Of(OWApiError::Kind::Api,
+                                  route + " became a proposal (202): this world takes an agent seat's writes as "
+                                          "proposals, so the element did not change. error.proposal is the row; the "
+                                          "owner or a co-builder accepts or declines it.",
+                                  202, response.body);
+    e.proposal = *row;
+    return e;
+}
 
 // Every call's request: the credential rules, then the send, then keel's envelope on a non-2xx, else the body parsed.
 // The rule is the Unity SDK's RequestWithResponseAsync and the TypeScript SDK's request(): what an account token or no
@@ -205,12 +247,21 @@ void Request(const StatePtr& s, const std::string& method, const std::string& pa
         if (!s->api_pin.empty() && (method != "GET" || me || s->kind == OWKeyKind::Legacy))
             request.headers.emplace_back("API-Pin", s->api_pin);
     }
+    if (how.body) request.headers.emplace_back("Content-Type", "application/json");
+    if (!how.idempotency_key.empty()) request.headers.emplace_back("Idempotency-Key", how.idempotency_key);
+    // Presence is the declaration, the value is never stored: opt-in, and on the element writes alone, where keel's
+    // document declares it. The client's name goes on the same writes and never on a read.
+    if (s->agent && how.write) request.headers.emplace_back("X-OW-Agent", "1");
+    if (how.write) request.headers.emplace_back("X-OW-Client", s->client_name);
     if (!how.if_none_match.empty()) request.headers.emplace_back("If-None-Match", how.if_none_match);
+    if (how.if_match) request.headers.emplace_back("If-Match", "\"" + std::to_string(*how.if_match) + "\"");
+    request.body = how.body;
 
     // The seam promises one answer; a second is dropped, so a walk never steps twice.
     auto answered = std::make_shared<bool>(false);
-    bool not_modified = how.not_modified;
-    s->transport->Send(std::move(request), [s, route, not_modified, answered, done](OWResponse response) {
+    bool not_modified = how.not_modified, proposable = how.proposable, allow_empty = how.allow_empty;
+    s->transport->Send(std::move(request), [s, route, not_modified, proposable, allow_empty, answered,
+                                            done](OWResponse response) {
         if (*answered) return;
         *answered = true;
         OWReply<OWJsonValue> r;
@@ -221,6 +272,10 @@ void Request(const StatePtr& s, const std::string& method, const std::string& pa
             // A 304 has no body: the caller that sent a tag reads the status.
         } else if (!response.IsSuccess()) {
             r.error = OWApiError::FromResponse(response, static_cast<int64_t>(std::time(nullptr)));
+        } else if (proposable && response.status == 202) {
+            r.error = Proposed(response, route);
+        } else if (allow_empty && OnlyWhite(response.body)) {
+            // A delete's 204: no value.
         } else {
             OWJsonParseResult parsed = OWJson::Parse(response.body);
             if (parsed.ok) {
@@ -405,6 +460,134 @@ void DropOnResync(const StatePtr& s, const OWReply<OWJsonValue>& r) {
     }
 }
 
+// -- The writes' helpers ---------------------------------------------------------------------------------------------------
+
+// keel's rule for X-OW-Client, exact: lower case letters, digits and hyphens, 1 to 32 characters. Read byte by byte, as
+// the Unity SDK reads it, so nothing past the name (a final newline) gets through.
+bool IsClientName(const std::string& s) {
+    if (s.empty() || s.size() > 32) return false;
+    return std::all_of(s.begin(), s.end(), [](char c) { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'; });
+}
+
+// A JSON value as JavaScript's JSON.stringify writes it, compact: keys in order, no white space, a number in section 5's
+// spelling (OWJson::CanonicalNumber: an integer literal as written, any other the shortest digits that read back the
+// same), a string escaped as OWJson::Quote escapes it. OWJson::Stringify is the folder spec's indented form.
+void Compact(const OWJsonValue& v, std::string& out) {
+    switch (v.kind()) {
+        case OWJsonValue::Kind::Null: out += "null"; break;
+        case OWJsonValue::Kind::Bool: out += v.AsBool() ? "true" : "false"; break;
+        case OWJsonValue::Kind::Number: out += OWJson::CanonicalNumber(v.Text()); break;
+        case OWJsonValue::Kind::String: out += OWJson::Quote(v.Text()); break;
+        case OWJsonValue::Kind::Array:
+            out.push_back('[');
+            for (size_t i = 0; i < v.Size(); ++i) {
+                if (i) out.push_back(',');
+                Compact(v.Items()[i], out);
+            }
+            out.push_back(']');
+            break;
+        case OWJsonValue::Kind::Object:
+            out.push_back('{');
+            for (size_t i = 0; i < v.Size(); ++i) {
+                if (i) out.push_back(',');
+                out += OWJson::Quote(v.Keys()[i]);
+                out.push_back(':');
+                Compact(v.Items()[i], out);
+            }
+            out.push_back('}');
+            break;
+    }
+}
+std::string Compact(const OWJsonValue& v) {
+    std::string out;
+    Compact(v, out);
+    return out;
+}
+
+const char* KindName(const OWJsonValue& v) {
+    switch (v.kind()) {
+        case OWJsonValue::Kind::Null: return "null";
+        case OWJsonValue::Kind::Bool: return "a boolean";
+        case OWJsonValue::Kind::Number: return "a number";
+        case OWJsonValue::Kind::String: return "a string";
+        case OWJsonValue::Kind::Array: return "an array";
+        case OWJsonValue::Kind::Object: return "an object";
+    }
+    return "";
+}
+
+// The body of an element write: Sanitize's copy of `element`; else `why` says what is refused (a body that is not an
+// object; a known-of stub, with the words of the Unity SDK's RefuseKnownOf and the TypeScript SDK's refuseKnownOf).
+OWJsonValue WriteBody(const std::string& where, const OWJsonValue& element, std::string_view type, std::string& why) {
+    if (!element.IsObject()) {
+        why = where + ": the element is a JSON object; got " + KindName(element) + "." + NothingSent;
+        return {};
+    }
+    if (OWClient::IsKnownOf(element)) {
+        why = where + ": this body is a known-of stub (known_of: true), not the element: its empty fields are not its "
+                      "values, and writing it would blank them. Write from a whole copy, or send only the fields you "
+                      "mean to change." + NothingSent;
+        return {};
+    }
+    return OWClient::Sanitize(element, type);
+}
+
+// True when a body carries no id to keep: absent, null or "" (the TypeScript SDK's create).
+bool NoId(const OWJsonValue& body) {
+    const OWJsonValue* id = body.Find("id");
+    return !id || id->IsNull() || (id->IsString() && id->Text().empty());
+}
+
+// An If-Match is an element's change_seq, a whole number; a negative one is refused before sending (the Unity SDK's
+// RefuseNegative). "" when there is none to refuse.
+std::string IfMatchWhy(const char* call, const OWWriteOptions& o) {
+    if (!o.if_match || *o.if_match >= 0) return "";
+    return std::string(call) + ": if_match must be a whole number, an element's change_seq; got " +
+           std::to_string(*o.if_match) + "." + NothingSent;
+}
+
+std::string NotBuilt(const OWClient::State& s) { return "OWClient was not built: " + s.error + NothingSent; }
+
+// An element write answering the element: the body as served, a JSON object.
+void ElementWrite(const StatePtr& s, const std::string& method, const std::string& path, const How& how,
+                  OWHandler<OWJsonValue> done) {
+    std::string route = method + " " + path;
+    Request(s, method, path, {}, how, [route, done](OWReply<OWJsonValue> r) { done(Object(std::move(r), route)); });
+}
+
+// keel's answer to POST /bulk/, read into its slots.
+void BulkOf(const OWJsonValue& body, OWReply<OWBulkResult>& r) {
+    const char* const route = "POST /bulk/";
+    OWBulkResult& out = r.value;
+    const OWJsonValue* errors = body.Find("errors");
+    out.errors = errors && errors->IsBool() && errors->AsBool();
+    const OWJsonValue* rows = body.Find("items");
+    if (rows && !rows->IsNull()) {
+        if (!rows->IsArray()) return Bad(r, std::string(route) + " answered items that are not a list");
+        for (const OWJsonValue& row : rows->Items()) {
+            if (!row.IsObject()) return Bad(r, std::string(route) + " answered a slot that is not an object");
+            OWBulkSlot slot;
+            slot.status = static_cast<int>(IntOf(row.Find("status")).value_or(0));
+            slot.id = TextOf(row.Find("id")).value_or("");
+            slot.created_at = TextOf(row.Find("created_at"));
+            slot.updated_at = TextOf(row.Find("updated_at"));
+            if (const OWJsonValue* e = row.Find("error"); e && e->IsObject()) {
+                OWResponse as_answer;
+                as_answer.status = slot.status;
+                as_answer.body = "{\"error\":" + Compact(*e) + "}";
+                slot.error = OWApiError::FromResponse(as_answer, static_cast<int64_t>(std::time(nullptr)));
+            }
+            if (const OWJsonValue* p = row.Find("proposal"); p && p->IsObject()) slot.proposal = *p;
+            out.items.push_back(std::move(slot));
+        }
+    }
+    const std::string* replay = r.response ? r.response->Header("Idempotent-Replay") : nullptr;
+    std::string word = replay ? *replay : "";
+    for (char& c : word)
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    out.was_replay = word == "true";
+}
+
 }  // namespace
 
 const std::vector<std::string>& OWPage::Keys() {
@@ -445,6 +628,13 @@ OWClient::OWClient(OWClientConfig config) : state_(std::make_shared<State>()) {
     while (!s.base_url.empty() && s.base_url.back() == '/') s.base_url.pop_back();
     s.page_size = config.page_size > 0 ? config.page_size : 100;
     s.transport = std::move(config.transport);
+    s.agent = config.agent;
+    s.client_name = config.client.value_or(DefaultClientName);
+    if (s.error.empty() && config.client && !IsClientName(*config.client)) {
+        s.error = "client must be lower case letters, digits and hyphens, 1 to 32 characters ([a-z0-9-]{1,32}), such "
+                  "as 'atlas'; got " + OWJson::Quote(*config.client) + ". It is sent as X-OW-Client on element "
+                  "writes; leave it absent for '" + std::string(DefaultClientName) + "'.";
+    }
 }
 
 OWClient::OWClient(OWClient&&) noexcept = default;
@@ -583,39 +773,175 @@ void OWClient::ChangesHead(OWHandler<OWChangesPage> done) {
     });
 }
 
-
-// -- Not written yet: the writes' declarations, so their tests build and run red first. ----------------------------
+// -- Element writes ---------------------------------------------------------------------------------------------------
 
 const char* const OWClient::DefaultClientName = "unreal-sdk";
-const std::string& OWClient::ClientName() const { static const std::string none; return none; }
-bool OWClient::Agent() const { return false; }
-const std::vector<std::string>& OWClient::ReadOnlyFields() { static const std::vector<std::string> none; return none; }
-bool OWClient::IsKnownOf(const OWJsonValue&) { return false; }
-OWJsonValue OWClient::Sanitize(const OWJsonValue& payload, std::string_view) { return payload; }
-const std::vector<std::string>& OWBulkSlot::Keys() { static const std::vector<std::string> none; return none; }
-const std::vector<std::string>& OWBulkResult::Keys() { static const std::vector<std::string> none; return none; }
-std::vector<size_t> OWBulkResult::Failed() const { return {}; }
-size_t OWBulkResult::SucceededCount() const { return 0; }
-bool OWBulkResult::AllSucceeded() const { return false; }
-void OWClient::Create(const std::string&, const OWJsonValue&, const OWCreateOptions&, OWHandler<OWJsonValue> done) {
-    Refuse(done, "Create: not written yet.");
+const std::string& OWClient::ClientName() const { return state_->client_name; }
+bool OWClient::Agent() const { return state_->agent; }
+
+const std::vector<std::string>& OWClient::ReadOnlyFields() {
+    static const std::vector<std::string> fields = {"world", "type", "created_at", "updated_at", "change_seq", "known_of"};
+    return fields;
 }
-void OWClient::Upsert(const std::string&, const std::string&, const OWJsonValue&, OWHandler<OWJsonValue> done) {
-    Refuse(done, "Upsert: not written yet.");
+
+bool OWClient::IsKnownOf(const OWJsonValue& body) {
+    const OWJsonValue* marker = body.IsObject() ? body.Find("known_of") : nullptr;
+    return marker && marker->IsBool() && marker->AsBool();
 }
-void OWClient::Patch(const std::string&, const std::string&, const OWJsonValue&, const OWWriteOptions&,
-                     OWHandler<OWJsonValue> done) {
-    Refuse(done, "Patch: not written yet.");
+
+OWJsonValue OWClient::Sanitize(const OWJsonValue& payload, std::string_view type) {
+    if (!payload.IsObject()) return payload;
+    // The base's scalar strings (schema.json's base, id and world aside: an id's null is kept, world is left out) and
+    // the type's own (OWLens::FieldsOf, kind Text: schema.json's scalar_str), the Unity SDK's IsStringField.
+    static const std::vector<std::string> base = {"name", "description", "supertype", "subtype", "image_url"};
+    std::vector<std::string> strings = base;
+    for (const OWLens::OWLensField& f : OWLens::FieldsOf(type))
+        if (f.kind == OWLens::OWFieldKind::Text) strings.emplace_back(f.name);
+    OWJsonValue body = payload;
+    for (const std::string& f : ReadOnlyFields()) body.Erase(f);
+    for (size_t i = 0; i < body.Size(); ++i) {
+        // string-empty-is-unset: "" is the wire's unset, and keel has no null to store.
+        if (body.Items()[i].IsNull() && std::find(strings.begin(), strings.end(), body.Keys()[i]) != strings.end())
+            body.Items()[i] = OWJsonValue::String("");
+    }
+    return body;
 }
-void OWClient::Delete(const std::string&, const std::string&, const OWWriteOptions&, OWHandler<OWJsonValue> done) {
-    Refuse(done, "Delete: not written yet.");
+
+const std::vector<std::string>& OWBulkSlot::Keys() {
+    static const std::vector<std::string> keys = {"status", "id", "created_at", "updated_at", "error", "proposal"};
+    return keys;
 }
-void OWClient::EditLinks(const std::string&, const std::string&, const std::string&, const OWLinkEdit&,
-                         const OWWriteOptions&, OWHandler<OWJsonValue> done) {
-    Refuse(done, "EditLinks: not written yet.");
+const std::vector<std::string>& OWBulkResult::Keys() {
+    static const std::vector<std::string> keys = {"errors", "items"};
+    return keys;
 }
-void OWClient::Bulk(const std::vector<OWBulkItem>&, const OWBulkOptions&, OWHandler<OWBulkResult> done) {
-    Refuse(done, "Bulk: not written yet.");
+std::vector<size_t> OWBulkResult::Failed() const {
+    std::vector<size_t> out;
+    for (size_t i = 0; i < items.size(); ++i)
+        if (!items[i].Succeeded()) out.push_back(i);
+    return out;
+}
+size_t OWBulkResult::SucceededCount() const { return items.size() - Failed().size(); }
+bool OWBulkResult::AllSucceeded() const { return !errors && Failed().empty(); }
+
+void OWClient::Create(const std::string& type, const OWJsonValue& element, const OWCreateOptions& options,
+                      OWHandler<OWJsonValue> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why;
+    OWJsonValue body = WriteBody("create", element, type, why);
+    if (!why.empty()) return Refuse(done, why);
+    // An id minted here, so a retry can name the element: keyed under a key, so the retry sends the same body.
+    if (NoId(body)) body.Set("id", OWJsonValue::String(OWId::Mint(options.idempotency_key, 0)));
+    std::string path = "/" + Seg("type", type, why) + "/";
+    if (!why.empty()) return Refuse(done, why);
+    How how;
+    how.write = true;
+    how.body = Compact(body);
+    how.idempotency_key = options.idempotency_key;
+    ElementWrite(state_, "POST", path, how, std::move(done));
+}
+
+void OWClient::Upsert(const std::string& type, const std::string& id, const OWJsonValue& element,
+                      OWHandler<OWJsonValue> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why;
+    OWJsonValue body = WriteBody("upsert", element, type, why);
+    if (!why.empty()) return Refuse(done, why);
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/";
+    if (!why.empty()) return Refuse(done, why);
+    How how;
+    how.write = true;
+    how.proposable = true;
+    how.body = Compact(body);
+    ElementWrite(state_, "PUT", path, how, std::move(done));
+}
+
+void OWClient::Patch(const std::string& type, const std::string& id, const OWJsonValue& partial,
+                     const OWWriteOptions& options, OWHandler<OWJsonValue> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why = IfMatchWhy("patch", options);
+    if (!why.empty()) return Refuse(done, why);
+    OWJsonValue body = WriteBody("patch", partial, type, why);
+    if (!why.empty()) return Refuse(done, why);
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/";
+    if (!why.empty()) return Refuse(done, why);
+    How how;
+    how.write = true;
+    how.proposable = true;
+    how.body = Compact(body);
+    how.if_match = options.if_match;
+    ElementWrite(state_, "PATCH", path, how, std::move(done));
+}
+
+void OWClient::Delete(const std::string& type, const std::string& id, const OWWriteOptions& options,
+                      OWHandler<OWJsonValue> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why = IfMatchWhy("delete", options);
+    if (!why.empty()) return Refuse(done, why);
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/";
+    if (!why.empty()) return Refuse(done, why);
+    How how;
+    how.write = true;
+    how.allow_empty = true;
+    how.if_match = options.if_match;
+    Request(state_, "DELETE", path, {}, how, [done](OWReply<OWJsonValue> r) {
+        if (r.Ok()) r.value = OWJsonValue();
+        done(std::move(r));
+    });
+}
+
+void OWClient::EditLinks(const std::string& type, const std::string& id, const std::string& field,
+                         const OWLinkEdit& edit, const OWWriteOptions& options, OWHandler<OWJsonValue> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why = IfMatchWhy("edit links", options);
+    if (!why.empty()) return Refuse(done, why);
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/links/" + Seg("field", field, why);
+    if (!why.empty()) return Refuse(done, why);
+    OWJsonValue body = OWJsonValue::Object();
+    for (auto [name, ids] : {std::make_pair("add", &edit.add), std::make_pair("remove", &edit.remove)}) {
+        if (!*ids) continue;
+        OWJsonValue list = OWJsonValue::Array();
+        for (const std::string& one : **ids) list.Push(OWJsonValue::String(one));
+        body.Set(name, std::move(list));
+    }
+    How how;
+    how.write = true;
+    how.proposable = true;
+    how.body = Compact(body);
+    how.if_match = options.if_match;
+    ElementWrite(state_, "POST", path, how, std::move(done));
+}
+
+void OWClient::Bulk(const std::vector<OWBulkItem>& items, const OWBulkOptions& options, OWHandler<OWBulkResult> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    if (items.empty()) return Refuse(done, std::string("bulk: needs at least one item.") + NothingSent);
+    OWJsonValue list = OWJsonValue::Array();
+    for (size_t i = 0; i < items.size(); ++i) {
+        std::string where = "bulk: items[" + std::to_string(i) + "]";
+        if (items[i].type.empty()) return Refuse(done, where + " needs a type." + NothingSent);
+        std::string why;
+        // A null element is an empty one, as the Unity SDK's BulkAsync reads it.
+        OWJsonValue element = WriteBody(where, items[i].element.IsNull() ? OWJsonValue::Object() : items[i].element,
+                                        items[i].type, why);
+        if (!why.empty()) return Refuse(done, why);
+        if (NoId(element))
+            element.Set("id", OWJsonValue::String(OWId::Mint(options.idempotency_key, static_cast<int64_t>(i))));
+        OWJsonValue slot = OWJsonValue::Object();
+        slot.Set("type", OWJsonValue::String(items[i].type));
+        slot.Set("element", std::move(element));
+        list.Push(std::move(slot));
+    }
+    OWJsonValue body = OWJsonValue::Object();
+    body.Set("items", std::move(list));
+    body.Set("atomic", OWJsonValue::Bool(options.atomic));
+    How how;
+    how.write = true;
+    how.body = Compact(body);
+    how.idempotency_key = options.idempotency_key;
+    Request(state_, "POST", "/bulk/", {}, how, [done](OWReply<OWJsonValue> raw) {
+        done(Then<OWBulkResult>(Object(std::move(raw), "POST /bulk/"),
+                                [](OWJsonValue& answer, OWReply<OWBulkResult>& r) { BulkOf(answer, r); }));
+    });
 }
 
 }  // namespace OnlyWorlds

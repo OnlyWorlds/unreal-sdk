@@ -7,6 +7,21 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- The element writes in the core's API client: `OWClient::Create`, `Upsert`, `Patch`, `Delete`, `EditLinks` and
+  `Bulk`, ported from the Unity SDK's `OWClient` and held to keel's wire document. Each body is a copy cleaned by
+  `OWClient::Sanitize` (`ReadOnlyFields` left out, a null scalar string sent as `""`, extension keys untouched) and
+  written compact; a known-of stub (`IsKnownOf`), a body that is not an object, a negative `if_match`, an empty bulk
+  or a value that is not one path segment is refused with nothing sent, and so is any write from an account token
+  or a keyless client. Every write sends the PIN and `X-OW-Client` (`OWClientConfig::client`, keel's
+  `[a-z0-9-]{1,32}`, `unreal-sdk` by default), `X-OW-Agent` on a client declared one (`OWClientConfig::agent`),
+  `If-Match` on a patch, a delete and a link edit (`OWWriteOptions`), `Idempotency-Key` on a create and a bulk.
+  `OWId` mints the ids an element without one gets: a UUIDv7, or under an idempotency key the UUIDv5 the Python
+  package, the Unity SDK and the TypeScript SDK derive, so a keyed retry sends the same body. A bulk answers an
+  `OWBulkResult` (`errors`, `items` of `OWBulkSlot`, `was_replay`; `Failed`, `SucceededCount`, `AllSucceeded`). New
+  on `OWApiError`: `proposal` and `IsProposed` (a 202 on an upsert, a patch or a link edit, kind `Api`),
+  `IsPreconditionFailed` with `Current()`, `IsIdConflict`, `IsIdempotencyConflict`, `IsKnownOfNotWritable`. The
+  wire tests now record every write on every world key and an agent seat, and hold each body key to what keel
+  declares on that operation (a bulk item's element to its type's create). Not on Blueprints yet.
 - The lens, its graph and the charter on Blueprints, over an opened world read as the core reads a snapshot (every
   element as served, world.json's `time_current` as its now, the hidden mark on each body). `UOWLens`: `GetLenses`,
   `IsLens`, `IsTemplate`, `LensesFor` (the membership's choice, else the Character's `x_lens_uses`), `IsHidden`,

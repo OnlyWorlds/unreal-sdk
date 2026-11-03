@@ -182,13 +182,20 @@ bool OWApiError::IsRetryable() const {
     return status == 429 || status >= 500;
 }
 
+bool OWApiError::IsProposed() const { return status == 202 && proposal.has_value(); }
+bool OWApiError::IsPreconditionFailed() const { return status == 412 && code == "precondition_failed"; }
+bool OWApiError::IsIdConflict() const { return status == 409 && code == "id_conflict"; }
+bool OWApiError::IsIdempotencyConflict() const { return status == 409 && code == "idempotency_error"; }
+bool OWApiError::IsKnownOfNotWritable() const { return status == 422 && code == "known_of_not_writable"; }
 
-// Not written yet: the write helpers' declarations, so their tests build and run red first.
-bool OWApiError::IsProposed() const { return false; }
-bool OWApiError::IsPreconditionFailed() const { return false; }
-std::optional<OWJsonValue> OWApiError::Current() const { return std::nullopt; }
-bool OWApiError::IsIdConflict() const { return false; }
-bool OWApiError::IsIdempotencyConflict() const { return false; }
-bool OWApiError::IsKnownOfNotWritable() const { return false; }
+std::optional<OWJsonValue> OWApiError::Current() const {
+    // The Unity SDK's Current: on any 412, and on a 409 stale_proposal.
+    bool stale = status == 409 && code == "stale_proposal";
+    if ((status != 412 && !stale) || raw_body.empty()) return std::nullopt;
+    OWJsonParseResult parsed = OWJson::Parse(raw_body);
+    const OWJsonValue* now = parsed.ok ? parsed.value.Find("current") : nullptr;
+    if (!now || !now->IsObject()) return std::nullopt;
+    return *now;
+}
 
 }  // namespace OnlyWorlds
