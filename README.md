@@ -63,6 +63,7 @@ for (const OWOpener& row : menu.rows) AddItem(row.name, row.href, row.state.valu
 | `UOWNames` | the names profile on Blueprints: `TypeWord(World, Type, Supertype, bMany, Word)`, the world's own word for a type from `x_names` on its World, or `false` for the standard's name (`Supertype` `""` for none) |
 | `UOWMessages` | the message profile on Blueprints, over an opened world, each element asked by its id as the API serves it (a body that names no type takes its folder's): `GetMessages(World)` and `GetNotes(World)` (ids in `created_at` order), `IsMessage`, `IsNote`, `RecipientsOf`, `IsAddressedTo`, `IsToEveryone(World, MessageId, bKeyless)`, `HasUnseenRecipients(World, MessageId, bKeyless)` (an `EOWUnseenRecipients`: `Yes`, `No`, or `Unknown` for a keyless reader), `IsSentBy`, `ThreadOf(World, RootId)`; against the world's members list as JSON text (what `OWClient::Members` answers; `""` for no list) `SenderStatus(World, MessageId, MembersJson, Sender, Reason)` (an `FOWSender`: `Status`, one of `Verified`, `Mismatch`, `Unverifiable`, `Unseen`; `Claimed`; `WrittenBy` on a mismatch), `EditedBy(World, MessageId, MembersJson, Edited, Reason)` (an `FOWEdited`: `bEdited`, `By`), `ReadMarkOf(World, CharacterId, MembersJson, bKeyless, MarkId, Reason)`, `UnreadFor(World, CharacterId, ReadMarkId, MembersJson, Unread, Reason)` and `NoteOf(World, CharacterId, MembersJson, NoteId, Reason)`, an id `""` for none. A call that reads the members list or a read mark refuses as `false` and the reason (`no world`, `no element <id> in this world`, `members: ` and where the text does not parse); every other call reads an id the world does not hold as the profile's no |
 | `FOWHttpTransport` | the core client's transport on Unreal's own HTTP (`FHttpModule`): `Config.transport = FOWHttpTransport::Make();`, and each `OnlyWorlds::OWClient` call answers once, on the game thread. The engine follows a redirect before the transport sees it (curl, `CURLOPT_FOLLOWLOCATION`), so a followed answer is refused as a failure: point the client at `https://www.onlyworlds.com/api/v2` (its default), which redirects no API call (`OnlyWorldsLive.Client.Redirect`) |
+| `UOWClientRead`, `UOWClientList`, `UOWClientListAll`, `UOWClientChanges` | the API client's read calls on Blueprints, one async node each, with `OnSuccess` and `OnFailure` (one signature per node, its value pins and an `FOWApiError`): `ReadHealth`, `ReadWorld`, `ReadMe`, `ReadMembers`, `ReadElement(Config, Type, Id, Expand, Fields, ViewAs)` (each a body as JSON text, the form `UOWWorld::GetElementJson` gives), `ListElements(Config, Type, Options)` (`Elements`, each row's JSON text, `bHasMore`, `NextCursor`), `ListAllElements(Config, Type, Options)` (every page by `has_more`, or no half list), `ReadChanges(Config, Since, After)` and `ReadChangesHead(Config)` (an `FOWChangesPage`: `Cursor`, `Changes` of `FOWChange`, an upsert's element as JSON text, `Head`, `Epoch` with `bHasEpoch`). `ReadMembers` answers the roster as the JSON array `UOWMessages` takes as `MembersJson`, so a graph wires one into the other. `FOWClientConfig`: `ApiKey`, `ApiPin`, `World` (for an account token or no key), `BaseUrl` (`""` the default), `PageSize`; `FOWListOptions` is the core's `OWListOptions`, its filters a map. Each node is its own `OWClient` on `FOWHttpTransport`, so it answers later, on the game thread; the core's refusals (a config it will not build, a call the key may not send, a value that is not one path segment) answer at once, inside the activation, kind `Refused`, nothing sent. An `FOWApiError` carries `Kind` (`None` on `OnSuccess`, `Api`, `Transport`, `Refused`, `Answer`), `Status`, keel's `Type`, `Code`, `Message`, `Param`, `DocUrl`, `RawBody`, `RetryAfter` with `bHasRetryAfter`, `bRetryable`, `ResyncReason` and `Line`. A node is kept (in the root set) from its activation until it answered, once; C++ may hand one another transport with `SetTransport` before it is activated. Never keep a key or a PIN in an asset |
 | `FOW<Type>`, `UOWElements` | one `USTRUCT(BlueprintType)` per element type (`FOWCharacter`, `FOWPin`, ...), and the library that reads them out of a world: `GetAll<Types>(World)`, `Find<Type>(World, Id, Out)`. Generated from schema-dist's `schema.json` |
 
 Members are PascalCase (`birth_date` -> `BirthDate`, `STR` -> `Str`). A string field is an `FString` (`""` for unset),
@@ -130,7 +131,7 @@ The automation tests (`OnlyWorlds.*`):
   as a body, a number as an id, a list as a read mark), each case placed in a world of its own and asked by id; and
   every element of Sikelia against the core.
 - `OnlyWorlds.Graph.Pins`, `.Run`, `.Integers` (editor only): Blueprints built in code. `Pins` places a Break and a
-  Make node on each of the plugin's 30 structs: every member gets a pin, the 70 integer pairs a bool and an Integer64
+  Make node on each of the plugin's 35 structs: every member gets a pin, the 70 integer pairs a bool and an Integer64
   on both. `Run` builds one function graph
   of real K2 nodes (`ParseAddress` -> Break -> Make -> `WriteAddress` and `OpenersForAddress`, `FormatStep`,
   `TypeWord`), compiles it with the Kismet compiler (no error, no warning), and calls it once per element of Sikelia
@@ -138,6 +139,15 @@ The automation tests (`OnlyWorlds.*`):
   pins swapped, a node left out) are each caught, by the compiler or by the answers. `Integers` makes an
   `FOWCharacter` setting `bHasLevel` and `Level` and breaks them back, and breaks `FindCharacter`'s struct for every
   Sikelia character's birth date, as its file says.
+- `OnlyWorlds.Client.Nodes.Requests`, `.Options`, `.Answers`, `.Errors`, `.Refusals`, `.Once`, `.Latent`,
+  `.Reflection`, `.Pins` (editor only): the client's async nodes through a fake transport that records each request
+  and answers from a script, never the network. Each of the nine nodes on seven credentials (a write, a read and a legacy key, an account token
+  with a world and without, no key with a world and without: 40 requests as the core sends them, method, URL and headers,
+  and 23 refusals before sending); every list, get and feed option; each answer's shape; keel's envelope, a
+  `Retry-After`, a resync's reason, no answer and a body that is not the answer on `OnFailure`; one answer from a transport
+  that answers twice; a walk held a frame a page, the node kept through a garbage collection in flight and collected after;
+  `ReadMembers` made and activated through reflection, its text read by `UOWMessages::SenderStatus` and `EditedBy`; and the
+  pins a graph's `UK2Node_AsyncAction` gets for each factory.
 - `OnlyWorlds.Frame.MoppetopiaRootMap` needs a renderer (`-RenderOffscreen` instead of `-nullrhi`; a `-nullrhi`
   run leaves it out): the world's root Map as a plane carrying its image, the Pins as markers, captured from above to
   `Host/Saved/OWFrames/moppetopia-root-map.png`.
@@ -179,14 +189,16 @@ regenerate, never edit.
 - Writing a struct back into an element (edits go through `UOWWorld`'s field setters for now).
 - A Blueprint graph saved as an asset, or one built in the editor's UI: the graphs that run are built in code by the
   tests; the calendar's `GetWorldCalendars` and `BreakdownStep`, the openers' `OpenersFor` and every `UOWMessages`
-  call are held through reflection only, not in a graph.
+  call are held through reflection only, not in a graph. The client's nodes are placed on a graph for their pins but
+  never compiled or run in one: one is activated through reflection, the rest from C++.
 - The Open with menu over a tools list other than the baked one (`OWOpeners::OpenersForJson` is in the core only).
 - The element's skips through an address on Blueprints: `UOWOpeners::OpenersForAddress` has no element to read, so
   its rows are every row; `UOWOpeners::OpenersFor` on an opened world reads the element and leaves the skipped rows out.
 - The lens, its graph and the charter on Blueprints: `OWLens`, `OWGraph` and `OWCharter` are in the core only.
-- The API client on Blueprints: `OWClient` and `FOWHttpTransport` are C++ only, with no async Blueprint node yet,
-  and the client reads only (no writes).
-- The members list from the API on Blueprints: `UOWMessages` takes it as JSON text, and only the C++ client's
-  `Members` fetches it (the client has no Blueprint node yet). `UOWMessages` reads an opened world only: a message
-  served by the API and not in a world has no Blueprint call.
+- Writes over the API: the core client reads only, and so do its Blueprint nodes.
+- An element read over the API as its `FOW<Type>` struct: the nodes answer each element as JSON text, and no Blueprint
+  call turns that text into a struct or places it in a world (`OWFromJson` does it in C++). `UOWMessages` reads an
+  opened world only: a message served by the API and not in a world has no Blueprint call.
+- The conditional tip read on Blueprints: each node is its own client, so `ReadChangesHead` holds no ETag between
+  reads and every poll is a full one (`bUnchanged` is never set); `ListAllElements` gives no progress per page.
 - Any platform other than Win64, and any engine other than 5.8.

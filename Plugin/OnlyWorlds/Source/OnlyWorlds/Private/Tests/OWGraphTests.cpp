@@ -126,8 +126,8 @@ bool FOWGraphPinsTest::RunTest(const FString& Parameters)
 	}
 	Structs.Sort([](const UScriptStruct& A, const UScriptStruct& B) { return A.GetName() < B.GetName(); });
 	// The 22 generated, and FOWArchiveVerdict, FOWWorldCalendar, FOWStepBreakdown, FOWAddress, FOWOpenerSurface, FOWOpener,
-	// FOWSender, FOWEdited.
-	TestEqual(TEXT("the plugin's structs"), Structs.Num(), 22 + 8);
+	// FOWSender, FOWEdited, and the client's FOWClientConfig, FOWApiError, FOWListOptions, FOWChange, FOWChangesPage.
+	TestEqual(TEXT("the plugin's structs"), Structs.Num(), 22 + 13);
 
 	int32 Optionals = 0, OptionalBreakPins = 0, OptionalMakePins = 0, Members = 0, Pairs = 0, PairsWithPins = 0;
 	TArray<FString> OptionalMembers;

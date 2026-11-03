@@ -7,6 +7,19 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- The API client's read calls on Blueprints: an async node per call of `OWClient`, each with `OnSuccess` and
+  `OnFailure`. `UOWClientRead` (`ReadHealth`, `ReadWorld`, `ReadMe`, `ReadMembers`, `ReadElement`: the body as JSON text),
+  `UOWClientList` (`ListElements`: a page's rows as JSON text, `bHasMore`, `NextCursor`), `UOWClientListAll`
+  (`ListAllElements`: every page, or no half list) and `UOWClientChanges` (`ReadChanges`, `ReadChangesHead`: an
+  `FOWChangesPage` of `FOWChange` rows). `ReadMembers` answers the JSON array `UOWMessages` takes as `MembersJson`. A
+  node is configured by an `FOWClientConfig` (key, PIN, world, base URL, page size) and fails with an `FOWApiError`
+  (`EOWApiErrorKind`, the status, keel's envelope, `Retry-After`, the resync's reason, the printed line); the list's
+  options are an `FOWListOptions`. Each node builds its own client on `FOWHttpTransport` and answers on the game
+  thread; the core's refusals answer inside the activation with nothing sent. A node stays in the root set until it
+  answered, once; `SetTransport` (C++ only) gives it another transport before it is activated. Held by
+  `OnlyWorlds.Client.Nodes.*` through a fake transport (no network): every node on seven credentials, the options,
+  the answers, the errors and refusals, one answer only, a garbage collection in flight, a node activated through
+  reflection with its members read by `UOWMessages`, and the editor's pins. The plugin now has 35 structs.
 - The message profile on Blueprints: `UOWMessages`, over an opened world, each element asked by its id as the API
   serves it (a body that names no type takes its folder's). `GetMessages` and `GetNotes` (ids in `created_at` order),
   `IsMessage`, `IsNote`, `RecipientsOf`, `IsAddressedTo`, `IsToEveryone`, `HasUnseenRecipients` (`EOWUnseenRecipients`:
