@@ -4,6 +4,7 @@
 #include "OWModelsJson.h"
 
 #include "OWModelRead.h"
+#include "OWModelWrite.h"
 #include "OWWorldObject.h"
 
 void OWFromJson(const OnlyWorlds::OWJsonValue& Body, FOWAbility& Out)
@@ -676,6 +677,628 @@ void OWFromJson(const OnlyWorlds::OWJsonValue& Body, FOWZone& Out)
 	Out.Principles = OWModelRead::Ids(Body, "principles");
 }
 
+OnlyWorlds::OWJsonValue OWToJson(const FOWAbility& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("activation", OWModelWrite::Str(In.Activation));
+	Json.Set("duration", OWModelWrite::Int(In.bHasDuration, In.Duration));
+	Json.Set("potency", OWModelWrite::Int(In.bHasPotency, In.Potency));
+	Json.Set("range", OWModelWrite::Int(In.bHasRange, In.Range));
+	Json.Set("effects", OWModelWrite::Ids(In.Effects));
+	Json.Set("challenges", OWModelWrite::Str(In.Challenges));
+	Json.Set("talents", OWModelWrite::Ids(In.Talents));
+	Json.Set("requisites", OWModelWrite::Ids(In.Requisites));
+	Json.Set("prevalence", OWModelWrite::Str(In.Prevalence));
+	Json.Set("tradition", OWModelWrite::Link(In.Tradition));
+	Json.Set("source", OWModelWrite::Link(In.Source));
+	Json.Set("locus", OWModelWrite::Link(In.Locus));
+	Json.Set("instruments", OWModelWrite::Ids(In.Instruments));
+	Json.Set("systems", OWModelWrite::Ids(In.Systems));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWCollective& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("composition", OWModelWrite::Str(In.Composition));
+	Json.Set("count", OWModelWrite::Int(In.bHasCount, In.Count));
+	Json.Set("formation_date", OWModelWrite::Int(In.bHasFormationDate, In.FormationDate));
+	Json.Set("operator", OWModelWrite::Link(In.Operator));
+	Json.Set("equipment", OWModelWrite::Ids(In.Equipment));
+	Json.Set("activity", OWModelWrite::Str(In.Activity));
+	Json.Set("disposition", OWModelWrite::Str(In.Disposition));
+	Json.Set("state", OWModelWrite::Str(In.State));
+	Json.Set("abilities", OWModelWrite::Ids(In.Abilities));
+	Json.Set("symbolism", OWModelWrite::Ids(In.Symbolism));
+	Json.Set("species", OWModelWrite::Ids(In.Species));
+	Json.Set("characters", OWModelWrite::Ids(In.Characters));
+	Json.Set("creatures", OWModelWrite::Ids(In.Creatures));
+	Json.Set("phenomena", OWModelWrite::Ids(In.Phenomena));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWCharacter& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("physicality", OWModelWrite::Str(In.Physicality));
+	Json.Set("mentality", OWModelWrite::Str(In.Mentality));
+	Json.Set("height", OWModelWrite::Int(In.bHasHeight, In.Height));
+	Json.Set("weight", OWModelWrite::Int(In.bHasWeight, In.Weight));
+	Json.Set("species", OWModelWrite::Ids(In.Species));
+	Json.Set("traits", OWModelWrite::Ids(In.Traits));
+	Json.Set("abilities", OWModelWrite::Ids(In.Abilities));
+	Json.Set("background", OWModelWrite::Str(In.Background));
+	Json.Set("motivations", OWModelWrite::Str(In.Motivations));
+	Json.Set("birth_date", OWModelWrite::Int(In.bHasBirthDate, In.BirthDate));
+	Json.Set("birthplace", OWModelWrite::Link(In.Birthplace));
+	Json.Set("languages", OWModelWrite::Ids(In.Languages));
+	Json.Set("reputation", OWModelWrite::Str(In.Reputation));
+	Json.Set("location", OWModelWrite::Link(In.Location));
+	Json.Set("objects", OWModelWrite::Ids(In.Objects));
+	Json.Set("institutions", OWModelWrite::Ids(In.Institutions));
+	Json.Set("charisma", OWModelWrite::Int(In.bHasCharisma, In.Charisma));
+	Json.Set("coercion", OWModelWrite::Int(In.bHasCoercion, In.Coercion));
+	Json.Set("competence", OWModelWrite::Int(In.bHasCompetence, In.Competence));
+	Json.Set("compassion", OWModelWrite::Int(In.bHasCompassion, In.Compassion));
+	Json.Set("creativity", OWModelWrite::Int(In.bHasCreativity, In.Creativity));
+	Json.Set("courage", OWModelWrite::Int(In.bHasCourage, In.Courage));
+	Json.Set("family", OWModelWrite::Ids(In.Family));
+	Json.Set("friends", OWModelWrite::Ids(In.Friends));
+	Json.Set("rivals", OWModelWrite::Ids(In.Rivals));
+	Json.Set("level", OWModelWrite::Int(In.bHasLevel, In.Level));
+	Json.Set("hit_points", OWModelWrite::Int(In.bHasHitPoints, In.HitPoints));
+	Json.Set("STR", OWModelWrite::Int(In.bHasStr, In.Str));
+	Json.Set("DEX", OWModelWrite::Int(In.bHasDex, In.Dex));
+	Json.Set("CON", OWModelWrite::Int(In.bHasCon, In.Con));
+	Json.Set("INT", OWModelWrite::Int(In.bHasInt, In.Int));
+	Json.Set("WIS", OWModelWrite::Int(In.bHasWis, In.Wis));
+	Json.Set("CHA", OWModelWrite::Int(In.bHasCha, In.Cha));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWConstruct& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("rationale", OWModelWrite::Str(In.Rationale));
+	Json.Set("history", OWModelWrite::Str(In.History));
+	Json.Set("status", OWModelWrite::Str(In.Status));
+	Json.Set("reach", OWModelWrite::Str(In.Reach));
+	Json.Set("start_date", OWModelWrite::Int(In.bHasStartDate, In.StartDate));
+	Json.Set("end_date", OWModelWrite::Int(In.bHasEndDate, In.EndDate));
+	Json.Set("founder", OWModelWrite::Link(In.Founder));
+	Json.Set("custodian", OWModelWrite::Link(In.Custodian));
+	Json.Set("characters", OWModelWrite::Ids(In.Characters));
+	Json.Set("objects", OWModelWrite::Ids(In.Objects));
+	Json.Set("locations", OWModelWrite::Ids(In.Locations));
+	Json.Set("species", OWModelWrite::Ids(In.Species));
+	Json.Set("creatures", OWModelWrite::Ids(In.Creatures));
+	Json.Set("institutions", OWModelWrite::Ids(In.Institutions));
+	Json.Set("traits", OWModelWrite::Ids(In.Traits));
+	Json.Set("collectives", OWModelWrite::Ids(In.Collectives));
+	Json.Set("zones", OWModelWrite::Ids(In.Zones));
+	Json.Set("abilities", OWModelWrite::Ids(In.Abilities));
+	Json.Set("phenomena", OWModelWrite::Ids(In.Phenomena));
+	Json.Set("languages", OWModelWrite::Ids(In.Languages));
+	Json.Set("families", OWModelWrite::Ids(In.Families));
+	Json.Set("relations", OWModelWrite::Ids(In.Relations));
+	Json.Set("titles", OWModelWrite::Ids(In.Titles));
+	Json.Set("constructs", OWModelWrite::Ids(In.Constructs));
+	Json.Set("events", OWModelWrite::Ids(In.Events));
+	Json.Set("narratives", OWModelWrite::Ids(In.Narratives));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWCreature& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("appearance", OWModelWrite::Str(In.Appearance));
+	Json.Set("weight", OWModelWrite::Int(In.bHasWeight, In.Weight));
+	Json.Set("height", OWModelWrite::Int(In.bHasHeight, In.Height));
+	Json.Set("species", OWModelWrite::Ids(In.Species));
+	Json.Set("habits", OWModelWrite::Str(In.Habits));
+	Json.Set("demeanor", OWModelWrite::Str(In.Demeanor));
+	Json.Set("traits", OWModelWrite::Ids(In.Traits));
+	Json.Set("abilities", OWModelWrite::Ids(In.Abilities));
+	Json.Set("languages", OWModelWrite::Ids(In.Languages));
+	Json.Set("status", OWModelWrite::Str(In.Status));
+	Json.Set("birth_date", OWModelWrite::Int(In.bHasBirthDate, In.BirthDate));
+	Json.Set("location", OWModelWrite::Link(In.Location));
+	Json.Set("zone", OWModelWrite::Link(In.Zone));
+	Json.Set("challenge_rating", OWModelWrite::Int(In.bHasChallengeRating, In.ChallengeRating));
+	Json.Set("hit_points", OWModelWrite::Int(In.bHasHitPoints, In.HitPoints));
+	Json.Set("armor_class", OWModelWrite::Int(In.bHasArmorClass, In.ArmorClass));
+	Json.Set("speed", OWModelWrite::Int(In.bHasSpeed, In.Speed));
+	Json.Set("actions", OWModelWrite::Ids(In.Actions));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWEvent& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("history", OWModelWrite::Str(In.History));
+	Json.Set("challenges", OWModelWrite::Str(In.Challenges));
+	Json.Set("consequences", OWModelWrite::Str(In.Consequences));
+	Json.Set("start_date", OWModelWrite::Int(In.bHasStartDate, In.StartDate));
+	Json.Set("end_date", OWModelWrite::Int(In.bHasEndDate, In.EndDate));
+	Json.Set("triggers", OWModelWrite::Ids(In.Triggers));
+	Json.Set("characters", OWModelWrite::Ids(In.Characters));
+	Json.Set("objects", OWModelWrite::Ids(In.Objects));
+	Json.Set("locations", OWModelWrite::Ids(In.Locations));
+	Json.Set("species", OWModelWrite::Ids(In.Species));
+	Json.Set("creatures", OWModelWrite::Ids(In.Creatures));
+	Json.Set("institutions", OWModelWrite::Ids(In.Institutions));
+	Json.Set("traits", OWModelWrite::Ids(In.Traits));
+	Json.Set("collectives", OWModelWrite::Ids(In.Collectives));
+	Json.Set("zones", OWModelWrite::Ids(In.Zones));
+	Json.Set("abilities", OWModelWrite::Ids(In.Abilities));
+	Json.Set("phenomena", OWModelWrite::Ids(In.Phenomena));
+	Json.Set("languages", OWModelWrite::Ids(In.Languages));
+	Json.Set("families", OWModelWrite::Ids(In.Families));
+	Json.Set("relations", OWModelWrite::Ids(In.Relations));
+	Json.Set("titles", OWModelWrite::Ids(In.Titles));
+	Json.Set("constructs", OWModelWrite::Ids(In.Constructs));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWFamily& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("spirit", OWModelWrite::Str(In.Spirit));
+	Json.Set("history", OWModelWrite::Str(In.History));
+	Json.Set("traditions", OWModelWrite::Ids(In.Traditions));
+	Json.Set("traits", OWModelWrite::Ids(In.Traits));
+	Json.Set("abilities", OWModelWrite::Ids(In.Abilities));
+	Json.Set("languages", OWModelWrite::Ids(In.Languages));
+	Json.Set("ancestors", OWModelWrite::Ids(In.Ancestors));
+	Json.Set("reputation", OWModelWrite::Str(In.Reputation));
+	Json.Set("estates", OWModelWrite::Ids(In.Estates));
+	Json.Set("governs", OWModelWrite::Ids(In.Governs));
+	Json.Set("heirlooms", OWModelWrite::Ids(In.Heirlooms));
+	Json.Set("creatures", OWModelWrite::Ids(In.Creatures));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWInstitution& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("doctrine", OWModelWrite::Str(In.Doctrine));
+	Json.Set("founding_date", OWModelWrite::Int(In.bHasFoundingDate, In.FoundingDate));
+	Json.Set("parent_institution", OWModelWrite::Link(In.ParentInstitution));
+	Json.Set("zones", OWModelWrite::Ids(In.Zones));
+	Json.Set("objects", OWModelWrite::Ids(In.Objects));
+	Json.Set("creatures", OWModelWrite::Ids(In.Creatures));
+	Json.Set("status", OWModelWrite::Str(In.Status));
+	Json.Set("allies", OWModelWrite::Ids(In.Allies));
+	Json.Set("adversaries", OWModelWrite::Ids(In.Adversaries));
+	Json.Set("constructs", OWModelWrite::Ids(In.Constructs));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWLanguage& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("phonology", OWModelWrite::Str(In.Phonology));
+	Json.Set("grammar", OWModelWrite::Str(In.Grammar));
+	Json.Set("lexicon", OWModelWrite::Str(In.Lexicon));
+	Json.Set("writing", OWModelWrite::Str(In.Writing));
+	Json.Set("classification", OWModelWrite::Link(In.Classification));
+	Json.Set("status", OWModelWrite::Str(In.Status));
+	Json.Set("spread", OWModelWrite::Ids(In.Spread));
+	Json.Set("dialects", OWModelWrite::Ids(In.Dialects));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWLaw& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("declaration", OWModelWrite::Str(In.Declaration));
+	Json.Set("purpose", OWModelWrite::Str(In.Purpose));
+	Json.Set("date", OWModelWrite::Int(In.bHasDate, In.Date));
+	Json.Set("parent_law", OWModelWrite::Link(In.ParentLaw));
+	Json.Set("penalties", OWModelWrite::Ids(In.Penalties));
+	Json.Set("author", OWModelWrite::Link(In.Author));
+	Json.Set("locations", OWModelWrite::Ids(In.Locations));
+	Json.Set("zones", OWModelWrite::Ids(In.Zones));
+	Json.Set("prohibitions", OWModelWrite::Ids(In.Prohibitions));
+	Json.Set("adjudicators", OWModelWrite::Ids(In.Adjudicators));
+	Json.Set("enforcers", OWModelWrite::Ids(In.Enforcers));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWLocation& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("form", OWModelWrite::Str(In.Form));
+	Json.Set("function", OWModelWrite::Str(In.Function));
+	Json.Set("founding_date", OWModelWrite::Int(In.bHasFoundingDate, In.FoundingDate));
+	Json.Set("parent_location", OWModelWrite::Link(In.ParentLocation));
+	Json.Set("vehicle", OWModelWrite::Link(In.Vehicle));
+	Json.Set("populations", OWModelWrite::Ids(In.Populations));
+	Json.Set("political_climate", OWModelWrite::Str(In.PoliticalClimate));
+	Json.Set("primary_power", OWModelWrite::Link(In.PrimaryPower));
+	Json.Set("governing_title", OWModelWrite::Link(In.GoverningTitle));
+	Json.Set("secondary_powers", OWModelWrite::Ids(In.SecondaryPowers));
+	Json.Set("zone", OWModelWrite::Link(In.Zone));
+	Json.Set("rival", OWModelWrite::Link(In.Rival));
+	Json.Set("partner", OWModelWrite::Link(In.Partner));
+	Json.Set("customs", OWModelWrite::Str(In.Customs));
+	Json.Set("founders", OWModelWrite::Ids(In.Founders));
+	Json.Set("cults", OWModelWrite::Ids(In.Cults));
+	Json.Set("delicacies", OWModelWrite::Ids(In.Delicacies));
+	Json.Set("extraction_methods", OWModelWrite::Ids(In.ExtractionMethods));
+	Json.Set("extraction_goods", OWModelWrite::Ids(In.ExtractionGoods));
+	Json.Set("industry_methods", OWModelWrite::Ids(In.IndustryMethods));
+	Json.Set("industry_goods", OWModelWrite::Ids(In.IndustryGoods));
+	Json.Set("infrastructure", OWModelWrite::Str(In.Infrastructure));
+	Json.Set("extraction_markets", OWModelWrite::Ids(In.ExtractionMarkets));
+	Json.Set("industry_markets", OWModelWrite::Ids(In.IndustryMarkets));
+	Json.Set("currencies", OWModelWrite::Ids(In.Currencies));
+	Json.Set("architecture", OWModelWrite::Str(In.Architecture));
+	Json.Set("buildings", OWModelWrite::Ids(In.Buildings));
+	Json.Set("building_methods", OWModelWrite::Ids(In.BuildingMethods));
+	Json.Set("defensibility", OWModelWrite::Str(In.Defensibility));
+	Json.Set("elevation", OWModelWrite::Int(In.bHasElevation, In.Elevation));
+	Json.Set("fighters", OWModelWrite::Ids(In.Fighters));
+	Json.Set("defensive_objects", OWModelWrite::Ids(In.DefensiveObjects));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWMap& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("background_color", OWModelWrite::Str(In.BackgroundColor));
+	Json.Set("hierarchy", OWModelWrite::Int(In.bHasHierarchy, In.Hierarchy));
+	Json.Set("width", OWModelWrite::Int(In.bHasWidth, In.Width));
+	Json.Set("height", OWModelWrite::Int(In.bHasHeight, In.Height));
+	Json.Set("depth", OWModelWrite::Int(In.bHasDepth, In.Depth));
+	Json.Set("parent_map", OWModelWrite::Link(In.ParentMap));
+	Json.Set("location", OWModelWrite::Link(In.Location));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWMarker& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("map", OWModelWrite::Link(In.Map));
+	Json.Set("zone", OWModelWrite::Link(In.Zone));
+	Json.Set("x", OWModelWrite::Int(In.bHasX, In.X));
+	Json.Set("y", OWModelWrite::Int(In.bHasY, In.Y));
+	Json.Set("z", OWModelWrite::Int(In.bHasZ, In.Z));
+	Json.Set("order", OWModelWrite::Int(In.bHasOrder, In.Order));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWNarrative& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("story", OWModelWrite::Str(In.Story));
+	Json.Set("consequences", OWModelWrite::Str(In.Consequences));
+	Json.Set("start_date", OWModelWrite::Int(In.bHasStartDate, In.StartDate));
+	Json.Set("end_date", OWModelWrite::Int(In.bHasEndDate, In.EndDate));
+	Json.Set("order", OWModelWrite::Int(In.bHasOrder, In.Order));
+	Json.Set("parent_narrative", OWModelWrite::Link(In.ParentNarrative));
+	Json.Set("protagonist", OWModelWrite::Link(In.Protagonist));
+	Json.Set("antagonist", OWModelWrite::Link(In.Antagonist));
+	Json.Set("narrator", OWModelWrite::Link(In.Narrator));
+	Json.Set("conservator", OWModelWrite::Link(In.Conservator));
+	Json.Set("events", OWModelWrite::Ids(In.Events));
+	Json.Set("characters", OWModelWrite::Ids(In.Characters));
+	Json.Set("objects", OWModelWrite::Ids(In.Objects));
+	Json.Set("locations", OWModelWrite::Ids(In.Locations));
+	Json.Set("species", OWModelWrite::Ids(In.Species));
+	Json.Set("creatures", OWModelWrite::Ids(In.Creatures));
+	Json.Set("institutions", OWModelWrite::Ids(In.Institutions));
+	Json.Set("traits", OWModelWrite::Ids(In.Traits));
+	Json.Set("collectives", OWModelWrite::Ids(In.Collectives));
+	Json.Set("zones", OWModelWrite::Ids(In.Zones));
+	Json.Set("abilities", OWModelWrite::Ids(In.Abilities));
+	Json.Set("phenomena", OWModelWrite::Ids(In.Phenomena));
+	Json.Set("languages", OWModelWrite::Ids(In.Languages));
+	Json.Set("families", OWModelWrite::Ids(In.Families));
+	Json.Set("relations", OWModelWrite::Ids(In.Relations));
+	Json.Set("titles", OWModelWrite::Ids(In.Titles));
+	Json.Set("constructs", OWModelWrite::Ids(In.Constructs));
+	Json.Set("laws", OWModelWrite::Ids(In.Laws));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWObject& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("aesthetics", OWModelWrite::Str(In.Aesthetics));
+	Json.Set("weight", OWModelWrite::Int(In.bHasWeight, In.Weight));
+	Json.Set("amount", OWModelWrite::Int(In.bHasAmount, In.Amount));
+	Json.Set("parent_object", OWModelWrite::Link(In.ParentObject));
+	Json.Set("materials", OWModelWrite::Ids(In.Materials));
+	Json.Set("technology", OWModelWrite::Ids(In.Technology));
+	Json.Set("utility", OWModelWrite::Str(In.Utility));
+	Json.Set("effects", OWModelWrite::Ids(In.Effects));
+	Json.Set("abilities", OWModelWrite::Ids(In.Abilities));
+	Json.Set("consumes", OWModelWrite::Ids(In.Consumes));
+	Json.Set("origins", OWModelWrite::Str(In.Origins));
+	Json.Set("location", OWModelWrite::Link(In.Location));
+	Json.Set("language", OWModelWrite::Link(In.Language));
+	Json.Set("affinities", OWModelWrite::Ids(In.Affinities));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWPhenomenon& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("expression", OWModelWrite::Str(In.Expression));
+	Json.Set("effects", OWModelWrite::Str(In.Effects));
+	Json.Set("duration", OWModelWrite::Int(In.bHasDuration, In.Duration));
+	Json.Set("catalysts", OWModelWrite::Ids(In.Catalysts));
+	Json.Set("empowerments", OWModelWrite::Ids(In.Empowerments));
+	Json.Set("mythology", OWModelWrite::Str(In.Mythology));
+	Json.Set("system", OWModelWrite::Link(In.System));
+	Json.Set("triggers", OWModelWrite::Ids(In.Triggers));
+	Json.Set("wielders", OWModelWrite::Ids(In.Wielders));
+	Json.Set("environments", OWModelWrite::Ids(In.Environments));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWPin& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("map", OWModelWrite::Link(In.Map));
+	Json.Set("element_type", OWModelWrite::Str(In.ElementType));
+	Json.Set("element_id", OWModelWrite::Link(In.ElementId));
+	Json.Set("x", OWModelWrite::Int(In.bHasX, In.X));
+	Json.Set("y", OWModelWrite::Int(In.bHasY, In.Y));
+	Json.Set("z", OWModelWrite::Int(In.bHasZ, In.Z));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWRelation& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("background", OWModelWrite::Str(In.Background));
+	Json.Set("start_date", OWModelWrite::Int(In.bHasStartDate, In.StartDate));
+	Json.Set("end_date", OWModelWrite::Int(In.bHasEndDate, In.EndDate));
+	Json.Set("intensity", OWModelWrite::Int(In.bHasIntensity, In.Intensity));
+	Json.Set("actor", OWModelWrite::Link(In.Actor));
+	Json.Set("events", OWModelWrite::Ids(In.Events));
+	Json.Set("characters", OWModelWrite::Ids(In.Characters));
+	Json.Set("objects", OWModelWrite::Ids(In.Objects));
+	Json.Set("locations", OWModelWrite::Ids(In.Locations));
+	Json.Set("species", OWModelWrite::Ids(In.Species));
+	Json.Set("creatures", OWModelWrite::Ids(In.Creatures));
+	Json.Set("institutions", OWModelWrite::Ids(In.Institutions));
+	Json.Set("traits", OWModelWrite::Ids(In.Traits));
+	Json.Set("collectives", OWModelWrite::Ids(In.Collectives));
+	Json.Set("zones", OWModelWrite::Ids(In.Zones));
+	Json.Set("abilities", OWModelWrite::Ids(In.Abilities));
+	Json.Set("phenomena", OWModelWrite::Ids(In.Phenomena));
+	Json.Set("languages", OWModelWrite::Ids(In.Languages));
+	Json.Set("families", OWModelWrite::Ids(In.Families));
+	Json.Set("titles", OWModelWrite::Ids(In.Titles));
+	Json.Set("constructs", OWModelWrite::Ids(In.Constructs));
+	Json.Set("narratives", OWModelWrite::Ids(In.Narratives));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWSpecies& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("appearance", OWModelWrite::Str(In.Appearance));
+	Json.Set("life_span", OWModelWrite::Int(In.bHasLifeSpan, In.LifeSpan));
+	Json.Set("weight", OWModelWrite::Int(In.bHasWeight, In.Weight));
+	Json.Set("nourishment", OWModelWrite::Ids(In.Nourishment));
+	Json.Set("reproduction", OWModelWrite::Ids(In.Reproduction));
+	Json.Set("adaptations", OWModelWrite::Ids(In.Adaptations));
+	Json.Set("instincts", OWModelWrite::Str(In.Instincts));
+	Json.Set("sociality", OWModelWrite::Str(In.Sociality));
+	Json.Set("temperament", OWModelWrite::Str(In.Temperament));
+	Json.Set("communication", OWModelWrite::Str(In.Communication));
+	Json.Set("aggression", OWModelWrite::Int(In.bHasAggression, In.Aggression));
+	Json.Set("traits", OWModelWrite::Ids(In.Traits));
+	Json.Set("role", OWModelWrite::Str(In.Role));
+	Json.Set("parent_species", OWModelWrite::Link(In.ParentSpecies));
+	Json.Set("locations", OWModelWrite::Ids(In.Locations));
+	Json.Set("zones", OWModelWrite::Ids(In.Zones));
+	Json.Set("affinities", OWModelWrite::Ids(In.Affinities));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWTitle& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("authority", OWModelWrite::Str(In.Authority));
+	Json.Set("eligibility", OWModelWrite::Str(In.Eligibility));
+	Json.Set("grant_date", OWModelWrite::Int(In.bHasGrantDate, In.GrantDate));
+	Json.Set("revoke_date", OWModelWrite::Int(In.bHasRevokeDate, In.RevokeDate));
+	Json.Set("issuer", OWModelWrite::Link(In.Issuer));
+	Json.Set("body", OWModelWrite::Link(In.Body));
+	Json.Set("superior_title", OWModelWrite::Link(In.SuperiorTitle));
+	Json.Set("holders", OWModelWrite::Ids(In.Holders));
+	Json.Set("symbols", OWModelWrite::Ids(In.Symbols));
+	Json.Set("status", OWModelWrite::Str(In.Status));
+	Json.Set("history", OWModelWrite::Str(In.History));
+	Json.Set("characters", OWModelWrite::Ids(In.Characters));
+	Json.Set("institutions", OWModelWrite::Ids(In.Institutions));
+	Json.Set("families", OWModelWrite::Ids(In.Families));
+	Json.Set("zones", OWModelWrite::Ids(In.Zones));
+	Json.Set("locations", OWModelWrite::Ids(In.Locations));
+	Json.Set("objects", OWModelWrite::Ids(In.Objects));
+	Json.Set("constructs", OWModelWrite::Ids(In.Constructs));
+	Json.Set("laws", OWModelWrite::Ids(In.Laws));
+	Json.Set("collectives", OWModelWrite::Ids(In.Collectives));
+	Json.Set("creatures", OWModelWrite::Ids(In.Creatures));
+	Json.Set("phenomena", OWModelWrite::Ids(In.Phenomena));
+	Json.Set("species", OWModelWrite::Ids(In.Species));
+	Json.Set("languages", OWModelWrite::Ids(In.Languages));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWTrait& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("social_effects", OWModelWrite::Str(In.SocialEffects));
+	Json.Set("physical_effects", OWModelWrite::Str(In.PhysicalEffects));
+	Json.Set("functional_effects", OWModelWrite::Str(In.FunctionalEffects));
+	Json.Set("personality_effects", OWModelWrite::Str(In.PersonalityEffects));
+	Json.Set("behaviour_effects", OWModelWrite::Str(In.BehaviourEffects));
+	Json.Set("charisma", OWModelWrite::Int(In.bHasCharisma, In.Charisma));
+	Json.Set("coercion", OWModelWrite::Int(In.bHasCoercion, In.Coercion));
+	Json.Set("competence", OWModelWrite::Int(In.bHasCompetence, In.Competence));
+	Json.Set("compassion", OWModelWrite::Int(In.bHasCompassion, In.Compassion));
+	Json.Set("creativity", OWModelWrite::Int(In.bHasCreativity, In.Creativity));
+	Json.Set("courage", OWModelWrite::Int(In.bHasCourage, In.Courage));
+	Json.Set("significance", OWModelWrite::Str(In.Significance));
+	Json.Set("anti_trait", OWModelWrite::Link(In.AntiTrait));
+	Json.Set("empowered_abilities", OWModelWrite::Ids(In.EmpoweredAbilities));
+	return Json;
+}
+
+OnlyWorlds::OWJsonValue OWToJson(const FOWZone& In)
+{
+	OnlyWorlds::OWJsonValue Json = OnlyWorlds::OWJsonValue::Object();
+	if (!In.Id.IsEmpty()) Json.Set("id", OWModelWrite::Str(In.Id));
+	Json.Set("name", OWModelWrite::Str(In.Name));
+	Json.Set("description", OWModelWrite::Str(In.Description));
+	Json.Set("supertype", OWModelWrite::Str(In.Supertype));
+	Json.Set("subtype", OWModelWrite::Str(In.Subtype));
+	Json.Set("image_url", OWModelWrite::Str(In.ImageUrl));
+	Json.Set("role", OWModelWrite::Str(In.Role));
+	Json.Set("shape", OWModelWrite::Str(In.Shape));
+	Json.Set("start_date", OWModelWrite::Int(In.bHasStartDate, In.StartDate));
+	Json.Set("end_date", OWModelWrite::Int(In.bHasEndDate, In.EndDate));
+	Json.Set("phenomena", OWModelWrite::Ids(In.Phenomena));
+	Json.Set("linked_zones", OWModelWrite::Ids(In.LinkedZones));
+	Json.Set("context", OWModelWrite::Str(In.Context));
+	Json.Set("populations", OWModelWrite::Ids(In.Populations));
+	Json.Set("titles", OWModelWrite::Ids(In.Titles));
+	Json.Set("principles", OWModelWrite::Ids(In.Principles));
+	return Json;
+}
+
 TArray<FOWAbility> UOWElements::GetAllAbilities(const UOWWorld* World)
 {
 	TArray<FOWAbility> Out;
@@ -690,6 +1313,11 @@ bool UOWElements::FindAbility(const UOWWorld* World, const FString& Id, FOWAbili
 	Ability = FOWAbility();
 	OWFromJson(*Body, Ability);
 	return true;
+}
+
+FString UOWElements::GetAbilityJson(const FOWAbility& Ability)
+{
+	return OWModelWrite::Text(OWToJson(Ability));
 }
 
 TArray<FOWCollective> UOWElements::GetAllCollectives(const UOWWorld* World)
@@ -708,6 +1336,11 @@ bool UOWElements::FindCollective(const UOWWorld* World, const FString& Id, FOWCo
 	return true;
 }
 
+FString UOWElements::GetCollectiveJson(const FOWCollective& Collective)
+{
+	return OWModelWrite::Text(OWToJson(Collective));
+}
+
 TArray<FOWCharacter> UOWElements::GetAllCharacters(const UOWWorld* World)
 {
 	TArray<FOWCharacter> Out;
@@ -722,6 +1355,11 @@ bool UOWElements::FindCharacter(const UOWWorld* World, const FString& Id, FOWCha
 	Character = FOWCharacter();
 	OWFromJson(*Body, Character);
 	return true;
+}
+
+FString UOWElements::GetCharacterJson(const FOWCharacter& Character)
+{
+	return OWModelWrite::Text(OWToJson(Character));
 }
 
 TArray<FOWConstruct> UOWElements::GetAllConstructs(const UOWWorld* World)
@@ -740,6 +1378,11 @@ bool UOWElements::FindConstruct(const UOWWorld* World, const FString& Id, FOWCon
 	return true;
 }
 
+FString UOWElements::GetConstructJson(const FOWConstruct& Construct)
+{
+	return OWModelWrite::Text(OWToJson(Construct));
+}
+
 TArray<FOWCreature> UOWElements::GetAllCreatures(const UOWWorld* World)
 {
 	TArray<FOWCreature> Out;
@@ -754,6 +1397,11 @@ bool UOWElements::FindCreature(const UOWWorld* World, const FString& Id, FOWCrea
 	Creature = FOWCreature();
 	OWFromJson(*Body, Creature);
 	return true;
+}
+
+FString UOWElements::GetCreatureJson(const FOWCreature& Creature)
+{
+	return OWModelWrite::Text(OWToJson(Creature));
 }
 
 TArray<FOWEvent> UOWElements::GetAllEvents(const UOWWorld* World)
@@ -772,6 +1420,11 @@ bool UOWElements::FindEvent(const UOWWorld* World, const FString& Id, FOWEvent& 
 	return true;
 }
 
+FString UOWElements::GetEventJson(const FOWEvent& Event)
+{
+	return OWModelWrite::Text(OWToJson(Event));
+}
+
 TArray<FOWFamily> UOWElements::GetAllFamilies(const UOWWorld* World)
 {
 	TArray<FOWFamily> Out;
@@ -786,6 +1439,11 @@ bool UOWElements::FindFamily(const UOWWorld* World, const FString& Id, FOWFamily
 	Family = FOWFamily();
 	OWFromJson(*Body, Family);
 	return true;
+}
+
+FString UOWElements::GetFamilyJson(const FOWFamily& Family)
+{
+	return OWModelWrite::Text(OWToJson(Family));
 }
 
 TArray<FOWInstitution> UOWElements::GetAllInstitutions(const UOWWorld* World)
@@ -804,6 +1462,11 @@ bool UOWElements::FindInstitution(const UOWWorld* World, const FString& Id, FOWI
 	return true;
 }
 
+FString UOWElements::GetInstitutionJson(const FOWInstitution& Institution)
+{
+	return OWModelWrite::Text(OWToJson(Institution));
+}
+
 TArray<FOWLanguage> UOWElements::GetAllLanguages(const UOWWorld* World)
 {
 	TArray<FOWLanguage> Out;
@@ -818,6 +1481,11 @@ bool UOWElements::FindLanguage(const UOWWorld* World, const FString& Id, FOWLang
 	Language = FOWLanguage();
 	OWFromJson(*Body, Language);
 	return true;
+}
+
+FString UOWElements::GetLanguageJson(const FOWLanguage& Language)
+{
+	return OWModelWrite::Text(OWToJson(Language));
 }
 
 TArray<FOWLaw> UOWElements::GetAllLaws(const UOWWorld* World)
@@ -836,6 +1504,11 @@ bool UOWElements::FindLaw(const UOWWorld* World, const FString& Id, FOWLaw& Law)
 	return true;
 }
 
+FString UOWElements::GetLawJson(const FOWLaw& Law)
+{
+	return OWModelWrite::Text(OWToJson(Law));
+}
+
 TArray<FOWLocation> UOWElements::GetAllLocations(const UOWWorld* World)
 {
 	TArray<FOWLocation> Out;
@@ -850,6 +1523,11 @@ bool UOWElements::FindLocation(const UOWWorld* World, const FString& Id, FOWLoca
 	Location = FOWLocation();
 	OWFromJson(*Body, Location);
 	return true;
+}
+
+FString UOWElements::GetLocationJson(const FOWLocation& Location)
+{
+	return OWModelWrite::Text(OWToJson(Location));
 }
 
 TArray<FOWMap> UOWElements::GetAllMaps(const UOWWorld* World)
@@ -868,6 +1546,11 @@ bool UOWElements::FindMap(const UOWWorld* World, const FString& Id, FOWMap& Map)
 	return true;
 }
 
+FString UOWElements::GetMapJson(const FOWMap& Map)
+{
+	return OWModelWrite::Text(OWToJson(Map));
+}
+
 TArray<FOWMarker> UOWElements::GetAllMarkers(const UOWWorld* World)
 {
 	TArray<FOWMarker> Out;
@@ -882,6 +1565,11 @@ bool UOWElements::FindMarker(const UOWWorld* World, const FString& Id, FOWMarker
 	Marker = FOWMarker();
 	OWFromJson(*Body, Marker);
 	return true;
+}
+
+FString UOWElements::GetMarkerJson(const FOWMarker& Marker)
+{
+	return OWModelWrite::Text(OWToJson(Marker));
 }
 
 TArray<FOWNarrative> UOWElements::GetAllNarratives(const UOWWorld* World)
@@ -900,6 +1588,11 @@ bool UOWElements::FindNarrative(const UOWWorld* World, const FString& Id, FOWNar
 	return true;
 }
 
+FString UOWElements::GetNarrativeJson(const FOWNarrative& Narrative)
+{
+	return OWModelWrite::Text(OWToJson(Narrative));
+}
+
 TArray<FOWObject> UOWElements::GetAllObjects(const UOWWorld* World)
 {
 	TArray<FOWObject> Out;
@@ -914,6 +1607,11 @@ bool UOWElements::FindObject(const UOWWorld* World, const FString& Id, FOWObject
 	Object = FOWObject();
 	OWFromJson(*Body, Object);
 	return true;
+}
+
+FString UOWElements::GetObjectJson(const FOWObject& Object)
+{
+	return OWModelWrite::Text(OWToJson(Object));
 }
 
 TArray<FOWPhenomenon> UOWElements::GetAllPhenomena(const UOWWorld* World)
@@ -932,6 +1630,11 @@ bool UOWElements::FindPhenomenon(const UOWWorld* World, const FString& Id, FOWPh
 	return true;
 }
 
+FString UOWElements::GetPhenomenonJson(const FOWPhenomenon& Phenomenon)
+{
+	return OWModelWrite::Text(OWToJson(Phenomenon));
+}
+
 TArray<FOWPin> UOWElements::GetAllPins(const UOWWorld* World)
 {
 	TArray<FOWPin> Out;
@@ -946,6 +1649,11 @@ bool UOWElements::FindPin(const UOWWorld* World, const FString& Id, FOWPin& Pin)
 	Pin = FOWPin();
 	OWFromJson(*Body, Pin);
 	return true;
+}
+
+FString UOWElements::GetPinJson(const FOWPin& Pin)
+{
+	return OWModelWrite::Text(OWToJson(Pin));
 }
 
 TArray<FOWRelation> UOWElements::GetAllRelations(const UOWWorld* World)
@@ -964,6 +1672,11 @@ bool UOWElements::FindRelation(const UOWWorld* World, const FString& Id, FOWRela
 	return true;
 }
 
+FString UOWElements::GetRelationJson(const FOWRelation& Relation)
+{
+	return OWModelWrite::Text(OWToJson(Relation));
+}
+
 TArray<FOWSpecies> UOWElements::GetAllSpecies(const UOWWorld* World)
 {
 	TArray<FOWSpecies> Out;
@@ -978,6 +1691,11 @@ bool UOWElements::FindSpecies(const UOWWorld* World, const FString& Id, FOWSpeci
 	Species = FOWSpecies();
 	OWFromJson(*Body, Species);
 	return true;
+}
+
+FString UOWElements::GetSpeciesJson(const FOWSpecies& Species)
+{
+	return OWModelWrite::Text(OWToJson(Species));
 }
 
 TArray<FOWTitle> UOWElements::GetAllTitles(const UOWWorld* World)
@@ -996,6 +1714,11 @@ bool UOWElements::FindTitle(const UOWWorld* World, const FString& Id, FOWTitle& 
 	return true;
 }
 
+FString UOWElements::GetTitleJson(const FOWTitle& Title)
+{
+	return OWModelWrite::Text(OWToJson(Title));
+}
+
 TArray<FOWTrait> UOWElements::GetAllTraits(const UOWWorld* World)
 {
 	TArray<FOWTrait> Out;
@@ -1012,6 +1735,11 @@ bool UOWElements::FindTrait(const UOWWorld* World, const FString& Id, FOWTrait& 
 	return true;
 }
 
+FString UOWElements::GetTraitJson(const FOWTrait& Trait)
+{
+	return OWModelWrite::Text(OWToJson(Trait));
+}
+
 TArray<FOWZone> UOWElements::GetAllZones(const UOWWorld* World)
 {
 	TArray<FOWZone> Out;
@@ -1026,4 +1754,9 @@ bool UOWElements::FindZone(const UOWWorld* World, const FString& Id, FOWZone& Zo
 	Zone = FOWZone();
 	OWFromJson(*Body, Zone);
 	return true;
+}
+
+FString UOWElements::GetZoneJson(const FOWZone& Zone)
+{
+	return OWModelWrite::Text(OWToJson(Zone));
 }
