@@ -198,6 +198,11 @@ element's Open with rows for a member in a game online and offline, and `done, e
 when every reading held, 2 for a refused or missing world (the reader's reason logged), 3 for a reading that did not
 hold. The log is also in the staged folder's `OWHost/Saved/Logs/OWHost.log`.
 
+`-clientconfig=Shipping` builds, cooks and stages the same way (`OWHost-Win64-Shipping.exe`, about 600 MB staged with
+its PDB), and the plugin runs in it: exit 0 on Moppetopia's folder, 2 on a world that is not there. A Shipping game
+writes no `OWBoot:` lines and no log file (the host's target keeps the engine's default, no logging in Shipping), so
+there the exit code is the reading.
+
 `codegen/schema-dist/` is vendored verbatim; never edit it, nor `codegen/tools/tools.json` (the tools list at the
 commit `codegen/tools-pin.json` names). Under `Plugin/OnlyWorlds/`, `Core/Private/OWUnicodeData.generated.cpp` is
 written by `codegen/generate.py`, `Core/Private/OWTools.generated.cpp` by `codegen/generate_tools.py`,
