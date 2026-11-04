@@ -23,8 +23,8 @@ namespace {
 
 // The npm SDK's test/fixtures/openers.fixture.json at 8f2986b (4.132.0: element_types, the types a tool's element door
 // opens, 8 cases more), read at v4.132.2.
-const char* const FixtureSha256 = "7c84e4f624fb7ecc7eca1e56b1d9807196a5055e359e0a1c26f2065c9808e0d5";
-const size_t CaseCount = 100;
+const char* const FixtureSha256 = "d758aa6910619e95549768bf2f604a1f0c40140f13cae4c7f69cd149582aecc1";
+const size_t CaseCount = 103;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";
