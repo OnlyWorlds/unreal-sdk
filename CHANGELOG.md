@@ -193,6 +193,12 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.108` (canonical `00.34.00` unchanged; descriptions only, canonical PR 20: no field, type,
+  link, wire, fixture or walk change). Seventeen time-field descriptions on thirteen types say one thing, "in the
+  world's time unit (World `time_basic_unit`)"; `Event.constructs` reads "concepts, systems or built entities";
+  `Map.hierarchy` reads "an integer to order or group the maps that share a parent; how a tool reads it is the tool's
+  own". `OWModels.h` carries those 19 descriptions in its field comments; the other generated files moved their stamp
+  lines only.
 - Schema pin to `v0.34.0-dist.107` (canonical `00.34.00` unchanged: no model, wire, fixture or walk change). Two
   profile pages' prose: the charter page names its `open` as the World's `public_read` (the standard's field: read
   from world.json in a folder, from the world GET over the API; the fixture's `open` is the same thing), and the
