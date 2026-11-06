@@ -74,6 +74,16 @@ def row(t: dict[str, Any]) -> str:
             if skips is None:
                 parts.append("{}")
             parts.append("std::vector<std::string>{" + ", ".join(json.dumps(v) for v in types) + "}")
+        if "opens_public" in o:
+            # open.opens_public, baked only when the row carries it, so a row without the key bakes as before; the
+            # aggregate's earlier members are filled in first.
+            if not isinstance(o["opens_public"], bool):
+                die(f"row {rid!r} open.opens_public is {o['opens_public']!r}; true or false")
+            if skips is None and types is None:
+                parts.append("{}")
+            if types is None:
+                parts.append("std::nullopt")
+            parts.append("true" if o["opens_public"] else "false")
         door = "OWToolOpen{" + ", ".join(parts) + "}"
     else:
         die(f"row {rid!r} open is {o!r}; an object or null")

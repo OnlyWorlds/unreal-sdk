@@ -238,10 +238,11 @@ OW_TEST(openers_the_baked_list_gives_the_sites_row_then_each_listed_tool_with_a_
     for (const OWTool& x : all) {
         if (x.rung != "listed" || !x.open || !x.open->world) continue;
         want.push_back(x.id);
-        // The public: a tool that needs the device is not there; one that needs an account says so.
+        // The public: a tool that needs the device is not there; one that needs an account says so, unless it opens a
+        // public world with none (Atlas at 9452529).
         if (x.open->needs && *x.open->needs == "device") continue;
         want_public.push_back(x.id);
-        want_public_state.push_back(x.open->needs ? OWOpeners::NeedsAnAccount : "");
+        want_public_state.push_back(x.open->needs && !x.open->opens_public ? OWOpeners::NeedsAnAccount : "");
     }
     for (const OWOpener& r : member.rows) got.push_back(r.id);
     t.Ok(got == want, "the site, then the list's order");
@@ -258,6 +259,10 @@ OW_TEST(openers_the_baked_list_gives_the_sites_row_then_each_listed_tool_with_a_
     }
     t.Ok(got_public == want_public, "the public's rows");
     t.Ok(got_public_state == want_public_state, "the public's words: an account tool's says it needs one");
+    bool atlas_live = false;
+    for (const OWTool& x : all)
+        if (x.id == "atlas") atlas_live = x.open && x.open->opens_public;
+    t.Ok(atlas_live, "Atlas opens a public world with no account (the list at 9452529)");
     t.Eq(std::string(OWTools::Commit).size(), size_t(40), "the pinned commit");
     t.Eq(std::string(OWTools::Sha256).size(), size_t(64), "the list's sha256");
 }

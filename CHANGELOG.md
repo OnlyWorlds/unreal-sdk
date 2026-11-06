@@ -7,6 +7,9 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWTools` repinned at the tools list's `9452529` (tools.json sha256 `8905defb…`), the list the TypeScript SDK
+  4.133.1 bakes: Atlas's row carries `opens_public: true` (its `needs` stays `account`), so a world's public page
+  offers Atlas live. The generator bakes the key only on a row that carries it.
 - A tools-list row can say it opens a public world with no account: `OWToolOpen::opens_public`, read from the row's
   `open.opens_public`. On a world's public page a row with `needs: account` and `opens_public: true` is live instead
   of "Needs an account"; anywhere else it reads as its `needs` says. Absent reads as false. A value that is not true or
