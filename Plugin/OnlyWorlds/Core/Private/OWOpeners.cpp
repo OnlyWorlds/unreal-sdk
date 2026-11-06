@@ -198,6 +198,9 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
         if (auto bad = CheckTemplate(r.id, "element", o.element)) return *bad;
         if (o.needs && *o.needs != Account && *o.needs != Device)
             return Mistake("tool " + r.id + ": open.needs is 'account', 'device' or null; got " + Quoted(*o.needs));
+        if (o.opens_public && !(o.needs && *o.needs == Account))
+            return Mistake("tool " + r.id + ": open.opens_public is true only beside needs 'account'; got needs " +
+                           (o.needs ? Quoted(*o.needs) : std::string("null")));
         const std::vector<std::string>& words = ElementMarks();
         for (const std::string& s : o.element_skips)
             if (std::find(words.begin(), words.end(), s) == words.end()) {
@@ -236,7 +239,9 @@ OWOpenersResult Rows(const std::vector<OWTool>& tools, bool element, const std::
         // The first that holds. A word the row needs (it cannot open now) comes before "Opens the world" (it opens,
         // somewhere else), so a world door alone that needs a sign-in says the sign-in.
         std::optional<std::string> state;
-        const bool account = o.needs && *o.needs == Account;
+        // What the row needs on this surface: a public page shows a public world, which a row that opens one opens with
+        // nothing signed in.
+        const bool account = o.needs && *o.needs == Account && !(visitor && o.opens_public);
         const std::string href = Fill(*tpl, world, type, id);
         if (surface.tool && r.client && *r.client == *surface.tool) state = YouAreHere;
         else if (offline(href)) state = NeedsAConnection;
@@ -449,6 +454,12 @@ OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, 
                 if (!v->IsString() || (v->Text() != Account && v->Text() != Device))
                     return Mistake("tool " + tool.id + ": open.needs is 'account', 'device' or null; got " + Show(*v));
                 door.needs = v->Text();
+            }
+            // True or false, absent for false; null, like any other value, is refused (the TypeScript reader's rule).
+            if (const OWJsonValue* v = o->Find("opens_public")) {
+                if (!v->IsBool())
+                    return Mistake("tool " + tool.id + ": open.opens_public is true or false; got " + Show(*v));
+                door.opens_public = v->AsBool();
             }
             // A list of words, absent or null for none; which words is Rows' check, as for a row built in code.
             if (const OWJsonValue* v = o->Find("element_skips"); v && !v->IsNull()) {

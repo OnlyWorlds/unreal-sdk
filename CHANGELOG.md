@@ -7,6 +7,11 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- A tools-list row can say it opens a public world with no account: `OWToolOpen::opens_public`, read from the row's
+  `open.opens_public`. On a world's public page a row with `needs: account` and `opens_public: true` is live instead
+  of "Needs an account"; anywhere else it reads as its `needs` says. Absent reads as false. A value that is not true or
+  false, or true beside a `needs` other than `account`, is refused by name. The same rule as the TypeScript SDK
+  4.133.0; the shared openers fixture at 110 cases.
 - A world drawn by the packaged game. The plugin's frame scene moves out of the frame test into the runtime,
   `OWFrame` (`Public/OWFrame.h`, C++): `RootMap` (the Map with no `parent_map`, its Pins with an x and a y),
   `MapImage` (the first `.png` under `media/<map id>/base-image/` among the world's files, a folder's or an

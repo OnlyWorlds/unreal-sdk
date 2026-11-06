@@ -19,7 +19,9 @@
 // either, world door or not: the tool opens other kinds of element, so its world is not offered from this one (the
 // type is read from the address, so no element body is needed; a world's menu reads no element types). For the
 // public audience (the signed-out reader) a row whose needs is "device" is not there, since a visitor's device holds no
-// world of this one's, and a row whose needs is "account" is there and says it needs one.
+// world of this one's, and a row whose needs is "account" is there and says it needs one, unless its open.opens_public
+// is true: its links open a public world with nothing signed in, so on a public page it needs nothing and reads as a
+// live row. Anywhere else the row reads as its needs says.
 // A lens and a moment on the address ride on no href.
 //
 // Each row's state, the first that holds: "You are here" for the surface's own tool (its client is surface.tool); then,
@@ -39,7 +41,8 @@
 // asked of an address with no element, an unknown key on the address, the surface or the options, a missing or unknown
 // audience, a surface value of the wrong type, an element given for a world's menu or naming another element than the
 // address, a tools row that is not one (a needs, an element_skips or an element_types word outside the list's format,
-// an empty or repeating element_types, or skips or element_types on a row with no element door, included).
+// an empty or repeating element_types, skips or element_types on a row with no element door, or an opens_public that
+// is not true or false or is true beside a needs other than "account", included).
 
 #include "OWAddress.h"
 #include "OWJson.h"
@@ -59,13 +62,16 @@ namespace OnlyWorlds {
 // room, hidden, proposed, map_space, reading_aid); empty when it opens every element, and on a list older than the key.
 // element_types is the element types the element door opens, as type words (OWAddress::TypeWords: "character"), each
 // once; absent (the list's null, or a list older than the key) when it opens every type. Only on a row with an element
-// door, and never an empty list.
+// door, and never an empty list. opens_public is true when the links open a public world for someone not signed in,
+// though needs is "account" for a private one: a public page offers the row live instead of "Needs an account", and
+// anywhere else the row reads as needs says. False when absent, and on a list older than the key; only beside "account".
 struct OWToolOpen {
     std::optional<std::string> world;
     std::optional<std::string> element;
     std::optional<std::string> needs;
     std::vector<std::string> element_skips = {};
     std::optional<std::vector<std::string>> element_types = std::nullopt;
+    bool opens_public = false;
 };
 
 // The keys of one tools list row that OpenersFor reads; the list's other keys are not kept.
