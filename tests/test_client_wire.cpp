@@ -10,9 +10,9 @@
 // apply to these calls, as the Godot SDK's test_client_wire.gd ports them.
 //
 // The fixture is keel's published document as the Unity SDK's tools/refresh_wire.py reduces it, vendored byte for byte
-// from unity-sdk (Packages/com.onlyworlds.sdk/Tests/Editor/Fixtures/wire/keel-wire.json at f89f03a; fetched
-// 2026-11-03T02:37+01:00 from https://www.onlyworlds.com/api/v2/openapi.json): tests/data/keel-wire.json,
-// sha256 4fddbede23aefd456dc8db5d6d5396aeba04f716565903a6b37466b77c9ba628, checked below. A trailing slash is ignored
+// from unity-sdk (Packages/com.onlyworlds.sdk/Tests/Editor/Fixtures/wire/keel-wire.json at 5e8f62d; fetched
+// 2026-11-07T19:12+01:00 from https://www.onlyworlds.com/api/v2/openapi.json): tests/data/keel-wire.json,
+// sha256 2c69999a1b4c680f28314de69d0c454ccb0e3571545b8fdcb57d1fd6fa938090, checked below. A trailing slash is ignored
 // when matching (keel serves both spellings). Answer keys go one level down there: data[].name, world.id.
 
 #include "ow_test.h"
@@ -39,7 +39,7 @@ using owtest::P;
 
 namespace {
 
-const char* const WireSha256 = "4fddbede23aefd456dc8db5d6d5396aeba04f716565903a6b37466b77c9ba628";
+const char* const WireSha256 = "2c69999a1b4c680f28314de69d0c454ccb0e3571545b8fdcb57d1fd6fa938090";
 const std::string Base = "https://example.test/api/v2";
 
 std::string WirePath() { return P().root + "/tests/data/keel-wire.json"; }
@@ -305,7 +305,7 @@ OW_TEST(client_wire_the_fixture_is_the_vendored_bytes) {
     t.Ok(OWFiles::Read(WirePath(), bytes), "tests/data/keel-wire.json is there");
     t.Eq(owtest::Sha256Hex(bytes.data(), bytes.size()), WireSha256, "unity-sdk 37d2cf6's copy, byte for byte");
     const OWJsonValue* fetched = Wire().Find("fetched");
-    t.Eq(fetched ? fetched->Text() : "", "2026-11-03T02:37+01:00", "");
+    t.Eq(fetched ? fetched->Text() : "", "2026-11-07T19:12+01:00", "");
     const OWJsonValue* paths = Wire().Find("paths");
     t.Ok(paths && paths->Size() > 300, "the document read whole");
 }
