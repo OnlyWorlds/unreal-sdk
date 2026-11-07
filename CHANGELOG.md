@@ -201,6 +201,10 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.109` (canonical `00.34.00` unchanged). The calendar profile's refusal list now says an
+  era's `year_base` is refused when it is "present and not 0 or 1", as its field table always did, and its fixture
+  gains `refuse-year-base-five` (77 cases, 43 refusals). `OWCalendar` refused it already; no code change. The
+  generated stamps moved, and the calendar test pins the new fixture's sha256 and counts.
 - Schema pin to `v0.34.0-dist.108` (canonical `00.34.00` unchanged; descriptions only, canonical PR 20: no field, type,
   link, wire, fixture or walk change). Seventeen time-field descriptions on thirteen types say one thing, "in the
   world's time unit (World `time_basic_unit`)"; `Event.constructs` reads "concepts, systems or built entities";
