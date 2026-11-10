@@ -1060,6 +1060,12 @@ struct Reader {
                 const OWJsonValue* f = body.Find(k);
                 row.Set(k, f ? *f : OWJsonValue::Null());
             }
+            // Serial 114: supertype and subtype where the served body holds one as a string with something left after
+            // trimming White_Space, carried as stored (never trimmed); anything else gives no key.
+            for (const char* k : {"supertype", "subtype"}) {
+                const OWJsonValue* f = body.Find(k);
+                if (f && f->IsString() && !OWMessage::Trim(f->Text()).empty()) row.Set(k, *f);
+            }
             // The description up to its first CR or LF, and none the body does not give as text (the profile's owner,
             // 2026-10-30, as the npm and Python packages read it; keel cut at LF only and wrote "" for none).
             if (const OWJsonValue* d = body.Find("description"); r.show == "first_line" && d && d->IsString())

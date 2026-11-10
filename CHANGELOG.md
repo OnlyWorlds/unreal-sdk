@@ -214,6 +214,16 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.114` (canonical `00.34.00` unchanged, no schema file moved). A lens's short rows
+  (`show` `first_line` or `name`) now carry `supertype` and `subtype`, each only where the body the reader is served
+  holds it as a string with something left after trimming White_Space, as stored (never trimmed): `OWLens::Resolve`'s
+  rows do, and the lens fixture's nine new cases pass (210 in all). Parity with the TypeScript SDK 4.151.0. The review
+  page's new rule 5 (an object holding a key is a mark, whatever its keys) is how `OWLens::IsProposed` already read
+  it; npm's two vectors join the review cases. The report page's rule 8 (a `consequences` line may stand for a change
+  made to many, with no address) binds a reader of report lines, which this SDK has none of. `views.json` is version
+  2 (the order a page draws its fields in) with a fixture of 41 cases; both vendored, still with no reader here. The
+  lens page's `lenses_from` gains `none`, which the client hands on as served. The generated files moved their stamp
+  lines only; the lens and room tests pin the fixtures' new sha256.
 - Schema pin to `v0.34.0-dist.113` (canonical `00.34.00` unchanged, no schema file moved). The serial adds two
   presentation files at the distribution's root, `views.json` (how a report, a charter, a message and a line in a
   room are shown: the one sentence, what leads, what folds, the layout, the marks at a page's head) and its fixture,
