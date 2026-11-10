@@ -214,6 +214,14 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.113` (canonical `00.34.00` unchanged, no schema file moved). The serial adds two
+  presentation files at the distribution's root, `views.json` (how a report, a charter, a message and a line in a
+  room are shown: the one sentence, what leads, what folds, the layout, the marks at a page's head) and its fixture,
+  `views.fixture.json`. This SDK vendors both and has no reader of them yet: a kind is drawn as its type is. The room
+  page now says the order of its pairs carries no meaning (no pair or case moved; the tests still hold the fixture's
+  order, which is stricter than the page), and two texts changed in words only (the report page's example, one
+  checks fixture case's description). The generated files moved their stamp lines only; the room test pins the
+  fixture's new sha256.
 - Schema pin to `v0.34.0-dist.112` (canonical `00.34.00` unchanged, no schema file moved). A report is a room element:
   `OWLens::RoomPairs()` holds the room profile's tenth pair, `narrative/report`, third in the fixture's order, so
   `OWLens::IsRoomElement` (and the plugin's `UOWLens::IsRoomElement`) answers true for a Narrative with supertype
