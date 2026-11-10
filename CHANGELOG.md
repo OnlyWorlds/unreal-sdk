@@ -18,7 +18,7 @@ Nothing is released yet; the history before this file is in the git log.
   is no element, a Map row without one no layout map; the last row served for an id) and counts a Pin whose element
   it cannot see. A caller's mistake (a `map` that is not an object, `maps` or `pins` not a list) is named in `error`
   and reads nothing. Parity with the TypeScript SDK 4.142.0's `layoutOf` and the Python package 0.110.0's
-  `layout_of`: every one of the fixture's 17 `layout_cases`, whole answers in key order, and the two packages' vectors
+  `layout_of`: every one of the fixture's 21 `layout_cases`, whole answers in key order, and the two packages' vectors
   beyond the fixture. `MapSpaceOf` is unchanged. Core only: there is no Blueprint door.
 - `OWTools` repinned at the tools list's `9452529` (tools.json sha256 `8905defb…`), the list the TypeScript SDK
   4.133.1 bakes: Atlas's row carries `opens_public: true` (its `needs` stays `account`), so a world's public page
@@ -214,6 +214,11 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.111` (canonical `00.34.00` unchanged, no schema file moved). Four more `layout_cases`
+  (twenty-one: code point order, a repeated Pin id, a Pin row and a Map row without a string id), the page's sentence
+  that a Map row without a string id is no Map, and a case that names the Map it reads by `map_index` (positions in
+  its elements) when the row has no id; the map-space test reads every row a case names. `LayoutOf` needed no change.
+  The generated stamps moved, and the map-space test pins the new fixture's sha256.
 - Schema pin to `v0.34.0-dist.110` (canonical `00.34.00` unchanged, no schema file moved). The map-space profile
   gains its layout keys, rules 8 to 10 (`x_layout` on a Map, its ground, `x_hand` on a Pin), and a second, small
   reading of one Map, with seventeen `layout_cases` beside the fixture's `cases`, which keep their 34 entries

@@ -1,4 +1,4 @@
-// OWMapSpace on the map-space profile's conformance fixture (schema-dist profiles/map-space.fixture.json, dist.110's
+// OWMapSpace on the map-space profile's conformance fixture (schema-dist profiles/map-space.fixture.json, dist.111's
 // copy, its sha256 held to MANIFEST.json): every case by name, its elements read as served and the whole answer
 // compared as bytes (key order, list order and each number's spelling as JSON.stringify writes it); then the profile's
 // invariants over every case (four keys in order, read twice the same bytes, the rows held one per id read forwards and
@@ -24,8 +24,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.110's MANIFEST.json records it.
-const char* const DistSha256 = "33ce47811bdc5715fa2f0617fb34c505e698e8ea8a66c725b7e7c8f9ac804d76";
+// The fixture's sha256 as dist.111's MANIFEST.json records it.
+const char* const DistSha256 = "6e8e48e38f59a644b2b3ca54cb9e4abde151d8ba99c0072a1677d27c99cb4526";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/map-space.fixture.json"; }
 
@@ -113,7 +113,7 @@ OWJsonValue Served(const OWJsonValue& elements) {
 OW_TEST(map_space_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the map-space fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.110's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.111's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -308,28 +308,74 @@ std::vector<const OWJsonValue*> LayoutCases() {
     return out;
 }
 
-// A layout case read as the page says: its Map row with the case's id, its Map rows, its Pin rows.
-OWMapLayout ReadLayout(const OWJsonValue& c) {
+// A layout case read as the page says, once per Map row it names: by `map`, the one Map row with that string id; by
+// `map_index` (since dist.111, for rows with no id to name them by), each row at those positions in its elements,
+// every one a Map row. `maps` are the case's Map rows, `pins` its Pin rows. A case names its Map one way, never both and
+// never neither: a lookup by an absent id finds a row with no id by accident and reads one row where the case names
+// two. What is wrong with the case itself goes in `problem`, and nothing is read.
+std::vector<OWMapLayout> ReadLayouts(const OWJsonValue& c, std::string* problem = nullptr) {
+    auto refuse = [&](const std::string& why) {
+        if (problem) *problem = why;
+        return std::vector<OWMapLayout>{};
+    };
+    const OWJsonValue& elements = ElementsOf(c);
     OWJsonValue maps = OWJsonValue::Array(), pins = OWJsonValue::Array();
-    const OWJsonValue* map = nullptr;
-    for (const OWJsonValue& e : ElementsOf(c).Items()) {
-        if (Str(e, "type") == "map") {
-            maps.Push(e);
-            if (Str(e, "id") == Str(c, "map")) map = &e;
-        }
+    for (const OWJsonValue& e : elements.Items()) {
+        if (Str(e, "type") == "map") maps.Push(e);
         if (Str(e, "type") == "pin") pins.Push(e);
     }
-    return OWMapSpace::LayoutOf(map ? *map : OWJsonValue(), maps, pins);
+    const OWJsonValue* by_id = c.Find("map");
+    const OWJsonValue* by_index = c.Find("map_index");
+    if (!by_id == !by_index) return refuse("a case names its Map by map or by map_index, one of the two");
+    std::vector<const OWJsonValue*> rows;
+    if (by_id) {
+        if (!by_id->IsString()) return refuse("map is an id");
+        for (const OWJsonValue& e : elements.Items()) {
+            const OWJsonValue* id = e.Find("id");
+            if (Str(e, "type") == "map" && id && id->IsString() && id->Text() == by_id->Text()) rows.push_back(&e);
+        }
+        if (rows.size() != 1) return refuse("no one Map row with the case's id");
+    } else {
+        if (!by_index->IsArray() || by_index->Items().empty()) return refuse("map_index is a list of positions");
+        for (const OWJsonValue& i : by_index->Items()) {
+            std::optional<int64_t> at = OWMapSpace::WholeOf(&i);
+            if (!at || *at < 0 || *at >= int64_t(elements.Items().size()) || Str(elements.Items()[size_t(*at)], "type") != "map")
+                return refuse("position " + OWJson::Stringify(i) + " is no Map row of the elements");
+            rows.push_back(&elements.Items()[size_t(*at)]);
+        }
+    }
+    std::vector<OWMapLayout> out;
+    for (const OWJsonValue* row : rows) out.push_back(OWMapSpace::LayoutOf(*row, maps, pins));
+    return out;
+}
+
+// A case that names one Map row (by its id): its one answer.
+OWMapLayout ReadLayout(const OWJsonValue& c) {
+    std::vector<OWMapLayout> all = ReadLayouts(c);
+    return all.size() == 1 ? all[0] : OWMapSpace::LayoutOf(OWJsonValue(), OWJsonValue(), OWJsonValue());
 }
 
 void LayoutCase(owtest::T& t, const OWJsonValue& c) {
     const OWJsonValue* want = c.Find("want");
     if (!c.Find("elements") || !want || !want->IsObject()) return t.Fail("the case has no elements or no want");
-    OWMapLayout got = ReadLayout(c);
-    t.Eq(got.error, std::string(), "no caller's mistake");
-    OWJsonValue answer = got.ToJson();
-    t.Ok(answer.Keys() == std::vector<std::string>{"layout", "ground", "hand"}, "the three keys, in order");
-    t.Ok(Bytes(answer) == Bytes(*want), "the whole answer: gave " + Compact(answer) + ", the case says " + Compact(*want));
+    std::string problem;
+    std::vector<OWMapLayout> answers = ReadLayouts(c, &problem);
+    t.Eq(problem, std::string(), "the case names its Map rows");
+    t.Ok(!answers.empty(), "a Map row read");
+    for (size_t n = 0; n < answers.size(); ++n) {
+        const std::string row = "row " + std::to_string(n + 1);
+        t.Eq(answers[n].error, std::string(), row + ": no caller's mistake");
+        OWJsonValue answer = answers[n].ToJson();
+        t.Ok(answer.Keys() == std::vector<std::string>{"layout", "ground", "hand"}, row + ": the three keys, in order");
+        t.Ok(Bytes(answer) == Bytes(*want),
+             row + ": the whole answer: gave " + Compact(answer) + ", the case says " + Compact(*want));
+    }
+}
+
+std::string AllBytes(const std::vector<OWMapLayout>& answers) {
+    std::string out;
+    for (const OWMapLayout& a : answers) out += Bytes(a.ToJson()) + "\n";
+    return out;
 }
 
 OWMapLayout Layout(const char* map, const char* maps, const char* pins) {
@@ -340,14 +386,46 @@ const std::string NoLayout = R"({"layout": null,"ground": null,"hand": []})";
 
 }  // namespace
 
-OW_TEST(map_space_fixture_holds_seventeen_layout_cases_beside_its_cases) {
+OW_TEST(map_space_fixture_holds_twenty_one_layout_cases_beside_its_cases) {
     const OWJsonValue* cases = Fixture()->Find("layout_cases");
     t.Ok(cases && cases->IsArray(), "layout_cases beside cases");
     std::set<std::string> names;
     for (const OWJsonValue* c : LayoutCases()) names.insert(Str(*c, "name"));
-    t.Eq(LayoutCases().size(), size_t(17), "17 layout cases");
-    t.Eq(names.size(), size_t(17), "each name its own");
+    t.Eq(LayoutCases().size(), size_t(21), "21 layout cases (17 at dist.110)");
+    t.Eq(names.size(), size_t(21), "each name its own");
     t.Eq(Cases().size(), size_t(34), "the map-space reading's 34 cases beside them");
+}
+
+// The replay reads every row a case names: one per `map` case, each of a `map_index` case's positions (dist.111's
+// map-without-a-string-id names two, a row with no id and one whose id is 7).
+OW_TEST(map_space_layout_the_replay_reads_every_row_a_case_names) {
+    std::vector<std::string> by_index;
+    size_t rows = 0;
+    std::string problems;
+    for (const OWJsonValue* c : LayoutCases()) {
+        if (c->Find("map_index")) by_index.push_back(Str(*c, "name"));
+        std::string problem;
+        rows += ReadLayouts(*c, &problem).size();
+        if (!problem.empty()) problems += Str(*c, "name") + ": " + problem + "; ";
+    }
+    t.Ok(by_index == std::vector<std::string>{"map-without-a-string-id"}, "dist.111 names one case's Maps by map_index");
+    for (const OWJsonValue* c : LayoutCases())
+        if (Str(*c, "name") == "map-without-a-string-id") t.Eq(ReadLayouts(*c).size(), size_t(2), "its two rows, each read");
+    t.Eq(rows, size_t(22), "every row a case names, read once");
+    t.Eq(problems, std::string(), "every case names its Map rows");
+}
+
+// The core's JSON joins an escaped surrogate pair into one code point (four UTF-8 bytes), which sorts after U+FFFF
+// (measured, as the fixture's hand-in-code-point-order holds its ids raw, not escaped).
+OW_TEST(map_space_layout_an_escaped_surrogate_pair_is_one_code_point_in_code_point_order) {
+    const std::string bs(1, '\x5c');
+    const std::string text = R"([{"type": "pin", "id": "p)" + bs + "ud83d" + bs + R"(udea2", "map": "m"}, {"type": "pin", "id": "p)" + bs +
+                             R"(uffff", "map": "m"}])";
+    OWJsonValue pins = Parse(text);
+    t.Ok(pins.IsArray() && pins.Items().size() == 2, "the text parses");
+    t.Eq(pins.IsArray() ? Str(pins.Items()[0], "id") : std::string(), std::string("p\xF0\x9F\x9A\xA2"), "the pair is one code point");
+    OWMapLayout a = OWMapSpace::LayoutOf(Parse(R"({"type": "map", "id": "m", "x_layout": {"method": "hand"}})"), Parse("[]"), pins);
+    t.Ok(a.hand == std::vector<std::string>{"p\xEF\xBF\xBF", "p\xF0\x9F\x9A\xA2"}, "U+FFFF first");
 }
 
 OW_CASES(map_space_layout_fixture_cases) {
@@ -380,8 +458,8 @@ OW_TEST(map_space_layout_never_moves_the_rows) {
     for (const OWJsonValue* c : LayoutCases()) {
         const std::string name = Str(*c, "name");
         const std::string before = Bytes(ElementsOf(*c));
-        const std::string once = Bytes(ReadLayout(*c).ToJson());
-        t.Eq(Bytes(ReadLayout(*c).ToJson()), once, name + ": read twice, the same bytes");
+        const std::string once = AllBytes(ReadLayouts(*c));
+        t.Eq(AllBytes(ReadLayouts(*c)), once, name + ": read twice, the same bytes");
         t.Eq(Bytes(ElementsOf(*c)), before, name + ": the rows unchanged");
     }
     for (const OWJsonValue* c : LayoutCases()) {
