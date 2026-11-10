@@ -1,4 +1,4 @@
-// OWMapSpace on the map-space profile's conformance fixture (schema-dist profiles/map-space.fixture.json, dist.106's
+// OWMapSpace on the map-space profile's conformance fixture (schema-dist profiles/map-space.fixture.json, dist.110's
 // copy, its sha256 held to MANIFEST.json): every case by name, its elements read as served and the whole answer
 // compared as bytes (key order, list order and each number's spelling as JSON.stringify writes it); then the profile's
 // invariants over every case (four keys in order, read twice the same bytes, the rows held one per id read forwards and
@@ -24,8 +24,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.106's MANIFEST.json records it.
-const char* const DistSha256 = "7622c9cc44f7254481b29add8846e2077e431353f993e8fc95702d7a530279af";
+// The fixture's sha256 as dist.110's MANIFEST.json records it.
+const char* const DistSha256 = "33ce47811bdc5715fa2f0617fb34c505e698e8ea8a66c725b7e7c8f9ac804d76";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/map-space.fixture.json"; }
 
@@ -113,7 +113,7 @@ OWJsonValue Served(const OWJsonValue& elements) {
 OW_TEST(map_space_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the map-space fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.106's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.110's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);

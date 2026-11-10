@@ -201,6 +201,10 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.110` (canonical `00.34.00` unchanged, no schema file moved). The map-space profile
+  gains its layout keys, rules 8 to 10 (`x_layout` on a Map, its ground, `x_hand` on a Pin), and a second, small
+  reading of one Map, with seventeen `layout_cases` beside the fixture's `cases`, which keep their 34 entries
+  unchanged. The generated stamps moved, and the map-space test pins the new fixture's sha256.
 - Schema pin to `v0.34.0-dist.109` (canonical `00.34.00` unchanged). The calendar profile's refusal list now says an
   era's `year_base` is refused when it is "present and not 0 or 1", as its field table always did, and its fixture
   gains `refuse-year-base-five` (77 cases, 43 refusals). `OWCalendar` refused it already; no code change. The
