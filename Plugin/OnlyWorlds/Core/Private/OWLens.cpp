@@ -248,9 +248,10 @@ const std::vector<std::pair<std::string, std::string>> Dates = {
     {"location", "founding_date"},    {"collective", "formation_date"}, {"law", "date"},
     {"title", "grant_date"},          {"construct", "start_date"}, {"event", "start_date"},
     {"narrative", "start_date"},      {"relation", "start_date"},  {"zone", "start_date"}};
-const std::vector<std::string> Rooms = {"narrative/message", "narrative/board", "relation/work item",
-                                        "construct/spec",    "relation/heart",  "relation/take",
-                                        "relation/vote",     "event/sitting",   "character/member"};
+const std::vector<std::string> Rooms = {"narrative/message",  "narrative/board", "narrative/report",
+                                        "relation/work item", "construct/spec",  "relation/heart",
+                                        "relation/take",      "relation/vote",   "event/sitting",
+                                        "character/member"};
 const std::vector<std::string> Aids = {"law/charter", "construct/guide", "construct/domain"};
 const std::vector<std::string> Reasons = {"budget", "types",  "window", "stale", "undated", "after_as_of",
                                           "anchor_not_visible", "not_visible", "hops_not_served"};

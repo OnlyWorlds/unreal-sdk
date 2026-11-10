@@ -1,4 +1,4 @@
-// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.104's copy, its sha256
+// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.112's copy, its sha256
 // held to MANIFEST.json): the pair and the template, the legal values of x_lens, where a seat's choice lives, every
 // resolution over the fixture's nine worlds and their readers, the invariants, the graph kind's 54 cases (each its
 // own world, through OWGraph::WorldGraph, the want compared whole) and the degree kind's 5 (OWGraph::DegreeOf and
@@ -25,8 +25,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.104's MANIFEST.json records it.
-const char* const DistSha256 = "7f36aff43da7494940464f0e09a7350de3fe92e7ea5e6f7a4acafcde4e244135";
+// The fixture's sha256 as dist.112's MANIFEST.json records it.
+const char* const DistSha256 = "4529d81be00f09a94de34e726fab9df7586c03c62abdbf8955b5ac953e3bf1ce";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/lens.fixture.json"; }
 
@@ -311,7 +311,7 @@ bool Runs(const std::string& kind) {
 OW_TEST(lens_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the lens fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.104's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.112's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);

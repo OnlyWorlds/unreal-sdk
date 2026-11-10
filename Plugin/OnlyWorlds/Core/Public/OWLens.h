@@ -92,8 +92,8 @@ const std::vector<std::string>& AnchorFields();
 const std::vector<std::string>& TypeOrder();
 // The date table, type to its date field, in the fixture's order; the ten types not in it are timeless.
 const std::vector<std::pair<std::string, std::string>>& DateTable();
-// The room profile's nine pairs and the reading aids' three, type and supertype folded with a slash between: the words
-// `types` may name beside the 22 slugs.
+// The room profile's ten pairs (the tenth, narrative/report, at serial 112) and the reading aids' three, type and
+// supertype folded with a slash between, in the fixture's order: the words `types` may name beside the 22 slugs.
 const std::vector<std::string>& RoomPairs();
 const std::vector<std::string>& ReadingAidPairs();
 // The cut reasons, one closed list in the profile's order, and the owner's two.
@@ -137,7 +137,9 @@ std::optional<std::string> CheckKeys(const OWJsonValue* x_lens);
 
 // The lenses a seat reads, by id: its membership's choice when it made one (a list; an empty list is a choice), else
 // its Character's x_lens_uses, else none. The membership wins whole. The strings of the list, each once in the order
-// given, "" dropped; nullptr, null or a value that is not a list is no choice.
+// given, "" dropped; nullptr, null or a value that is not a list is no choice. A null membership is no membership (a
+// folder world); a keel membership that never chose is not this reading's case: keel starts that seat with its Titles'
+// lenses and never reads x_lens_uses (the lens profile, serial 112).
 std::vector<std::string> LensesInUse(const OWJsonValue* membership, const OWJsonValue* x_lens_uses);
 
 // An element's date as the profile reads it: the whole number in its type's date field (the type trimmed and folded),

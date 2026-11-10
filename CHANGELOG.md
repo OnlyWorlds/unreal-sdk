@@ -214,6 +214,15 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.112` (canonical `00.34.00` unchanged, no schema file moved). A report is a room element:
+  `OWLens::RoomPairs()` holds the room profile's tenth pair, `narrative/report`, third in the fixture's order, so
+  `OWLens::IsRoomElement` (and the plugin's `UOWLens::IsRoomElement`) answers true for a Narrative with supertype
+  `Report` that carries `x_room_of`, a lore view leaves it out and a lens's `types` may name it; without the mark it
+  stays lore. The room fixture's three new cases pass (35 in all, 17 in the room) and the lens fixture's `room_pairs`
+  is held to the pairs in the new order. The new report profile's key `x_report_answers` and the packet profile's new
+  optional `x_packet_for` have no reader here (none in the TypeScript SDK or the Python package either);
+  `LensesInUse`'s null membership is a folder world, as the lens page now says, its behaviour unchanged. The
+  generated files moved their stamp lines only; the room and lens tests pin the fixtures' new sha256.
 - Schema pin to `v0.34.0-dist.111` (canonical `00.34.00` unchanged, no schema file moved). Four more `layout_cases`
   (twenty-one: code point order, a repeated Pin id, a Pin row and a Map row without a string id), the page's sentence
   that a Map row without a string id is no Map, and a case that names the Map it reads by `map_index` (positions in
