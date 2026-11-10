@@ -4,7 +4,8 @@
 // coordinates in the Map's own pixels, counted from its bottom left, z upward (an elevation, never a height); looks,
 // cameras, walls, doors and units are a drawing tool's. It adds nothing to the world and stores nothing. The npm
 // SDK's mapSpace and the Python package's map_space give the same answer; held to the profile's conformance fixture
-// (profiles/map-space.fixture.json).
+// (profiles/map-space.fixture.json). Since serial 110 also the profile's second, small reading, LayoutOf: one Map's
+// layout keys (`x_layout` on the Map, `x_hand` on its Pins), held to the fixture's `layout_cases`.
 
 #include "OWJson.h"
 
@@ -87,6 +88,27 @@ struct OWWorldMapSpace {
     OWJsonValue ToJson() const;
 };
 
+// What LayoutOf answers: one Map's layout keys (the map-space profile's rules 8 to 10, serial 110). How a method places
+// Pins, and its own settings, are a layout tool's and are not read: a tool that cannot run a method draws the Pins
+// where they are and never lays them out again.
+struct OWMapLayout {
+    // The Map's `x_layout.method` when `x_layout` is an object whose `method` is a non-empty string ("hand" for a
+    // board; a method no page names answers itself), else none: the Map is not a layout map.
+    std::optional<std::string> layout;
+    // When `layout` is set: the id in `x_layout.settings.ground.map` when it names a served Map other than this one,
+    // else none. Its size is not returned: the served Map's own `width` and `height` win, and the caller holds it.
+    std::optional<std::string> ground;
+    // The ids of this Map's Pins a new lay-out keeps where they are, by id in code point order: every Pin on a board,
+    // the Pins whose `x_hand` is exactly `true` on any other layout map, none on a Map that is not a layout map.
+    std::vector<std::string> hand;
+    // Empty unless the call was a mistake (a map that is not an object, maps or pins that are not a list): it names the
+    // mistake and nothing is read.
+    std::string error;
+
+    // The answer in the fixture's shape, {layout, ground, hand}, all three, in that order.
+    OWJsonValue ToJson() const;
+};
+
 namespace OWMapSpace {
 
 // The reasons `out` counts, in the answer's order: no_point, no_markers, dangling, no_map.
@@ -116,6 +138,21 @@ std::optional<int64_t> WholeOf(const OWJsonValue* v);
 // Ids compare by code point (a UTF-8 id's bytes), never by UTF-16 unit: the same input gives the same answer, byte for
 // byte. Pure.
 OWWorldMapSpace MapSpaceOf(const OWJsonValue& elements);
+
+// The method word of a board, a Map whose Pins are all placed by hand.
+inline constexpr const char* Board = "hand";
+
+// layoutOf(map, maps, pins), the profile's layout reading of one Map: `map` the Map read, `maps` the Maps the reader is
+// served, `pins` every Pin the caller holds, of any Map, as served (two JSON lists). The reader keeps the Pins whose
+// `map` names this Map's id, so a caller passes every Pin it has. Rows are read as MapSpaceOf reads them: a row that is
+// not an object or has no non-empty string `id` is no element (a Map without one is no layout map), and of two Pin
+// rows with one id the last served is read. The Map is a layout map when its `x_layout` is an object whose `method` is
+// a non-empty string; anything else (absent, null, a string, an object without a string `method`, "") is no layout,
+// and its ground and Pins are not read. On a board (`method` "hand") every Pin of the Map is kept, marked or not; on
+// any other layout map only the Pins whose `x_hand` is the JSON `true` (never "true" or 1); on a Map that is not a
+// layout map none, whatever its Pins carry. A Pin whose element the reader cannot see is still a Pin. Ids in code
+// point order. Pure; MapSpaceOf reads neither key. The npm SDK's layoutOf and the Python package's layout_of.
+OWMapLayout LayoutOf(const OWJsonValue& map, const OWJsonValue& maps, const OWJsonValue& pins);
 
 }  // namespace OWMapSpace
 }  // namespace OnlyWorlds

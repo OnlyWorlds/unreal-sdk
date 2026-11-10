@@ -46,6 +46,16 @@ OWJsonValue PointJson(const OWMapSpacePoint& p) {
 
 }  // namespace
 
+OWJsonValue OWMapLayout::ToJson() const {
+    OWJsonValue answer = OWJsonValue::Object();
+    answer.Set("layout", TextOrNull(layout));
+    answer.Set("ground", TextOrNull(ground));
+    OWJsonValue ids = OWJsonValue::Array();
+    for (const std::string& h : hand) ids.Push(Text(h));
+    answer.Set("hand", std::move(ids));
+    return answer;
+}
+
 OWJsonValue OWWorldMapSpace::ToJson() const {
     OWJsonValue answer = OWJsonValue::Object();
     OWJsonValue ms = OWJsonValue::Array();
@@ -271,6 +281,57 @@ OWWorldMapSpace MapSpaceOf(const OWJsonValue& elements) {
         row.parent_map = IdOf(mp->Find("parent_map"));
         answer.maps.push_back(std::move(row));
     }
+    return answer;
+}
+
+OWMapLayout LayoutOf(const OWJsonValue& map, const OWJsonValue& maps, const OWJsonValue& pins) {
+    OWMapLayout answer;
+    if (!map.IsObject()) {
+        answer.error = "layoutOf: map is one Map element.";
+        return answer;
+    }
+    if (!maps.IsArray()) {
+        answer.error = "layoutOf: maps is a list of Map elements.";
+        return answer;
+    }
+    if (!pins.IsArray()) {
+        answer.error = "layoutOf: pins is a list of Pin elements.";
+        return answer;
+    }
+    const std::optional<std::string> id = IdOf(map.Find("id"));
+    if (!id) return answer;
+
+    // Rule 8: the mark is x_layout alone, an object with a non-empty string method.
+    const OWJsonValue* recipe = map.Find("x_layout");
+    if (!recipe || !recipe->IsObject()) return answer;
+    const std::optional<std::string> method = IdOf(recipe->Find("method"));
+    if (!method) return answer;
+
+    // Rule 9: the ground is a served Map other than this one, named by settings.ground.map.
+    const OWJsonValue* settings = recipe->Find("settings");
+    const OWJsonValue* ground = settings && settings->IsObject() ? settings->Find("ground") : nullptr;
+    const std::optional<std::string> named = ground && ground->IsObject() ? IdOf(ground->Find("map")) : std::nullopt;
+    if (named && *named != *id) {
+        for (const OWJsonValue& m : maps.Items())
+            if (m.IsObject() && IdOf(m.Find("id")) == named) {
+                answer.ground = named;
+                break;
+            }
+    }
+
+    // Rule 10: one row per Pin id, the last served; this Map's Pins, every one on a board, else the marked ones.
+    std::map<std::string, const OWJsonValue*, ByCodePoint> held;
+    for (const OWJsonValue& p : pins.Items()) {
+        if (!p.IsObject()) continue;
+        if (std::optional<std::string> pid = IdOf(p.Find("id"))) held[*pid] = &p;
+    }
+    const bool board = *method == Board;
+    for (const auto& [pid, p] : held) {
+        if (IdOf(p->Find("map")) != id) continue;
+        const OWJsonValue* mark = p->Find("x_hand");
+        if (board || (mark && mark->IsBool() && mark->AsBool())) answer.hand.push_back(pid);
+    }
+    answer.layout = method;
     return answer;
 }
 

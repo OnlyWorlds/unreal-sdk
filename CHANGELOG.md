@@ -7,6 +7,19 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWMapSpace::LayoutOf(map, maps, pins)`, the map-space profile's layout reading (rules 8 to 10, serial 110): one
+  Map's `OWMapLayout`, whose `ToJson()` is `{layout, ground, hand}`. `layout` is the Map's `x_layout.method` when
+  `x_layout` is an object whose `method` is a non-empty string (`"hand"` a board, `OWMapSpace::Board`; a method no page
+  names answers itself), else none. `ground`, only on a layout map, is the id in `x_layout.settings.ground.map` when it
+  names a Map in `maps` other than this one, else none; its size is not returned. `hand` is the ids, by code point, of
+  this Map's Pins a new lay-out keeps: every Pin on a board, the Pins whose `x_hand` is the JSON `true` on any other
+  layout map (`1`, `1.0` and `"true"` are not), none on a plain Map. `pins` may hold every Pin the caller has: the
+  reader keeps those whose `map` names this Map, reads rows as `MapSpaceOf` does (a row without a non-empty string id
+  is no element, a Map row without one no layout map; the last row served for an id) and counts a Pin whose element
+  it cannot see. A caller's mistake (a `map` that is not an object, `maps` or `pins` not a list) is named in `error`
+  and reads nothing. Parity with the TypeScript SDK 4.142.0's `layoutOf` and the Python package 0.110.0's
+  `layout_of`: every one of the fixture's 17 `layout_cases`, whole answers in key order, and the two packages' vectors
+  beyond the fixture. `MapSpaceOf` is unchanged. Core only: there is no Blueprint door.
 - `OWTools` repinned at the tools list's `9452529` (tools.json sha256 `8905defb…`), the list the TypeScript SDK
   4.133.1 bakes: Atlas's row carries `opens_public: true` (its `needs` stays `account`), so a world's public page
   offers Atlas live. The generator bakes the key only on a row that carries it.
