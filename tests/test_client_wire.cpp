@@ -10,9 +10,9 @@
 // apply to these calls, as the Godot SDK's test_client_wire.gd ports them.
 //
 // The fixture is keel's published document as the Unity SDK's tools/refresh_wire.py reduces it, vendored byte for byte
-// from unity-sdk (Packages/com.onlyworlds.sdk/Tests/Editor/Fixtures/wire/keel-wire.json at f54fc3f; fetched
-// 2026-11-09T09:22+01:00 from https://www.onlyworlds.com/api/v2/openapi.json): tests/data/keel-wire.json,
-// sha256 64fdad99742b32ac5c7c973a685dd3b2953b73ec9438f999eaaa3a752f662fbc, checked below. A trailing slash is ignored
+// from unity-sdk (Packages/com.onlyworlds.sdk/Tests/Editor/Fixtures/wire/keel-wire.json at ef1c208; fetched
+// 2026-11-10T02:31+01:00 from https://www.onlyworlds.com/api/v2/openapi.json): tests/data/keel-wire.json,
+// sha256 9f06a8c703cb78740ffdbd0bb91f92a3e385e6a33afed3e9333f765fe81d1848, checked below. A trailing slash is ignored
 // when matching (keel serves both spellings). Answer keys go one level down there: data[].name, world.id.
 
 #include "ow_test.h"
@@ -39,7 +39,7 @@ using owtest::P;
 
 namespace {
 
-const char* const WireSha256 = "64fdad99742b32ac5c7c973a685dd3b2953b73ec9438f999eaaa3a752f662fbc";
+const char* const WireSha256 = "9f06a8c703cb78740ffdbd0bb91f92a3e385e6a33afed3e9333f765fe81d1848";
 const std::string Base = "https://example.test/api/v2";
 
 std::string WirePath() { return P().root + "/tests/data/keel-wire.json"; }
@@ -303,9 +303,9 @@ const std::vector<OWRequest>& Record() {
 OW_TEST(client_wire_the_fixture_is_the_vendored_bytes) {
     OWBytes bytes;
     t.Ok(OWFiles::Read(WirePath(), bytes), "tests/data/keel-wire.json is there");
-    t.Eq(owtest::Sha256Hex(bytes.data(), bytes.size()), WireSha256, "unity-sdk 37d2cf6's copy, byte for byte");
+    t.Eq(owtest::Sha256Hex(bytes.data(), bytes.size()), WireSha256, "unity-sdk ef1c208's copy, byte for byte");
     const OWJsonValue* fetched = Wire().Find("fetched");
-    t.Eq(fetched ? fetched->Text() : "", "2026-11-09T09:22+01:00", "");
+    t.Eq(fetched ? fetched->Text() : "", "2026-11-10T02:31+01:00", "");
     const OWJsonValue* paths = Wire().Find("paths");
     t.Ok(paths && paths->Size() > 300, "the document read whole");
 }
