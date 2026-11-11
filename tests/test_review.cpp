@@ -1,7 +1,7 @@
 // OWLens::IsProposed on the review profile's rule 1 (schema-dist profiles/review.md, serial 87): the npm and Python
 // packages' 24 shared cases (npm test/review.test.mjs at 4.102.2, Python tests/test_review.py at 0.84.1), same names,
 // same order, and npm 4.151.0's two of rule 5 (serial 114: an object holding a key is a mark, whatever its keys) in
-// npm's place, 26 in all. Each case's answer is the packages' handsOnAsProposed column: whether a reader leaves the element out as
+// npm's place, and npm 4.152.0's three doubts (1, true and ["a"]) in npm's places, 29 in all. Each case's answer is the packages' handsOnAsProposed column: whether a reader leaves the element out as
 // proposed, a doubt included. Their proposedMarkOf column (the mark's by, expires and lapsed) has no reader here, so it
 // is not ported. Each element is JSON text, so a character past ASCII is a \u escape.
 
@@ -36,6 +36,9 @@ const std::vector<ReviewCase>& Cases() {
         {"an array holding an empty array: present, not a mark, a doubt", "[[]]", true},
         {"false: a value, a doubt", "false", true},
         {"zero: a value, a doubt", "0", true},
+        {"one: a value, a doubt", "1", true},
+        {"true: a value, a doubt", "true", true},
+        {"a list holding a string: present, not a mark, a doubt", R"(["a"])", true},
         {"an empty object: an empty mark, settled", "{}", false},
         {"an object with no key the profile names: present, a mark", R"({"x": null})", true},
         {R"(rule 5: only a key the table does not name ({"note": "x"}), a mark that never lapses)",
@@ -68,8 +71,8 @@ std::string Element(const ReviewCase& c) {
 
 }  // namespace
 
-OW_TEST(review_the_cases_are_the_packages_26) {
-    t.Eq(Cases().size(), size_t(26), "case count");
+OW_TEST(review_the_cases_are_the_packages_29) {
+    t.Eq(Cases().size(), size_t(29), "case count");
     t.Eq(std::string(OWLens::ProposedMark), std::string("x_review_proposed"), "the mark key is the profile's");
 }
 
@@ -84,7 +87,7 @@ OW_TEST(review_is_proposed_answers_each_case) {
         t.Eq(OWLens::IsProposed(r.value), c.proposed, std::string(c.what) + ": is_proposed");
         ++run;
     }
-    t.Eq(run, size_t(26), "every case runs");
+    t.Eq(run, size_t(29), "every case runs");
 }
 
 // The packages' own extra case: what is not an element reads as settled.

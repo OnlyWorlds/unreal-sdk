@@ -733,6 +733,47 @@ OW_TEST(lens_an_owners_full_row_of_a_hidden_element_carries_hidden_true_as_serve
     t.Ok(named.rows.size() == 2 && named.rows[0].Find("hidden") == nullptr, "a name row: " + RowsOf(named));
 }
 
+OW_TEST(lens_a_first_line_row_carries_the_first_line_holding_something_as_stored) {
+    // The lens profile's first-line rule (schema-dist serial 115): trimming White_Space decides which line is the first
+    // that holds something; the line itself is carried as stored, its leading spaces kept; a description with no such
+    // line gives no description key. The npm package's eight cases (test/lens.test.mjs, 4.153.0) and the Python
+    // package's (tests/test_lens.py, 0.116.0), the same inputs and answers. Each description is JSON text, so a
+    // character past ASCII is a \u escape; nullptr: no key.
+    struct FirstLineCase {
+        const char* what;
+        const char* description;
+        const char* want;
+    };
+    const FirstLineCase cases[] = {
+        {"plain", R"("One.\nTwo.")", "One."},
+        {"a leading break, then spaces", R"("\n  Rung for every crossing.\nMore.")", "  Rung for every crossing."},
+        {"blank lines first, CRLF", R"("\r\n \t\r\n \r\nThird.\r\nFourth.")", "Third."},
+        {"a carriage return alone", R"("\rAfter the return.")", "After the return."},
+        {"one line with spaces", R"("  Only line  ")", "  Only line  "},
+        {"blank lines only", R"("\n \n\t\r\n")", nullptr},
+        {"White_Space alone", R"(" 　 ")", nullptr},
+        {"empty", R"("")", nullptr},
+    };
+    OWJsonValue lens = Parse(R"({"id": "L", "type": "construct", "name": "L", "supertype": "Lens",
+        "institutions": ["a"], "x_lens": {"show": "first_line"}})");
+    for (const FirstLineCase& c : cases) {
+        OWJsonValue world = Parse(std::string(R"({"elements": [
+            {"id": "a", "type": "institution", "name": "Anchor", "objects": ["o"]},
+            {"id": "o", "type": "object", "name": "Ledger", "description": )") + c.description + "}]}");
+        OWLensReading r = OWLens::Resolve(world, lens, Parse(R"({"rung": "owner"})"));
+        const OWJsonValue* row = nullptr;
+        for (const OWJsonValue& each : r.rows)
+            if (Str(each, "id") == "o") row = &each;
+        if (!row) {
+            t.Ok(false, std::string(c.what) + ": the row");
+            continue;
+        }
+        const OWJsonValue* got = row->Find("description");
+        t.Eq(got != nullptr, c.want != nullptr, std::string(c.what) + ": the key");
+        if (c.want) t.Eq(Str(got), std::string(c.want), c.what);
+    }
+}
+
 OW_TEST(lens_a_stored_hidden_false_is_dropped_from_the_row) {
     // keel serves no hidden key on a body no mark hides, so a stored hidden: false is dropped from the row, for the
     // owner and every reader below it. Kills: the stored key carried onto the row.
