@@ -214,6 +214,10 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.117` (canonical `00.34.00` unchanged; no schema file or walk moved). The views table's
+  description says a tool's own words for a heading or a fold are its drawing, and its fixture gains a 46th case (a
+  Pin's generic link with one key holding and the other White_Space alone holds nothing). This core vendors both and
+  has no views reader yet, so nothing here reads them. The generated files changed in their stamp lines only.
 - Schema pin to `v0.34.0-dist.116` (canonical `00.34.00` unchanged; no schema file, fixture or walk moved). The review
   page says who a mark's `by` names: the writer's own word, a claim, read as stored and never trimmed (White_Space
   alone, or a value that is not a string, names nobody), shown as the mark's word and in a name's place only where the
