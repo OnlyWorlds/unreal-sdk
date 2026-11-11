@@ -18,8 +18,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.114's MANIFEST.json records it.
-const char* const DistSha256 = "7a6cb0899060b95e40f87d9d3e34d3ab57b5212486d92c90654e030f001105cd";
+// The fixture's sha256 as dist.118's MANIFEST.json records it.
+const char* const DistSha256 = "3b804a78d4df907abed0778782bd0acf335570a1670cae125b97d5bce66dcd72";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/room.fixture.json"; }
 
@@ -43,7 +43,7 @@ std::string Str(const OWJsonValue& v, const char* key) {
 OW_TEST(room_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the room fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.114's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.118's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);

@@ -214,6 +214,14 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.118` (canonical `00.34.00` unchanged; no schema file or walk moved). The views table's
+  sentence rule and `conversation` layout each gain a closing clause (a tool that shows names only need show no
+  sentence; a tool that shows one element and no thread draws it as a document), and the checks fixture gains two
+  room-mark rules with eight cases; this core vendors both and has no views or checks reader, so nothing here reads
+  them. The room page says a sitting's own mark holds the world's id and a sitting's winning spec is named in its
+  `x_star`, and its fixture's note says the first; the pairs and cases are the same, so `OWLens` is unchanged, and the
+  room test's pinned sha256 of the fixture moved with the new bytes. The generated files changed in their stamp lines
+  only.
 - Schema pin to `v0.34.0-dist.117` (canonical `00.34.00` unchanged; no schema file or walk moved). The views table's
   description says a tool's own words for a heading or a fold are its drawing, and its fixture gains a 46th case (a
   Pin's generic link with one key holding and the other White_Space alone holds nothing). This core vendors both and
