@@ -214,6 +214,12 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.116` (canonical `00.34.00` unchanged; no schema file, fixture or walk moved). The review
+  page says who a mark's `by` names: the writer's own word, a claim, read as stored and never trimmed (White_Space
+  alone, or a value that is not a string, names nobody), shown as the mark's word and in a name's place only where the
+  platform resolves it. This core reads the review marks by presence and reads no mark's `by`, so no reader moved. The
+  review cases follow the TypeScript SDK 4.155.0 (one row renamed, two added, 31 in all; every answer here is presence
+  and unchanged). The generated files changed in their stamp lines only.
 - Schema pin to `v0.34.0-dist.115` (canonical `00.34.00` unchanged, no schema file moved). A lens's `first_line` row
   now carries as `description` the first line, the description split at every carriage return and every line feed
   (no other character breaks a line), that holds something after trimming White_Space, as stored with its own spaces;

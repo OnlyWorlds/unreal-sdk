@@ -1,7 +1,8 @@
 // OWLens::IsProposed on the review profile's rule 1 (schema-dist profiles/review.md, serial 87): the npm and Python
 // packages' 24 shared cases (npm test/review.test.mjs at 4.102.2, Python tests/test_review.py at 0.84.1), same names,
 // same order, and npm 4.151.0's two of rule 5 (serial 114: an object holding a key is a mark, whatever its keys) in
-// npm's place, and npm 4.152.0's three doubts (1, true and ["a"]) in npm's places, 29 in all. Each case's answer is the packages' handsOnAsProposed column: whether a reader leaves the element out as
+// npm's place, npm 4.152.0's three doubts (1, true and ["a"]) in npm's places, and with serial 116 npm 4.155.0's
+// renamed row and two new ones (a by read as stored), 31 in all. Each case's answer is the packages' handsOnAsProposed column: whether a reader leaves the element out as
 // proposed, a doubt included. Their proposedMarkOf column (the mark's by, expires and lapsed) has no reader here, so it
 // is not ported. Each element is JSON text, so a character past ASCII is a \u escape.
 
@@ -46,11 +47,13 @@ const std::vector<ReviewCase>& Cases() {
         {R"(rule 5: a named key whose value is null ({"by": null}), a mark, no proposer named)", R"({"by": null})",
          true},
         {"a whole mark, open", R"({"by": "m1", "evidence": "seen", "expires": "2026-11-01"})", true},
-        {"trimmed by and expires", R"({"by": "  m1 ", "expires": " 2026-11-01 "})", true},
+        {"a by read as stored, never trimmed; expires trimmed", R"({"by": "  m1 ", "expires": " 2026-11-01 "})", true},
+        {"a by of owner with White_Space around it is not the word owner", R"({"by": " owner\n"})", true},
         {"lapses on its own day", R"({"by": "m1", "expires": "2026-10-26"})", true},
         {"lapsed before today", R"({"by": "m1", "expires": "2026-10-01"})", true},
         {"an expires not shaped as a day", R"({"by": "m1", "expires": "2026-1-1"})", true},
         {"a blank or non-string by", R"({"by": "   ", "expires": 7})", true},
+        {"a by that is not a string names nobody", R"({"by": 7, "expires": "2026-11-01"})", true},
         {"U+3000 only: White_Space, an empty mark, settled", R"("　")", false},
         {"U+001C only: not White_Space, present, a doubt", R"("\u001c")", true},
         {"a byte order mark only: not White_Space, present, a doubt", R"("﻿")", true},
@@ -71,8 +74,8 @@ std::string Element(const ReviewCase& c) {
 
 }  // namespace
 
-OW_TEST(review_the_cases_are_the_packages_29) {
-    t.Eq(Cases().size(), size_t(29), "case count");
+OW_TEST(review_the_cases_are_the_packages_31) {
+    t.Eq(Cases().size(), size_t(31), "case count");
     t.Eq(std::string(OWLens::ProposedMark), std::string("x_review_proposed"), "the mark key is the profile's");
 }
 
@@ -87,7 +90,7 @@ OW_TEST(review_is_proposed_answers_each_case) {
         t.Eq(OWLens::IsProposed(r.value), c.proposed, std::string(c.what) + ": is_proposed");
         ++run;
     }
-    t.Eq(run, size_t(29), "every case runs");
+    t.Eq(run, size_t(31), "every case runs");
 }
 
 // The packages' own extra case: what is not an element reads as settled.
