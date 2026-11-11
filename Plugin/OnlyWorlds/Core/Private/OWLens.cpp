@@ -1066,10 +1066,21 @@ struct Reader {
                 const OWJsonValue* f = body.Find(k);
                 if (f && f->IsString() && !OWMessage::Trim(f->Text()).empty()) row.Set(k, *f);
             }
-            // The description up to its first CR or LF, and none the body does not give as text (the profile's owner,
-            // 2026-10-30, as the npm and Python packages read it; keel cut at LF only and wrote "" for none).
-            if (const OWJsonValue* d = body.Find("description"); r.show == "first_line" && d && d->IsString())
-                row.Set("description", OWJsonValue::String(d->Text().substr(0, d->Text().find_first_of("\r\n"))));
+            // Serial 115: the first line, the description split at every CR and every LF (no other break; a UTF-8 byte
+            // 0x0A or 0x0D is only ever that character), that holds something after trimming White_Space, carried as
+            // stored; no such line, or a description that is not a string, gives no key.
+            if (const OWJsonValue* d = body.Find("description"); r.show == "first_line" && d && d->IsString()) {
+                const std::string& text = d->Text();
+                for (std::size_t start = 0; start <= text.size();) {
+                    const std::size_t end = std::min(text.find_first_of("\r\n", start), text.size());
+                    const std::string line = text.substr(start, end - start);
+                    if (!OWMessage::Trim(line).empty()) {
+                        row.Set("description", OWJsonValue::String(line));
+                        break;
+                    }
+                    start = end + 1;
+                }
+            }
         }
         if (const OWJsonValue* note = r.NoteOf(v.ids[i]); note && anchor_ids.count(v.ids[i])) row.Set("note", *note);
         return row;

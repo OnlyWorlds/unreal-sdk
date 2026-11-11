@@ -214,6 +214,19 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.115` (canonical `00.34.00` unchanged, no schema file moved). A lens's `first_line` row
+  now carries as `description` the first line, the description split at every carriage return and every line feed
+  (no other character breaks a line), that holds something after trimming White_Space, as stored with its own spaces;
+  a description with no such line, or one that is not a string, gives no `description`. Before, `OWLens::Resolve`'s
+  row carried everything up to the first line break, so a description opening with one gave `""` and one of
+  White_Space alone was carried. The lens fixture's ten new cases pass (220 in all); built to the profile's words and
+  the fixture, since no package had published a reader of the rule at this serial. The charter page's empty mark
+  (settled) and a Domain's sentence (trimmed, cut at the first line break, trimmed again) are how `OWCharter` already
+  read them; the charter fixture's four new cases pass (31 in all). `views.json` is version 3 (a generic link, a Pin's
+  `element`, is one field of the drawing order, read by its two keys) with a fixture of 45 cases; both vendored, still
+  with no reader here. The report page's keeper report in one write and its reporter by `created_by`, the packet
+  page's optional producer `version`, and the folder lint's review warnings bind readers this SDK has none of. The
+  generated files moved their stamp lines only; the lens and charter tests pin the fixtures' new sha256.
 - Schema pin to `v0.34.0-dist.114` (canonical `00.34.00` unchanged, no schema file moved). A lens's short rows
   (`show` `first_line` or `name`) now carry `supertype` and `subtype`, each only where the body the reader is served
   holds it as a string with something left after trimming White_Space, as stored (never trimmed): `OWLens::Resolve`'s

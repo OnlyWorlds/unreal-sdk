@@ -43,7 +43,9 @@ struct OWLensReading {
     std::vector<std::string> kept;
     // The kept elements as `show` makes them, in the same order; an anchor's row carries its `note`. A `name` row is
     // `id`, `type`, `name`, and `supertype` and `subtype` each where the served body holds it as a string with something
-    // left after trimming White_Space, as stored; a `first_line` row adds `description` up to its first line break.
+    // left after trimming White_Space, as stored; a `first_line` row adds `description`, its first line: the first,
+    // split at every carriage return and line feed, that holds something after trimming White_Space, as stored; no such
+    // line, or a description that is not a string, gives no `description` (schema-dist serial 115).
     std::vector<OWJsonValue> rows;
     // The cut counted by reason, in the profile's order; a reason with no count is absent, and a reader that is not the
     // owner never carries the owner's two.

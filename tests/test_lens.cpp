@@ -25,8 +25,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.114's MANIFEST.json records it.
-const char* const DistSha256 = "2a44b8b382012c12458bd522dcfe175eee603d7f32d305277b4a25284de146da";
+// The fixture's sha256 as dist.115's MANIFEST.json records it.
+const char* const DistSha256 = "dbd60b0952156e0b58f5f9987f064b9d2bd74410b87fe324a3fa1a88f2fc63b7";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/lens.fixture.json"; }
 
@@ -311,7 +311,7 @@ bool Runs(const std::string& kind) {
 OW_TEST(lens_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the lens fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.114's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.115's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -331,19 +331,19 @@ OW_TEST(lens_fixture_is_the_pinned_one) {
         names.insert(Str(c, "name"));
         if (Runs(Str(c, "kind"))) ++run;
     }
-    t.Eq(cases->Size(), size_t(210), "210 cases");
-    t.Eq(names.size(), size_t(210), "each name its own");
+    t.Eq(cases->Size(), size_t(220), "220 cases");
+    t.Eq(names.size(), size_t(220), "each name its own");
     const std::pair<const char*, size_t> want[] = {{"shape", 6},   {"keys", 25},      {"uses", 5},
-                                                   {"resolve", 111}, {"invariant", 4}, {"graph", 54},
+                                                   {"resolve", 121}, {"invariant", 4}, {"graph", 54},
                                                    {"degree", 5}};
     size_t sum = 0;
     for (const auto& [kind, n] : want) {
         t.Eq(kinds[kind], n, std::string("kind ") + kind);
         sum += n;
     }
-    t.Eq(sum, size_t(210), "the seven kinds are every case");
+    t.Eq(sum, size_t(220), "the seven kinds are every case");
     t.Eq(kinds.size(), size_t(7), "and no other kind");
-    t.Eq(run, size_t(210), "every case runs here, the 54 graph and the 5 degree cases among them");
+    t.Eq(run, size_t(220), "every case runs here, the 54 graph and the 5 degree cases among them");
 }
 
 OW_TEST(lens_tables_are_the_fixtures) {
