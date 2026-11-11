@@ -2,7 +2,8 @@
 // map's own image from the world folder's media/, each of its Pins a marker at the pin's x and y, shot from above by
 // a scene capture into a PNG under Saved/OWFrames. Needs a renderer: run with -RenderOffscreen (NonNullRHI keeps it
 // out of a -nullrhi run). The markers are found again in the frame's pixels, where the pins' coordinates put them.
-// The scene is the plugin's (OWFrame.h, the one a packaged game shoots); the materials are made here, in code.
+// The scene is the plugin's (OWFrame.h, the one a packaged game shoots); the materials are made here, in code. Below
+// it, OnlyWorlds.Frame.RootMapSkipsLayoutMaps holds the root Map's choice on worlds made in memory (no renderer).
 
 #include "CoreMinimal.h"
 #include "Misc/AutomationTest.h"
@@ -24,10 +25,16 @@
 #include "UObject/Package.h"
 
 #include "OWFrame.h"
+#include "OWJson.h"
 #include "OWLibrary.h"
 #include "OWModels.h"
+#include "OWWorld.h"
 #include "OWWorldObject.h"
 #include "OWTestPaths.h"
+
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace
 {
@@ -155,6 +162,77 @@ bool FOWFrameTest::RunTest(const FString& Parameters)
 	}
 
 	OWFrame::EndFrameWorld(World);
+	return true;
+}
+
+// -- the root Map is never a layout map ----------------------------------------------------------------------------------
+// The map-space profile's rule 8 marks a layout map by x_layout alone, an object whose method is a non-empty string. Its
+// Pins are placed by a method, so drawn as the world's ground they show an arrangement as geography. Each world below
+// reads the layout map last, the place OWFrame::RootMap took before it skipped one. Needs no renderer.
+
+namespace
+{
+	using OnlyWorlds::OWJsonValue;
+
+	OWJsonValue FrameMapBody(const char* Id, const char* Name, const OWJsonValue* XLayout = nullptr)
+	{
+		OWJsonValue M = OWJsonValue::Object();
+		M.Set("id", OWJsonValue::String(Id));
+		M.Set("type", OWJsonValue::String("map"));
+		M.Set("name", OWJsonValue::String(Name));
+		M.Set("parent_map", OWJsonValue::Null());
+		if (XLayout) M.Set("x_layout", *XLayout);
+		return M;
+	}
+
+	OWJsonValue FrameRecipe(OWJsonValue Method)
+	{
+		OWJsonValue R = OWJsonValue::Object();
+		R.Set("method", std::move(Method));
+		return R;
+	}
+
+	// The root RootMap picks among these Maps, read in the order given; "<none>" when it finds none.
+	FString FrameRootOf(std::vector<OWJsonValue> Maps)
+	{
+		auto Native = std::make_unique<OnlyWorlds::OWWorld>();
+		Native->info = OWJsonValue::Object();
+		Native->info.Set("id", OWJsonValue::String("019a3b10-0000-7000-8000-00000000f100"));
+		for (OWJsonValue& M : Maps) Native->Add("map", std::move(M));
+		UOWWorld* World = NewObject<UOWWorld>(GetTransientPackage());
+		World->SetNative(std::move(Native));
+		FOWMap Map;
+		TArray<FOWPin> Pins;
+		return OWFrame::RootMap(World, Map, Pins) ? Map.Id : FString(TEXT("<none>"));
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWFrameLayoutMapTest, "OnlyWorlds.Frame.RootMapSkipsLayoutMaps",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ClientContext | EAutomationTestFlags::ProductFilter)
+
+bool FOWFrameLayoutMapTest::RunTest(const FString& Parameters)
+{
+	const OWJsonValue Board = FrameRecipe(OWJsonValue::String("hand"));
+	TestEqual(TEXT("a layout map read last is not the root"),
+		FrameRootOf({ FrameMapBody("ground", "Sikelia"), FrameMapBody("layout", "Sikelia: layout", &Board) }), FString(TEXT("ground")));
+	TestEqual(TEXT("a world whose only map is a layout map has no root"),
+		FrameRootOf({ FrameMapBody("layout", "Sikelia: layout", &Board) }), FString(TEXT("<none>")));
+
+	// What is no mark leaves the Map a candidate: read last, it is the root.
+	const std::pair<const TCHAR*, OWJsonValue> NotMarks[] = {
+		{ TEXT("an object without method"), OWJsonValue::Object() },
+		{ TEXT("an empty method"), FrameRecipe(OWJsonValue::String("")) },
+		{ TEXT("a null method"), FrameRecipe(OWJsonValue::Null()) },
+		{ TEXT("a number method"), FrameRecipe(OWJsonValue::Number(int64_t(3))) },
+		{ TEXT("a string"), OWJsonValue::String("hand") },
+		{ TEXT("an array"), OWJsonValue::Array() },
+		{ TEXT("null"), OWJsonValue::Null() },
+	};
+	for (const std::pair<const TCHAR*, OWJsonValue>& Case : NotMarks)
+	{
+		TestEqual(FString(TEXT("x_layout as ")) + Case.first + TEXT(" is no layout mark"),
+			FrameRootOf({ FrameMapBody("ground", "Sikelia"), FrameMapBody("other", "Other", &Case.second) }), FString(TEXT("other")));
+	}
 	return true;
 }
 

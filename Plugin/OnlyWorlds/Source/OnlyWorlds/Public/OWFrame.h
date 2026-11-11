@@ -29,8 +29,11 @@ namespace OWFrame
 	inline constexpr const TCHAR* PlanePath = TEXT("/Engine/BasicShapes/Plane.Plane");
 	inline constexpr const TCHAR* SpherePath = TEXT("/Engine/BasicShapes/Sphere.Sphere");
 
-	// The world's root Map (one with no parent_map; the last in read order when there are several) and its Pins that
-	// have both an x and a y, in read order. False, Map left empty and Pins none, when the world holds no root Map.
+	// The world's root Map and its Pins that have both an x and a y, in read order. The root is a Map with no
+	// parent_map that is not a layout map (the map-space profile's rule 8: x_layout an object with a non-empty string
+	// method); among several, the last in read order (a folder's elements/ before spatial/, type folders and file
+	// names in UTF-8 byte order; an .owworld's paths in the same order). False, Map left empty and Pins none, when the
+	// world holds no such Map.
 	ONLYWORLDS_API bool RootMap(const UOWWorld* World, FOWMap& Map, TArray<FOWPin>& Pins);
 
 	// The map's image as a transient texture: the first .png, in path order, under media/<map id>/base-image/ among

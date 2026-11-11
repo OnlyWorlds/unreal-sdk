@@ -183,6 +183,14 @@ Nothing is released yet; the history before this file is in the git log.
   leave the row out (each passes the address's type). Parity with the TypeScript SDK 4.132.0 and the Python package
   0.106.0: the shared openers fixture at 100 cases, the same bytes.
 
+### Fixed
+
+- `OWFrame::RootMap` (the frame test's scene and the host's `-OWFrame`) never takes a layout map as the root: among
+  the Maps with no `parent_map` it skips any whose `x_layout` is an object with a non-empty string `method` (the
+  map-space profile's rule 8, read through `OWMapSpace::LayoutOf`). A parentless layout map read after the ground
+  (its file name sorting later, as `sikelia-layout--…` after `sikelia--…`) was taken as the map to draw. A world whose
+  only Maps are layout maps has no root Map. Held by `OnlyWorlds.Frame.RootMapSkipsLayoutMaps`, which needs no renderer.
+
 ### Changed
 
 - A signed-out visitor sees the tools that need an account. `OWOpeners::OpenersFor` and `OpenersForJson` with the
