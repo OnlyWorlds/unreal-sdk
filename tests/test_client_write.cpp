@@ -22,6 +22,7 @@
 #include <set>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -30,6 +31,19 @@ using owtest::FakeTransport;
 using owtest::P;
 
 namespace {
+
+// A bulk slot's id: a string, or null when the slot answers none. The overloads read either spelling of the field, so
+// the null test could be seen red against a reader that turned null into "".
+template <typename Id>
+bool IdIsNull(const Id& id) {
+    if constexpr (std::is_same_v<Id, std::string>) return false;
+    else return !id;
+}
+template <typename Id>
+std::string IdText(const Id& id) {
+    if constexpr (std::is_same_v<Id, std::string>) return id;
+    else return id.value_or("<null>");
+}
 
 const std::string Base = "https://example.test/api/v2";
 const char* const Element = "{\"id\":\"c1\",\"name\":\"Ana\",\"type\":\"character\",\"change_seq\":4}";
@@ -397,7 +411,7 @@ OW_TEST(client_write_bulk_answers_its_slots) {
     t.Eq(b.items.size(), size_t(3), "a slot per item, in order");
     if (b.items.size() != 3) return;
     t.Eq(b.items[0].status, 201, "");
-    t.Eq(b.items[0].id, "a1", "");
+    t.Eq(IdText(b.items[0].id), "a1", "");
     t.Eq(b.items[0].created_at.value_or(""), "t1", "");
     t.Eq(b.items[0].updated_at.value_or(""), "t2", "");
     t.Ok(b.items[0].Succeeded() && !b.items[0].IsProposed() && !b.items[0].error, "a create");
@@ -405,7 +419,7 @@ OW_TEST(client_write_bulk_answers_its_slots) {
     t.Eq(b.items[1].proposal ? TextOf(*b.items[1].proposal, "id") : "<absent>", "p1", "the proposal row");
     t.Ok(!b.items[1].created_at, "a stamp absent is absent");
     t.Ok(!b.items[2].Succeeded(), "a failed slot");
-    t.Eq(b.items[2].id, "", "a null id is empty");
+    t.Ok(IdIsNull(b.items[2].id), "a null id stays null, never \"\" (the API document's string or null)");
     t.Ok(b.items[2].error.has_value(), "its error");
     if (b.items[2].error) {
         const OWApiError& e = *b.items[2].error;

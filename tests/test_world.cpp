@@ -5,6 +5,7 @@
 #include "ow_test.h"
 #include "worlds.h"
 
+#include "OWFiles.h"
 #include "OWJson.h"
 #include "OWWorld.h"
 
@@ -174,4 +175,59 @@ OW_TEST(world_new_elements_take_section_3_2_names) {
         t.Ok(r.ok && r.value.Find("id") && r.value.Find("id")->Text() == "0895db52-0000-7000-8000-0000000000c7",
              "the lower id keeps the short name");
     }
+}
+
+// -- No id, no write (folder format 4.1; 3.4, v0.3.22: a draft world conforms as any other, and a writer mints no id) --
+
+// A world in memory with no world.json id: WriteFolder writes nothing and says why, Pack refuses; with the tool's own id
+// both go.
+OW_TEST(world_a_world_json_with_no_id_is_refused_and_nothing_is_written) {
+    std::string out = P().tmp + "/draft-no-id";
+    const std::vector<std::string> worlds = {"", "{\"name\": \"Draft\"}", "{\"id\": \"\", \"name\": \"Draft\"}",
+                                             "{\"id\": \"  \", \"name\": \"Draft\"}", "{\"id\": 7, \"name\": \"Draft\"}"};
+    for (const std::string& world : worlds) {
+        OWFileMap files;
+        if (!world.empty()) files["world.json"] = OWBytes(world.begin(), world.end());
+        std::unique_ptr<OWWorld> w = OWWorld::FromFiles(files);
+        const std::string label = "world.json '" + world + "'";
+        OWFiles::RemoveTree(out);
+        t.Ok(!w->WriteRefusal().empty(), label + ": a refusal");
+        std::string err;
+        t.Ok(!w->WriteFolder(out, false, &err), label + ": WriteFolder refuses");
+        t.Eq(err, w->WriteRefusal(), label + ": and says why");
+        t.Ok(!OWFiles::IsDir(out), label + ": nothing written");
+        OWPacked packed = w->Pack("draft");
+        t.Ok(!packed.ok, label + ": Pack refuses");
+    }
+    std::unique_ptr<OWWorld> draft = OWWorld::FromFiles(OWFileMap());
+    draft->SetInfo("id", OWJsonValue::String("019a9200-0000-7000-8000-000000000001"));
+    draft->SetInfo("name", OWJsonValue::String("Draft"));
+    t.Eq(draft->WriteRefusal(), std::string(), "with the tool's own id, no refusal");
+    t.Ok(draft->WriteFolder(out), "a draft with its id is written");
+    t.Ok(OWFiles::IsFile(out + "/world.json"), "its world.json");
+    t.Ok(draft->Pack("draft").ok, "and packs");
+    OWFiles::RemoveTree(out);
+}
+
+// A new element with no id: the writer mints none, so WriteFolder and Pack refuse the whole world; given an id, it goes.
+OW_TEST(world_a_new_element_with_no_id_is_refused_and_nothing_is_written) {
+    std::string out = P().tmp + "/element-no-id";
+    OWFiles::RemoveTree(out);
+    OWFileMap files;
+    std::string world = "{\"id\": \"w1\", \"name\": \"Draft\"}";
+    files["world.json"] = OWBytes(world.begin(), world.end());
+    std::unique_ptr<OWWorld> w = OWWorld::FromFiles(files);
+    OWJsonValue body = OWJsonValue::Object();
+    body.Set("name", OWJsonValue::String("Harbour"));
+    w->Add("location", body);
+    t.Ok(!w->WriteRefusal().empty(), "a refusal");
+    t.Ok(!w->WriteFolder(out), "WriteFolder refuses");
+    t.Ok(!OWFiles::IsDir(out), "nothing written");
+    t.Ok(!w->Pack("draft").ok, "Pack refuses");
+    t.Ok(!w->WriteFolder(out, true), "an edited-only write refuses too");
+    w->OfType("location")[0]->Set("id", OWJsonValue::String("019a9200-0000-7000-8000-0000000e0001"));
+    t.Eq(w->WriteRefusal(), std::string(), "with an id, no refusal");
+    t.Ok(w->WriteFolder(out), "written");
+    t.Ok(OWFiles::IsFile(out + "/elements/location/harbour--000e0001.json"), "its file");
+    OWFiles::RemoveTree(out);
 }

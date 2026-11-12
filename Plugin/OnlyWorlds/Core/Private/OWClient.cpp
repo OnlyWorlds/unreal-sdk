@@ -568,7 +568,7 @@ void BulkOf(const OWJsonValue& body, OWReply<OWBulkResult>& r) {
             if (!row.IsObject()) return Bad(r, std::string(route) + " answered a slot that is not an object");
             OWBulkSlot slot;
             slot.status = static_cast<int>(IntOf(row.Find("status")).value_or(0));
-            slot.id = TextOf(row.Find("id")).value_or("");
+            slot.id = TextOf(row.Find("id"));
             slot.created_at = TextOf(row.Find("created_at"));
             slot.updated_at = TextOf(row.Find("updated_at"));
             if (const OWJsonValue* e = row.Find("error"); e && e->IsObject()) {

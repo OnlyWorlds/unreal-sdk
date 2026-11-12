@@ -106,7 +106,7 @@ namespace
 		{
 			FOWBulkSlot& Row = Out.Items.AddDefaulted_GetRef();
 			Row.Status = S.status;
-			Row.Id = Str(S.id);
+			Row.Id = TextOr(S.id);
 			Row.CreatedAt = TextOr(S.created_at);
 			Row.UpdatedAt = TextOr(S.updated_at);
 			Row.bSucceeded = S.Succeeded();

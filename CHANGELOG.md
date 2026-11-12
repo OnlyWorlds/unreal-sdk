@@ -185,6 +185,20 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- **`OWBulkSlot::id` is `std::optional<std::string>`** (breaking for C++ callers): a string, or `nullopt` when the slot
+  answers none (a failure before the item was identified), as the API document types it and the TypeScript and Unity
+  SDKs read it; it read `""` before. The Blueprint `FOWBulkSlot.Id` stays an `FString`, empty for none, as its
+  timestamps are.
+- Folder format 0.3.22 (a draft world, one no host holds yet, conforms as any other folder; a writer adds no `world`
+  to an element file and a reader gives one no meaning). **`OWWorld::WriteFolder` and `OWWorld::Pack` now refuse a
+  world they would write with no id**: a `world.json` whose `id` is not a non-empty string, or a new or edited
+  element with no id. `WriteFolder` returns false and writes nothing, `Pack` answers an `OWPacked` that is not ok,
+  and the new `OWWorld::WriteRefusal()` says why (also `WriteFolder`'s `error`). Before, `WriteFolder` wrote such a
+  `world.json` (0 bytes, or an object with no id) and dropped an id-less new element with a line in `errors` while
+  reporting success, and `Pack` packed the world without it. A writer mints no id: the caller sets `world.json`'s
+  (`SetInfo("id", ...)`; a draft world's id is the tool's own until a host gives one) and each element's. No writer
+  here adds a `world` key; this core's writers stamp no `format_version`, so there is no version to move.
+
 - A signed-out visitor sees the tools that need an account. `OWOpeners::OpenersFor` and `OpenersForJson` with the
   `public` audience give a row for a tool whose `open.needs` is `account`, with the new word "Needs an account"
   (`OWOpeners::NeedsAnAccount`), whatever `signed_in` and `browser` say; before, the public saw no such row. The href

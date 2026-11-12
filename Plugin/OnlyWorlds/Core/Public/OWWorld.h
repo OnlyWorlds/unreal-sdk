@@ -77,8 +77,15 @@ public:
     // Every file of the world by its path inside it: world.json, each element, and other_files. `only_edited` gives
     // just the files an edit changed (to write back into the folder read).
     OWFileMap ToFiles(bool only_edited = false);
+    // Why WriteFolder and Pack would refuse to write this world, or "" when they would not: a world.json to be written
+    // whose id is no non-empty string, or a new or edited element with no id. A writer mints no id (folder spec 4.1;
+    // 3.4, format 0.3.22: a draft world conforms as any other, its id the tool's own until a host gives one), so the
+    // caller sets it.
+    std::string WriteRefusal(bool only_edited = false) const;
+    // False, nothing written and `error` WriteRefusal's line, when it refuses.
     bool WriteFolder(const std::string& path, bool only_edited = false, std::string* error = nullptr);
     // The world as a portable .owworld (OWWorldArchive::PackWorld: api stripped, private records left out, unless asked).
+    // Not ok, its message WriteRefusal's, when it refuses.
     OWPacked Pack(const std::string& top, bool keep_api = false, bool include_private = false);
 
     // Section 3.2's filename for an element: <slug>--<id tail>.json, or <full id>.json when the name gives no slug;

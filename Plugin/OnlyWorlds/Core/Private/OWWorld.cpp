@@ -265,7 +265,26 @@ OWFileMap OWWorld::ToFiles(bool only_edited) {
     return out;
 }
 
+std::string OWWorld::WriteRefusal(bool only_edited) const {
+    if (info_edited || !only_edited) {
+        const OWJsonValue* id = info.IsObject() ? info.Find("id") : nullptr;
+        if (!id || !id->IsString() || OWUnicode::StripWhite(id->Text()).empty())
+            return "world.json has no id (a non-empty string), and a writer mints none: set it first (SetInfo(\"id\", ...))";
+    }
+    for (const OWElement& e : elements) {
+        if (only_edited && !e.edited) continue;
+        const OWJsonValue* id = e.body.Find("id");
+        if ((e.edited || e.source_path.empty()) && !(id && id->IsString() && !id->Text().empty()))
+            return "a new or edited " + e.folder_type + " has no id (a non-empty string), and a writer mints none: set it first";
+    }
+    return "";
+}
+
 bool OWWorld::WriteFolder(const std::string& path, bool only_edited, std::string* error) {
+    if (std::string why = WriteRefusal(only_edited); !why.empty()) {
+        if (error) *error = why;
+        return false;
+    }
     std::unordered_set<std::string> made;  // each folder made once, not once per file
     for (const auto& kv : ToFiles(only_edited)) {
         std::string full = path + "/" + kv.first;
@@ -283,6 +302,11 @@ bool OWWorld::WriteFolder(const std::string& path, bool only_edited, std::string
 }
 
 OWPacked OWWorld::Pack(const std::string& top, bool keep_api, bool include_private) {
+    if (std::string why = WriteRefusal(); !why.empty()) {
+        OWPacked refused;
+        refused.message = why;
+        return refused;
+    }
     return OWWorldArchive::PackWorld(ToFiles(), top, keep_api, include_private);
 }
 

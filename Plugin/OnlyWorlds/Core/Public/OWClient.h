@@ -150,7 +150,9 @@ struct OWBulkOptions {
 // One item's outcome in an OWBulkResult. Mirrors the TypeScript SDK's `OwBulkItemResult`.
 struct OWBulkSlot {
     int status = 0;  // the item's own HTTP status: 201 created, 200 updated, 202 a proposal, else its failure
-    std::string id;
+    // The element's id as served; nullopt when the slot answers none (a failure before the item was identified), as
+    // the API document types it (a string or null).
+    std::optional<std::string> id;
     // On a success: keel's timestamps, from which a sync baseline is set.
     std::optional<std::string> created_at;
     std::optional<std::string> updated_at;
