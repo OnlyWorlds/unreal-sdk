@@ -217,6 +217,9 @@ The automation tests (`OnlyWorlds.*`):
   run leaves it out): the world's root Map as a plane carrying its image, the Pins as markers, captured from above to
   `Host/Saved/OWFrames/moppetopia-root-map.png`. The scene is the plugin's (`Public/OWFrame.h`, the one the packaged
   game's `-OWFrame` shoots); the test makes its two materials in code.
+- `OnlyWorlds.Frame.RootMapSkipsLayoutMaps`: `OWFrame::RootMap` on worlds made in memory (no renderer): a layout map
+  (the map-space profile's rule 8, `x_layout` an object with a non-empty string `method`) read last is not the root, a
+  world whose only Map is one has none, and seven `x_layout` values that are no mark leave the Map a candidate.
 
 The core's runner and the world tests read two real worlds from this machine when present (`OW_SIKELIA`,
 `OW_MOPPETOPIA`). In the core's runner a missing world is a named skip; in the automation tests it fails.
@@ -290,7 +293,7 @@ once its pipeline states have precached, so the frame waits, tick by tick, until
 then shoots. It logs the map, the image, the wait, `wrote <path> (1800 x 1200, N bytes)`, and how many markers it finds
 again in its own pixels where their pins put them: exit 0 when every one is there and the plane holds more than 200
 colours (2 without an image), 3 when not (the frame still written). Exit 5, and no file written, when it cannot draw:
-`-OWFrame` bare, empty or not a `.png` path, no renderer (`-nullrhi`), no root Map (a Map with no `parent_map`) or one
+`-OWFrame` bare, empty or not a `.png` path, no renderer (`-nullrhi`), no root Map (a Map with no `parent_map` that is not a layout map) or one
 without a width and a height, the material or the meshes not in the pak, pixels that cannot be read, a write that
 fails. A refused world (2) and a missing graph (4) end the run before the frame. Without `-OWFrame`, nothing changes.
 

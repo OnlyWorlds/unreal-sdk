@@ -20,12 +20,23 @@
 #include "UObject/Package.h"
 
 #include "OWConvert.h"
+#include "OWMapSpace.h"
+#include "OWModelRead.h"
 #include "OWWorldObject.h"
 
 #include <string>
 
 namespace
 {
+	// The map-space profile's rule 8, read by the core's LayoutOf: a Map whose x_layout is an object with a non-empty
+	// string method is a layout map. Its Pins are placed by a method, not where the places stand, so it is no ground.
+	bool IsLayoutMap(const UOWWorld* World, const FString& Id)
+	{
+		const OnlyWorlds::OWJsonValue* Body = OWModelRead::Find(World, Id, "map");
+		return Body && OnlyWorlds::OWMapSpace::LayoutOf(*Body, OnlyWorlds::OWJsonValue::Array(), OnlyWorlds::OWJsonValue::Array())
+			.layout.has_value();
+	}
+
 	AStaticMeshActor* SpawnMesh(UWorld* World, UStaticMesh* Mesh, const FVector& At, const FRotator& Turn, const FVector& Scale,
 		UMaterialInterface* Material)
 	{
@@ -44,7 +55,7 @@ bool OWFrame::RootMap(const UOWWorld* World, FOWMap& Map, TArray<FOWPin>& Pins)
 	Pins.Reset();
 	for (const FOWMap& M : UOWElements::GetAllMaps(World))
 	{
-		if (M.ParentMap.IsEmpty()) Map = M;
+		if (M.ParentMap.IsEmpty() && !IsLayoutMap(World, M.Id)) Map = M;
 	}
 	if (Map.Id.IsEmpty()) return false;
 	for (const FOWPin& P : UOWElements::GetAllPins(World))

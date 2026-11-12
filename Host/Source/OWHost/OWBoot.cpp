@@ -327,7 +327,7 @@ bool UOWBootSubsystem::Run(float DeltaTime)
 		}
 		else if (!OWFrame::RootMap(World, Map, Pins))
 		{
-			FrameRefusal = TEXT("the world holds no root Map (a Map with no parent_map)");
+			FrameRefusal = TEXT("the world holds no root Map (a Map with no parent_map that is not a layout map)");
 		}
 		else if (Map.Width <= 0 || Map.Height <= 0)
 		{
