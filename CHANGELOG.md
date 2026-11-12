@@ -403,7 +403,9 @@ Nothing is released yet; the history before this file is in the git log.
   sends it since 4.122.1: a string like `abc/hidden` never asks a different route. Requests go
   through `OWTransport` (`OWTransport.h`), one call answered once through a callback, so Unreal's asynchronous HTTP and
   a synchronous test fake both fit; a client may be destroyed with a request in flight. Held to keel's OpenAPI
-  document, vendored from the Unity SDK (`tests/data/keel-wire.json`).
+  document, vendored from the Unity SDK (`tests/data/keel-wire.json`), which follows keel's (at `c1d6b0ff0cdd`: the Pin
+  list takes `element`, the Pins that place that element of any type, `""` for the Pins placing nothing); `List`
+  already sends any field-named filter as given, so `filter["element"] = id` needs no change here.
 - `FOWHttpTransport` in the plugin (`OWHttpTransport.h`): the client's transport on Unreal's `FHttpModule`. It
   answers each request once, on the game thread, with the body's bytes as received, or with status 0 and a failure
   (no connection, the timeout, a request that would not start). Unreal's HTTP follows a redirect itself, and nothing
