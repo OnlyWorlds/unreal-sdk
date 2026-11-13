@@ -7,6 +7,17 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWReport::ThreadsOf(narratives)` in the core (`OWReport.h`), the report profile's rule 9 (schema-dist serial
+  120): the reports among the Narratives, as served and in that order, grouped by `parent_narrative` as written.
+  `OWReportThreads` holds `parents` (each report's parent: `none`, `report`, `board`, `missing`, `other` or `self`),
+  `groups` (`{parent, kind, reports}`, a report's thread or a board entry's talks, the reports in the message
+  profile's `created_at` order through `OWMessage::InCreatedOrder`) and `lints` (`chain`, `self`); `ToJson()` is the
+  fixture's shape. A report and a board entry are the room profile's pairs with the mark, read by
+  `OWLens::IsRoomElement` (`OWReport::IsReport`, `IsBoardEntry`). A parent is never trimmed before the lookup (only
+  an empty or White_Space-only one reads as none), a parent that is no string reads as none, and of two elements with
+  one id the first is read; the npm SDK 4.159.0 and the Python package 0.120.0 read these the same. Held to the
+  profile's fixture (`profiles/report.fixture.json`, 20 thread cases, each its own test) and to the packages' corner
+  vectors. Core only: no Blueprint face yet.
 - `OWMapSpace::LayoutOf(map, maps, pins)`, the map-space profile's layout reading (rules 8 to 10, serial 110): one
   Map's `OWMapLayout`, whose `ToJson()` is `{layout, ground, hand}`. `layout` is the Map's `x_layout.method` when
   `x_layout` is an object whose `method` is a non-empty string (`"hand"` a board, `OWMapSpace::Board`; a method no page
