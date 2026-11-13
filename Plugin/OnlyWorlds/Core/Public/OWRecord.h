@@ -26,7 +26,7 @@ namespace OnlyWorlds {
 // missing), the seats in the order written.
 struct OWRecordMark {
     std::string tool;       // the game's id, the tools list's form: [a-z0-9-], 1 to 32
-    std::string played_at;  // when the run was played, real time: RFC 3339 in UTC, as written
+    std::string played_at;  // when the run was played, real time, in the message page's grammar, as written
     std::optional<std::string> version;  // the engine's version; with seed, the replay
     std::optional<std::string> seed;     // the run's seed, a string
     std::optional<std::string> outcome;  // one lowercase word the game chose, 1 to 24 letters a to z
@@ -84,13 +84,15 @@ const std::vector<std::string>& Members();  // tool, played_at, version, seed, o
 // or `seats` is anything but its kind, null or absent (a number seed, a capitalised or empty outcome, a seats list, a
 // seat that is not a string). A mark on any element but an Event is no mark. Proposal is RecordsOf's to read, not this.
 //
-// `played_at` is in form when it is YYYY-MM-DDTHH:MM, optionally :SS and then optionally a fraction (.digits), then Z,
-// in ASCII digits, and names a real calendar instant, checked here by its parts and never by a date parser: year 0001
-// or later, month 1 to 12, the day within its month (leap years Gregorian), hour 0 to 23, minute and second 0 to 59.
+// `played_at` is in form when it reads by the message page's grammar, the standard's one grammar for a time
+// (OWMessage::TimeKey): YYYY-MM-DDTHH:MM:SS, optionally a fraction (.digits), then Z, +HH:MM, -HH:MM or no offset
+// (read as UTC), T and Z in either case, ASCII digits, every part in its range (month 1 to 12, the day within its month,
+// leap years Gregorian, hour 0 to 23, minute and second 0 to 59, an offset's hours to 23); checked by its parts and
+// never by a date parser. A time without its seconds is no mark.
 std::optional<OWRecordMark> MarkOf(const OWJsonValue& element);
 
-// `played_at` as an instant: whole milliseconds from 0001-01-01T00:00Z (a fraction truncated past three digits), or
-// absent when it is not in MarkOf's form. The order RecordsOf reads.
+// `played_at` as an instant: whole milliseconds from 0001-01-01T00:00Z, its offset applied (a fraction truncated past
+// three digits; negative before year 0001), or absent when it is not in MarkOf's form. The order RecordsOf reads.
 std::optional<int64_t> InstantOf(std::string_view played_at);
 
 // A Character's records in a world (the packages' recordsOf), `elements` the world's elements as this reader is served

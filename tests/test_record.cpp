@@ -191,62 +191,96 @@ OW_CASES(record_fixture_cases) {
     return out;
 }
 
-// The instant is milliseconds from 0001-01-01T00:00Z on the proleptic Gregorian calendar, a fraction truncated past
-// three digits and padded short of them, seconds optional. Values from JavaScript's Date.parse plus 62135596800000.
-// Kills: a day count off by a century rule, a fraction rounded or read as a number, a missing second read as anything
-// but zero.
+// The instant is milliseconds from 0001-01-01T00:00Z on the proleptic Gregorian calendar, its offset applied, a
+// fraction truncated past three digits and padded short of them. Values from JavaScript's Date.parse plus
+// 62135596800000. Kills: a day count off by a century rule, a fraction rounded or read as a number, an offset added
+// where it is taken away.
 OW_TEST(record_the_instant_is_milliseconds_on_the_gregorian_calendar) {
     auto at = [](const char* s) { return OWRecord::InstantOf(s).value_or(-1); };
-    t.Eq(at("0001-01-01T00:00Z"), int64_t(0), "the first instant");
+    t.Eq(at("0001-01-01T00:00:00Z"), int64_t(0), "the first instant of year 0001");
     t.Eq(at("1970-01-01T00:00:00Z"), int64_t(62135596800000), "the Unix epoch");
-    t.Eq(at("2000-02-29T12:00Z"), int64_t(63087422400000), "a leap day of a century divisible by 400");
+    t.Eq(at("2000-02-29T12:00:00Z"), int64_t(63087422400000), "a leap day of a century divisible by 400");
     t.Eq(at("2026-11-01T00:30:00.1239Z"), int64_t(63929089800123), "a fraction truncated, never rounded");
     t.Eq(at("2026-11-01T00:30:00.1Z"), int64_t(63929089800100), "a short fraction padded: .1 is 100 ms");
     t.Eq(at("2026-11-01T00:30:00.000000001Z"), int64_t(63929089800000), "a long fraction of zeros");
-    t.Eq(at("2026-11-01T00:30Z"), at("2026-11-01T00:30:00Z"), "no seconds is second 0");
-    t.Eq(at("9999-12-31T23:59:59.999Z"), int64_t(315537897599999), "the last instant");
+    t.Eq(at("2026-11-01T02:30:00+02:00"), int64_t(63929089800000), "an offset taken away");
+    t.Eq(at("9999-12-31T23:59:59.999Z"), int64_t(315537897599999), "the last instant of year 9999");
+    std::optional<int64_t> zero = OWRecord::InstantOf("0000-12-31T23:59:59Z");
+    t.Ok(zero && *zero == -1000, "year 0000 reads, before the first instant of 0001");
 }
 
-// played_at's form at its edges: ASCII digits only, T and Z in capitals, seconds before a fraction, a fraction of at
-// least one digit, four-digit years, nothing after Z; 1900 is a common year and 2000 a leap year. Kills: a digit test
-// that takes any Unicode digit (the Python package's \d), a lowercase z, a fraction with no seconds, a missing
-// century rule, a search instead of a whole match.
+// played_at's form at its edges, the message page's grammar: ASCII digits only, the seconds required and before a
+// fraction, a fraction of at least one digit, four-digit years, an offset with its colon and in range, nothing after;
+// 1900 is a common year and 2000 a leap year. Kills: a digit test that takes any Unicode digit (the Python package's
+// \d), a time without seconds taken, a fraction with no seconds, a missing century rule, a search instead of a whole
+// match.
 OW_TEST(record_played_at_is_the_profiles_form_and_nothing_else) {
     const char* const bad[] = {
-        "\xEF\xBC\x92\xEF\xBC\x90\xEF\xBC\x92\xEF\xBC\x96-11-01T00:30Z",  // 2026 in fullwidth digits (U+FF12 U+FF10 ...)
+        "\xEF\xBC\x92\xEF\xBC\x90\xEF\xBC\x92\xEF\xBC\x96-11-01T00:30:00Z",  // 2026 in fullwidth digits (U+FF12 ...)
         // The Unity SDK's three (OWRecordTests): a fraction with no seconds, an empty fraction, one fullwidth first digit.
         "2026-11-01T00:00.5Z",
         "2026-11-01T00:00:00.Z",
-        "\xEF\xBC\x92" "026-11-01T00:00Z",
+        "\xEF\xBC\x92" "026-11-01T00:00:00Z",
+        "2026-11-01T00:30Z",
         "2026-11-01T00:30z",
         "2026-11-01t00:30Z",
         "2026-11-01T00:30.5Z",
-        "2026-11-01T00:30:00.Z",
         "2026-11-01T00:30:00Z ",
         "2026-11-01T00:30:00Z\\n",  // a JSON escape: a newline after the Z
+        "2026-11-01 00:30:00Z",
+        "2026-11-01T00:30:00+0100",
+        "2026-11-01T00:30:00+24:00",
+        "2026-11-01T00:30:00+01:60",
         "2026-11-01T00Z",
         "2026-11-01",
-        "10000-01-01T00:00Z",
-        "2026-1-01T00:00Z",
-        "1900-02-29T00:00Z",
-        "2026-00-10T00:00Z",
-        "2026-13-10T00:00Z",
-        "2026-04-31T00:00Z",
-        "2026-04-00T00:00Z",
-        "2026-11-01T00:60Z",
+        "10000-01-01T00:00:00Z",
+        "2026-1-01T00:00:00Z",
+        "1900-02-29T00:00:00Z",
+        "2026-00-10T00:00:00Z",
+        "2026-13-10T00:00:00Z",
+        "2026-04-31T00:00:00Z",
+        "2026-04-00T00:00:00Z",
+        "2026-11-01T24:00:00Z",
+        "2026-11-01T00:60:00Z",
+        "2026-11-01T00:00:60Z",
         "",
     };
     for (const char* at : bad) t.Ok(!Marked(t, Played(at)), std::string("no mark: \"") + at + "\"");
-    for (const char* at : {"2000-02-29T00:00Z", "2026-12-31T23:59:59Z", "0001-01-01T00:00Z", "2026-04-30T00:00Z"})
+    for (const char* at : {"2000-02-29T00:00:00Z", "2026-12-31T23:59:59Z", "0001-01-01T00:00:00Z", "2026-04-30T00:00:00Z",
+                           "0000-02-29T00:00:00Z", "2026-11-01T00:30:00-23:59", "2026-11-01T00:30:00.5z"})
         t.Ok(Marked(t, Played(at)), std::string("a mark: ") + at);
     t.Ok(!Marked(t, R"({"tool": "subs", "played_at": 1793493000000})"), "played_at a number");
     t.Ok(!Marked(t, R"({"tool": "subs"})"), "no played_at");
 }
 
+// One time grammar: played_at is read by the message page's grammar (OWMessage::TimeKey), so a lowercase t and z, an
+// offset and a time with no offset (read as UTC) are marks, each the instant it names, and a time without its seconds
+// is no mark. Records order by that instant. Kills: the record keeping a grammar of its own, an offset read and not
+// applied.
+OW_TEST(record_played_at_is_read_by_the_message_grammar) {
+    for (const char* at : {"2026-11-01t00:30:00z", "2026-11-01T01:30:00+01:00", "2026-11-01T00:30:00",
+                           "2026-10-31T23:30:00-01:00", "2026-11-01T00:30:00.000Z"}) {
+        t.Ok(Marked(t, Played(at)), std::string("a mark: ") + at);
+        std::optional<int64_t> instant = OWRecord::InstantOf(at);
+        t.Ok(instant && *instant == OWRecord::InstantOf("2026-11-01T00:30:00Z").value_or(-1),
+             std::string("the instant of 2026-11-01T00:30:00Z: ") + at);
+    }
+    for (const char* at : {"2026-11-01T00:30Z", "2028-02-29T00:00Z", "2026-11-01t00:30z", "2026-11-01T00:30+01:00"})
+        t.Ok(!Marked(t, Played(at)), std::string("no mark, no seconds: ") + at);
+    const std::string c = Fluffington;
+    OWJsonValue els = Parse(R"([
+        {"id": "e1", "type": "event", "characters": [")" + c + R"("], "x_record": {"tool": "subs", "played_at": "2026-11-01T01:30:00+02:00"}},
+        {"id": "e2", "type": "event", "characters": [")" + c + R"("], "x_record": {"tool": "subs", "played_at": "2026-11-01T00:00:00Z"}}])");
+    OWCharacterRecords got = OWRecord::RecordsOf(c, els);
+    std::string order;
+    for (const OWCharacterRecord& r : got.records) order += r.event_id + " ";
+    t.Eq(order, std::string("e2 e1 "), "e1 is 2026-10-31T23:30Z, older than e2, though its text sorts after");
+}
+
 // tool is [a-z0-9-], 1 to 32; outcome [a-z], 1 to 24; version and seed strings; seats an object of strings, null
 // reading as none. Kills: a length bound off by one, a seat null taken as unset, a version that takes a number.
 OW_TEST(record_the_marks_members_at_their_bounds) {
-    std::string at = R"("played_at": "2026-11-01T00:30Z")";
+    std::string at = R"("played_at": "2026-11-01T00:30:00Z")";
     auto with = [&](const std::string& members) { return Marked(t, "{" + at + ", " + members + "}"); };
     t.Ok(with(R"("tool": ")" + std::string(32, 'a') + "\""), "a tool of 32");
     t.Ok(!with(R"("tool": ")" + std::string(33, 'a') + "\""), "a tool of 33");
@@ -262,9 +296,9 @@ OW_TEST(record_the_marks_members_at_their_bounds) {
     t.Ok(!with(R"("tool": "subs", "seats": "General")"), "seats a string");
     std::optional<OWRecordMark> none = OWRecord::MarkOf(OneEvent("{" + at + R"(, "tool": "subs", "seats": null})").Items()[0]);
     t.Ok(none && none->seats.empty(), "seats null reads as none");
-    t.Ok(!OWRecord::MarkOf(Parse(R"({"id": "e", "type": "Event", "x_record": {"tool": "subs", "played_at": "2026-11-01T00:30Z"}})")),
+    t.Ok(!OWRecord::MarkOf(Parse(R"({"id": "e", "type": "Event", "x_record": {"tool": "subs", "played_at": "2026-11-01T00:30:00Z"}})")),
          "the type is the slug \"event\"");
-    t.Ok(!OWRecord::MarkOf(Parse(R"({"id": "e", "x_record": {"tool": "subs", "played_at": "2026-11-01T00:30Z"}})")),
+    t.Ok(!OWRecord::MarkOf(Parse(R"({"id": "e", "x_record": {"tool": "subs", "played_at": "2026-11-01T00:30:00Z"}})")),
          "an element with no type");
     t.Ok(!OWRecord::MarkOf(Parse(R"(["event"])")), "not an element");
 }
@@ -272,7 +306,7 @@ OW_TEST(record_the_marks_members_at_their_bounds) {
 // An Event or a story whose id is not a string cannot be named, so it is never read; a name that is not text reads "";
 // a protagonist that is not a string names no one; a characters entry that is not the id lists nothing.
 OW_TEST(record_what_cannot_be_named_is_never_read) {
-    std::string mark = R"("x_record": {"tool": "subs", "played_at": "2026-11-01T00:30Z"})";
+    std::string mark = R"("x_record": {"tool": "subs", "played_at": "2026-11-01T00:30:00Z"})";
     std::string f = Fluffington;
     OWJsonValue els = Parse(R"([{"type": "event", "name": "no id", "characters": [")" + f + R"("], )" + mark + R"(},
         {"id": 7, "type": "event", "characters": [")" + f + R"("], )" + mark + R"(},
@@ -283,7 +317,7 @@ OW_TEST(record_what_cannot_be_named_is_never_read) {
         {"id": "n3", "type": "narrative", "protagonist": [")" + f + R"("], "events": ["e2"]},
         {"id": "n4", "type": "Narrative", "protagonist": ")" + f + R"(", "events": ["e2"]}])");
     const OWJsonValue want = Parse(R"([{"event": {"id": "e2", "name": ""}, "tool": "subs",
-        "played_at": "2026-11-01T00:30Z", "version": null, "seed": null, "outcome": null, "seat": null,
+        "played_at": "2026-11-01T00:30:00Z", "version": null, "seed": null, "outcome": null, "seat": null,
         "stories": [{"id": "n2", "name": "", "as": "narrator"}]}])");
     Same(t, OWRecord::RecordsOf(f, els).ToJson(), &want, "only e2, its one story");
 }
@@ -291,7 +325,7 @@ OW_TEST(record_what_cannot_be_named_is_never_read) {
 // The stories in code point order of their ids, whatever the order served; ties on the instant by the Event's id in
 // code point order (a UTF-8 id's bytes), so an id past U+FFFF sorts after U+FFFD (UTF-16 order puts it first).
 OW_TEST(record_ids_order_by_code_point) {
-    std::string f = Fluffington, mark = R"("x_record": {"tool": "subs", "played_at": "2026-11-01T00:30Z"})";
+    std::string f = Fluffington, mark = R"("x_record": {"tool": "subs", "played_at": "2026-11-01T00:30:00Z"})";
     // U+FFFD then U+1F600: code point order; UTF-16 compares the surrogate 0xD83D below 0xFFFD.
     std::string hi = "\xEF\xBF\xBD", astral = "\xF0\x9F\x98\x80";
     OWJsonValue els = Parse(R"([{"id": ")" + astral + R"(", "type": "event", "characters": [")" + f + R"("], )" + mark +
@@ -369,8 +403,8 @@ OW_TEST(record_proposed_is_an_object_with_a_key) {
     auto read = [&](const std::string& proposed) {
         OWJsonValue els = Parse(R"([
             {"id": "e1", "type": "event", "characters": [")" + c + R"("], "x_review_proposed": )" + proposed +
-                                R"(, "x_record": {"tool": "subs", "played_at": "2026-11-01T00:00Z"}},
-            {"id": "e2", "type": "event", "characters": [")" + c + R"("], "x_record": {"tool": "subs", "played_at": "2026-11-02T00:00Z"}},
+                                R"(, "x_record": {"tool": "subs", "played_at": "2026-11-01T00:00:00Z"}},
+            {"id": "e2", "type": "event", "characters": [")" + c + R"("], "x_record": {"tool": "subs", "played_at": "2026-11-02T00:00:00Z"}},
             {"id": "n1", "type": "narrative", "protagonist": ")" + c + R"(", "x_review_proposed": )" + proposed +
                                 R"(, "events": ["e2"]}])");
         OWCharacterRecords got = OWRecord::RecordsOf(c, els);

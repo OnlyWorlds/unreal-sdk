@@ -217,6 +217,16 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- **One time grammar: a record's `played_at` is read by the message profile's grammar.** `OWRecord::MarkOf` and
+  `OWRecord::InstantOf` now read `played_at` through `OWMessage::TimeKey`, the grammar the message, lens, report and
+  charter readers already order by, in place of a grammar of their own. A lowercase `t` or `z` (`2026-11-01t00:30:00z`),
+  an offset (`2026-11-01T01:30:00+01:00`, read as the instant it names) and a time with no offset (read as UTC) are now
+  marks; a time without its seconds (`2026-11-01T00:30Z`) is no longer one. Year `0000` reads, as the message grammar
+  reads it (before the first instant of 0001, so `InstantOf` is negative there). `RecordsOf` still orders newest first
+  by the instant to the millisecond, a fraction truncated past three digits, a tie by the Event's id. A game that wrote
+  `played_at` without seconds writes them now: such a mark is no longer read. Four cases of the record fixture
+  vendored at dist.122 hold the old grammar (an offset that was no mark, a leap day written without seconds that was
+  one, and the two records lists those Events join) and answer otherwise until the fixture's next pin.
 - **One clock per lens: rule 5 orders by the clock `changed_within` reads.** `OWLens::Resolve`'s order past the
   anchors (the schema's type order, newest first, then by id) now reads an element's time as `changed_within` reads it:
   on the wire its `updated_at`; for a folder's element the newer of `server_updated_at` and `local_updated_at` where

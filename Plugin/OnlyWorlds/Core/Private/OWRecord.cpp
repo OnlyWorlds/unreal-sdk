@@ -1,12 +1,14 @@
 #include "OWRecord.h"
 
+#include "OWMessage.h"
+
 #include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
 
 // keel's records_of (elements/record.py) over the elements as served: the mark checked member by member, played_at by
-// its parts on the proleptic Gregorian calendar (never a date parser), the order by the instant to the millisecond,
-// ties and stories by id in code point order (a UTF-8 id's bytes compare in code point order).
+// the message page's grammar (OWMessage::TimeKey, by its parts, never a date parser), the order by the instant to the
+// millisecond, ties and stories by id in code point order (a UTF-8 id's bytes compare in code point order).
 
 namespace OnlyWorlds {
 
@@ -78,31 +80,8 @@ bool Digit(char c) { return c >= '0' && c <= '9'; }
 bool Lower(char c) { return c >= 'a' && c <= 'z'; }
 bool ToolChar(char c) { return Lower(c) || Digit(c) || c == '-'; }
 
-bool Leap(int64_t y) { return y % 4 == 0 && (y % 100 != 0 || y % 400 == 0); }
-
-int64_t MonthDays(int64_t y, int64_t m) {
-    static const int64_t days[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    return m == 2 && Leap(y) ? 29 : days[m - 1];
-}
-
-// Days from 0001-01-01 on the proleptic Gregorian calendar.
-int64_t DaysFrom1(int64_t y, int64_t m, int64_t d) {
-    int64_t before = y - 1;
-    int64_t days = before * 365 + before / 4 - before / 100 + before / 400;
-    for (int64_t k = 1; k < m; ++k) days += MonthDays(y, k);
-    return days + d - 1;
-}
-
-// `n` ASCII digits at `at` as a number, or -1.
-int64_t Digits(std::string_view s, size_t at, size_t n) {
-    if (at + n > s.size()) return -1;
-    int64_t v = 0;
-    for (size_t i = at; i < at + n; ++i) {
-        if (!Digit(s[i])) return -1;
-        v = v * 10 + (s[i] - '0');
-    }
-    return v;
-}
+// Seconds from 0001-01-01T00:00Z to 1970-01-01T00:00Z on the proleptic Gregorian calendar (719162 days).
+const int64_t SecondsBefore1970 = 62135596800;
 
 bool OptionalString(const OWJsonValue* v, std::optional<std::string>& out, bool (*ok)(std::string_view) = nullptr) {
     if (!v || v->IsNull()) return true;
@@ -161,30 +140,13 @@ OWJsonValue OWCharacterRecords::ToJson() const {
 namespace OWRecord {
 
 std::optional<int64_t> InstantOf(std::string_view s) {
-    // YYYY-MM-DDTHH:MM, then optionally :SS and optionally .fraction, then Z and nothing after.
-    if (s.size() < 17 || s[4] != '-' || s[7] != '-' || s[10] != 'T' || s[13] != ':') return std::nullopt;
-    int64_t y = Digits(s, 0, 4), mo = Digits(s, 5, 2), d = Digits(s, 8, 2), h = Digits(s, 11, 2), mi = Digits(s, 14, 2);
-    if (y < 0 || mo < 0 || d < 0 || h < 0 || mi < 0) return std::nullopt;
-    size_t at = 16;
-    int64_t sec = 0, ms = 0;
-    if (at < s.size() && s[at] == ':') {
-        sec = Digits(s, at + 1, 2);
-        if (sec < 0) return std::nullopt;
-        at += 3;
-        if (at < s.size() && s[at] == '.') {
-            size_t start = ++at;
-            while (at < s.size() && Digit(s[at])) ++at;
-            if (at == start) return std::nullopt;  // a fraction is at least one digit
-            // Truncated past three digits, padded short of them: .1 is 100 ms, .1239 is 123.
-            for (size_t k = 0; k < 3; ++k) ms = ms * 10 + (start + k < at ? s[start + k] - '0' : 0);
-        }
-    }
-    if (at + 1 != s.size() || s[at] != 'Z') return std::nullopt;
-    // A real calendar instant, checked by its parts.
-    if (y < 1 || mo < 1 || mo > 12 || d < 1 || d > MonthDays(y, mo) || h > 23 || mi > 59 || sec > 59)
-        return std::nullopt;
-    int64_t seconds = ((DaysFrom1(y, mo, d) * 24 + h) * 60 + mi) * 60 + sec;
-    return seconds * 1000 + ms;
+    // One grammar for a time in the standard: the message page's, read by OWMessage::TimeKey (its parts in range, an
+    // offset applied, no offset read as UTC, T and Z in either case, the seconds required).
+    OWJsonValue text = OWJsonValue::String(std::string(s));
+    std::optional<OWMessage::OWTimeKey> key = OWMessage::TimeKey(&text);
+    if (!key) return std::nullopt;
+    // To the millisecond: the fraction truncated past three digits (.1239 is 123 ms).
+    return (key->seconds + SecondsBefore1970) * 1000 + key->micros / 1000;
 }
 
 std::optional<OWRecordMark> MarkOf(const OWJsonValue& element) {
