@@ -90,10 +90,11 @@ OWSender SenderStatus(const OWJsonValue& message, const OWJsonValue* members);
 OWEdited EditedBy(const OWJsonValue& message, const OWJsonValue* members);
 
 // The reader's read mark among the Relations: supertype Read, `actor` the reader, every write the reader's own hand
-// (created_by verified where present; changed_by equal to created_by where present); the newest updated_at (a
-// readable time beats an unreadable one, equal times keep the first). nullptr when none, and always for "". keyless
-// true for bodies read with no credential, as IsToEveryone takes it: the keyless public reader is served no created_by
-// or changed_by on any body, so no mark counts there.
+// (created_by verified where present; changed_by equal to created_by where present); the newest updated_at as an
+// instant (a readable time beats an unreadable one in either list order; two at one instant, however written, tie by
+// the higher id by code point, as written; two that cannot be read keep the first). nullptr when none, and always for
+// "". keyless true for bodies read with no credential, as IsToEveryone takes it: the keyless public reader is served no
+// created_by or changed_by on any body, so no mark counts there.
 const OWJsonValue* ReadMarkOf(const std::vector<const OWJsonValue*>& relations, std::string_view character_id,
                               const OWJsonValue* members, bool keyless = false);
 

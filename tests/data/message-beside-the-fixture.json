@@ -666,7 +666,8 @@
   },
   {
    "kind": "mark",
-   "name": "mark-equal-times-keep-the-first",
+   "name": "mark-equal-times-the-higher-id",
+   "note": "Two marks at one instant tie by the higher id (code point, as written), in either list order. npm 4.102.4 kept the first in the list (e031); the message page's tie rule moved the answer to e032.",
    "relations": [
     {
      "id": "019a3b10-0000-7000-8000-00000000e031",
@@ -688,7 +689,7 @@
     }
    ],
    "reader": "019a3b10-0000-7000-8000-0000000000a1",
-   "mark": "019a3b10-0000-7000-8000-00000000e031"
+   "mark": "019a3b10-0000-7000-8000-00000000e032"
   },
   {
    "kind": "mark",
@@ -879,6 +880,7 @@
   {
    "kind": "mark",
    "name": "mark-microseconds-order",
+   "note": "A fraction counts to its sixth digit, so .0000019 and .000001 are one instant, and the two marks tie by the higher id (e046). npm 4.102.4 kept the first in the list (e045); the message page's tie rule moved the answer.",
    "relations": [
     {
      "id": "019a3b10-0000-7000-8000-00000000e045",
@@ -900,7 +902,7 @@
     }
    ],
    "reader": "019a3b10-0000-7000-8000-0000000000a1",
-   "mark": "019a3b10-0000-7000-8000-00000000e045"
+   "mark": "019a3b10-0000-7000-8000-00000000e046"
   },
   {
    "kind": "unread",

@@ -421,3 +421,54 @@ OW_TEST(message_empty_id_and_wrong_kinds_read_as_no) {
     t.Ok(!OWMessage::NoteOf({}, "x", nullptr), "no Note");
     t.Ok(OWMessage::List(OWJsonValue::String("x")).empty(), "List of a string is empty");
 }
+
+namespace {
+
+// One of Ada's read marks, a folder's (no created_by, so it counts), its updated_at the JSON text given (nullptr: no
+// updated_at key).
+OWJsonValue AdasMark(const std::string& id, const char* updated_at_json) {
+    std::string body = R"({"id": ")" + id + R"(", "type": "relation", "supertype": "Read", "name": "Read: Ada",
+        "actor": "a1", "narratives": [])";
+    if (updated_at_json) body += std::string(R"(, "updated_at": )") + updated_at_json;
+    OWJsonParseResult r = OWJson::Parse(body + "}");
+    return r.ok ? std::move(r.value) : OWJsonValue();
+}
+
+// The id of Ada's read mark among the marks, in the order given; "" for none.
+std::string MarkAmong(const std::vector<OWJsonValue>& marks) {
+    std::vector<const OWJsonValue*> list;
+    for (const OWJsonValue& m : marks) list.push_back(&m);
+    const OWJsonValue* mark = OWMessage::ReadMarkOf(list, "a1", nullptr);
+    return mark ? Str(*mark, "id") : std::string();
+}
+
+}  // namespace
+
+// The read mark's tie: of two marks at the same instant, the higher id wins (by code point, the id as written), in
+// either list order; an instant written two ways (an offset, a fraction of zeros, a lowercase t and z) is the same
+// instant. A mark whose updated_at cannot be read never wins over one that can. Two that cannot be read keep the first
+// in the list. Kills: a tie kept by list order, a tie by the lower id, an id compared folded, the text compared in
+// place of the instant.
+OW_TEST(message_read_mark_tie_goes_to_the_higher_id) {
+    const char* const ten = "\"2026-10-27T10:00:00Z\"";
+    for (const char* same : {"\"2026-10-27T11:00:00+01:00\"", "\"2026-10-27T10:00:00.000Z\"", "\"2026-10-27t10:00:00z\"",
+                             "\"2026-10-27T10:00:00Z\""}) {
+        std::string shown = std::string("10:00Z and ") + same;
+        t.Eq(MarkAmong({AdasMark("m-0a", ten), AdasMark("m-0b", same)}), std::string("m-0b"), shown + ", lower id first");
+        t.Eq(MarkAmong({AdasMark("m-0b", same), AdasMark("m-0a", ten)}), std::string("m-0b"), shown + ", higher id first");
+    }
+    // By code point, as written: "m-a" (0x61) is above "m-B" (0x42), though a folded compare puts B above a.
+    t.Eq(MarkAmong({AdasMark("m-a", ten), AdasMark("m-B", ten)}), std::string("m-a"), "lowercase above uppercase");
+    t.Eq(MarkAmong({AdasMark("m-B", ten), AdasMark("m-a", ten)}), std::string("m-a"), "the same, listed the other way");
+    // A newer instant still beats a higher id, and a readable time beats one that cannot be read, in either order.
+    t.Eq(MarkAmong({AdasMark("m-0a", "\"2026-10-27T10:00:00.000001Z\""), AdasMark("m-0b", ten)}), std::string("m-0a"),
+         "a microsecond newer beats the higher id");
+    for (const char* unread : {"\"garbage\"", "\"2026-10-27\"", "null"}) {
+        std::string shown = std::string("beside ") + unread;
+        t.Eq(MarkAmong({AdasMark("m-00", ten), AdasMark("m-ff", unread)}), std::string("m-00"), shown + ", listed later");
+        t.Eq(MarkAmong({AdasMark("m-ff", unread), AdasMark("m-00", ten)}), std::string("m-00"), shown + ", listed first");
+    }
+    t.Eq(MarkAmong({AdasMark("m-00", ten), AdasMark("m-ff", nullptr)}), std::string("m-00"), "beside no updated_at");
+    t.Eq(MarkAmong({AdasMark("m-00", nullptr), AdasMark("m-ff", "\"garbage\"")}), std::string("m-00"),
+         "two that cannot be read: the first in the list");
+}

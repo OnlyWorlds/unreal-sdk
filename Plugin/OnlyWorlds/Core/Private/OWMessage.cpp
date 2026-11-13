@@ -278,6 +278,11 @@ OWEdited EditedBy(const OWJsonValue& message, const OWJsonValue* members) {
 const OWJsonValue* ReadMarkOf(const std::vector<const OWJsonValue*>& relations, std::string_view character_id,
                               const OWJsonValue* members, bool keyless) {
     if (keyless || character_id.empty()) return nullptr;
+    // The id as written ("" when it is no string), compared by code point: a UTF-8 string's bytes.
+    auto id_of = [](const OWJsonValue& rel) {
+        const OWJsonValue* id = rel.Find("id");
+        return id && id->IsString() ? id->Text() : std::string();
+    };
     const OWJsonValue* mark = nullptr;
     std::optional<OWTimeKey> mark_key;
     for (const OWJsonValue* rel : relations) {
@@ -289,7 +294,10 @@ const OWJsonValue* ReadMarkOf(const std::vector<const OWJsonValue*>& relations, 
         // Its author is the reader: the sender rule on actor, where created_by exists.
         if (has_author && HandOf(*rel, members) != std::optional<std::string>(std::string(character_id))) continue;
         std::optional<OWTimeKey> key = TimeKey(rel->Find("updated_at"));
-        if (!mark || (key && (!mark_key || *mark_key < *key))) {
+        // A readable time beats an unreadable one; the newer wins; two at one instant, the higher id by code point.
+        bool newer = !mark || (key && (!mark_key || *mark_key < *key));
+        if (!newer && key && mark_key && *key == *mark_key) newer = id_of(*rel) > id_of(*mark);
+        if (newer) {
             mark = rel;
             mark_key = key;
         }
