@@ -307,15 +307,16 @@ std::optional<OWOpenersResult> CheckAudience(const std::string& audience) {
     return std::nullopt;
 }
 
-// The element given for the menu: only an element's, and only the one the address names (its id compared lowercased,
-// as the address's is); on success fills its marks (MarksOf). Null is no element.
+// The element given for the menu: only an element's, and only the one the address names (the address profile's rule for
+// the same id: the address's id taken in lowercase, the element's own id read as written, so an element held in upper
+// case is not the one the address names); on success fills its marks (MarksOf). Null is no element.
 std::optional<OWOpenersResult> CheckElement(std::string_view kind, const OWJsonValue* element, const std::string& id,
                                             std::vector<std::string>& marks) {
     if (!element || element->IsNull()) return std::nullopt;
     if (!element->IsObject()) return Mistake("options element is the element as served, an object, or null");
     if (kind != Element) return Mistake("options element is for an element's menu; a world's menu takes none");
     const OWJsonValue* eid = element->Find("id");
-    if (!eid || !eid->IsString() || AsciiLower(eid->Text()) != id)
+    if (!eid || !eid->IsString() || eid->Text() != id)
         return Mistake("options element is the element the address names: its id differs");
     marks = MarksOf(*element);
     return std::nullopt;

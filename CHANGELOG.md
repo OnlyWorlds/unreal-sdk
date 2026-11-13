@@ -220,6 +220,14 @@ Nothing is released yet; the history before this file is in the git log.
   names the Object held in lowercase, and a kept skill is always the Object's own id. This follows the address
   profile's rule for the same id: an id is read in either case only at an address and in a text, and what it is then
   matched against is read as written, as every other reader of the core already reads ids.
+- **The openers' check reads the given element's own id as written.** `OWOpeners::OpenersFor` with an
+  `OWOpenersOptions` element still reads the address's id in either case and takes it in lowercase, but now compares
+  the element's own `id` to it as written, where it lowercased that too. An element held in upper case is not the
+  element the address names, whatever the address's case, and is refused ("its id differs"); an element held in
+  lowercase is the element of an address in either case. The same rule for the same id as the Charter's skill ids
+  above. The shared openers fixture is re-vendored at 111 cases (sha256 `ac14435b…`): its old id-case case is now
+  two, an element held in upper case under a lowercase address (refused) and a lowercase element under an upper-case
+  address (the rows); the plugin's Blueprint path carries neither, as it carries no element as served.
 
 - **`OWBulkSlot::id` is `std::optional<std::string>`** (breaking for C++ callers): a string, or `nullopt` when the slot
   answers none (a failure before the item was identified), as the API document types it and the TypeScript and Unity

@@ -500,8 +500,8 @@ bool FOWOpenersAddressTest::RunTest(const FString& Parameters)
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	// The fixture at 110 cases (the TypeScript SDK 4.133.0: open.opens_public).
-	TestEqual(TEXT("110 cases"), static_cast<int32>(Cases->Items().size()), 110);
+	// The fixture at 111 cases (its id-case case split in two; both carry the element as served, so neither is carried).
+	TestEqual(TEXT("111 cases"), static_cast<int32>(Cases->Items().size()), 111);
 	TestEqual(TEXT("the row cases carried"), RowCases, 50);
 	TestEqual(TEXT("the address refusals carried"), Refusals, 6);
 	TestEqual(TEXT("cases failed"), Failed, 0);

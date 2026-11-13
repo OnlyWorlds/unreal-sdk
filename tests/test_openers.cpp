@@ -21,10 +21,10 @@ using owtest::P;
 
 namespace {
 
-// The npm SDK's test/fixtures/openers.fixture.json at 8f2986b (4.132.0: element_types, the types a tool's element door
-// opens, 8 cases more), read at v4.132.2.
-const char* const FixtureSha256 = "9df2b52916223969f8b48284c770f933673cef308b2f5158cb2007715e80c17b";
-const size_t CaseCount = 110;
+// The npm SDK's test/fixtures/openers.fixture.json at 111 cases: its id-case case split in two, an element held in
+// upper case under a lowercase address (refused) and a lowercase element under an upper-case address (the rows).
+const char* const FixtureSha256 = "ac14435bc287e92bd18e651871f39a0c66870bb041be0eb394d3eb868eb76978";
+const size_t CaseCount = 111;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e1a";
@@ -717,4 +717,34 @@ OW_TEST(openers_the_baked_list_offers_tactical_tangle_on_a_world_and_a_character
     t.Ok(visitor.ok && visitor.rows.size() >= 2 && visitor.rows[visitor.rows.size() - 2].id == "tangle" &&
              tail == std::vector<std::string>{"tangle: needs", "subs: needs"},
          "the public's Character menu: Tangle, then Subs, last, each Needs an account");
+}
+
+OW_TEST(openers_the_elements_own_id_is_read_as_written_the_addresss_in_either_case) {
+    // The address profile's rule for the same id at the openers' check: the address's id is read in either case and
+    // taken in lowercase, the given element's own id is read as written. An element held in lowercase is the address's
+    // element whatever the address's case; one held in upper case is not, whatever the address's case.
+    auto upper = [](std::string s) {
+        for (char& c : s)
+            if (c >= 'a' && c <= 'z') c = char(c - 'a' + 'A');
+        return s;
+    };
+    struct Cell {
+        bool element_upper, address_upper, same;
+    };
+    for (const Cell& c : {Cell{false, false, true}, Cell{false, true, true}, Cell{true, false, false}, Cell{true, true, false}}) {
+        const std::string label = std::string("element ") + (c.element_upper ? "upper" : "lower") + ", address " +
+                                  (c.address_upper ? "upper" : "lower");
+        OWJsonParseResult held = OWJson::Parse("{\"id\": \"" + (c.element_upper ? upper(Element) : Element) +
+                                               "\", \"type\": \"character\", \"name\": \"The element\"}");
+        OWOpenersOptions options;
+        options.element = &held.value;
+        OWAddressParts address = ElementOf("character");
+        if (c.address_upper) address.id = upper(Element);
+        OWOpenersResult r = OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, address, Member(true), options);
+        if (c.same)
+            t.Ok(r.ok && !r.rows.empty(), label + ": the address's element, its rows");
+        else
+            t.Ok(!r.ok && r.message.find("its id differs") != std::string::npos, label + ": refused, its id differs (got " +
+                                                                                     r.message + ")");
+    }
 }
