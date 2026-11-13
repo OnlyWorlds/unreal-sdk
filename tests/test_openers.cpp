@@ -711,14 +711,15 @@ OW_TEST(openers_the_baked_list_offers_tactical_tangle_on_a_world_and_a_character
     OWOpenerSurface pub;
     pub.audience = OWOpeners::Public;
     OWOpenersResult visitor = OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf("character"), pub);
-    // The list's order: Tangle, then Subs (the list at 0a7539c), each saying it needs an account.
+    // The list's order: Tangle, then Subs (the list at 0a7539c), each saying it needs an account, then the mapper (the
+    // list at aa00969), which opens a public world with none, so its row is live.
     std::vector<std::string> tail;
     for (const OWOpener& o : visitor.rows)
-        if (o.id == "tangle" || o.id == "subs")
+        if (o.id == "tangle" || o.id == "subs" || o.id == "mapper")
             tail.push_back(o.id + (o.state.value_or("") == OWOpeners::NeedsAnAccount ? ": needs" : ": open"));
-    t.Ok(visitor.ok && visitor.rows.size() >= 2 && visitor.rows[visitor.rows.size() - 2].id == "tangle" &&
-             tail == std::vector<std::string>{"tangle: needs", "subs: needs"},
-         "the public's Character menu: Tangle, then Subs, last, each Needs an account");
+    t.Ok(visitor.ok && visitor.rows.size() >= 3 && visitor.rows[visitor.rows.size() - 3].id == "tangle" &&
+             tail == std::vector<std::string>{"tangle: needs", "subs: needs", "mapper: open"},
+         "the public's Character menu: Tangle, then Subs, each Needs an account, then the mapper, last");
 }
 
 // Windrose (the list at 53a05e4): listed with no `open`, so no menu offers it, a member's or the public's, on a world
@@ -745,6 +746,55 @@ OW_TEST(openers_the_baked_list_lists_windrose_and_offers_it_on_no_menu) {
              std::string("a member's ") + type + " menu");
         t.Ok(!offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf(type), pub)),
              std::string("the public's ") + type + " menu");
+    }
+}
+
+// The OnlyWorlds mapper (the list at aa00969): a world door and an element door, needs an account but opens a public
+// world with none, and its element_types is null, so it is offered on every type, its href naming the type; its door
+// skips an element in map space (a Map, a Pin or a Marker held as served), and a Zone is content, so it is offered on
+// one. The public's row is live.
+OW_TEST(openers_the_baked_list_offers_the_mapper_on_every_element) {
+    const OWTool* mapper = nullptr;
+    for (const OWTool& x : OWTools::All())
+        if (x.id == "mapper") mapper = &x;
+    t.Ok(mapper && mapper->rung == "listed" && mapper->client && *mapper->client == "mapper" && mapper->open &&
+             mapper->open->world && mapper->open->element,
+         "the mapper is listed, client mapper, with a world door and an element door");
+    if (!mapper || !mapper->open) return;
+    t.Ok(mapper->open->needs && *mapper->open->needs == "account", "it needs an account");
+    t.Ok(!mapper->open->element_types, "its element_types is null: every type");
+    t.Ok(mapper->open->element_skips == std::vector<std::string>{"map_space"}, "skipping an element in map space");
+    t.Ok(mapper->open->opens_public, "it opens a public world with no account");
+    auto offered = [](const OWOpenersResult& r) {
+        for (const OWOpener& o : r.rows)
+            if (o.id == "mapper") return o.href;
+        return NotOffered;
+    };
+    const std::string site = "https://maps.onlyworlds.com/?world=" + World;
+    OWAddressParts world;
+    world.form = OWAddress::Human;
+    world.world = World;
+    t.Eq(offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::World, world, Member(true))), site, "a world's menu");
+    OWOpenerSurface pub;
+    pub.audience = OWOpeners::Public;
+    for (const char* type : OWAddress::TypeWords) {
+        const std::string want = site + "&type=" + type + "&element=" + Element;
+        t.Eq(offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf(type), Member(true))), want,
+             std::string("a member's ") + type + " menu");
+        OWOpenersResult visitor = OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf(type), pub);
+        const OWOpener* row = nullptr;
+        for (const OWOpener& o : visitor.rows)
+            if (o.id == "mapper") row = &o;
+        t.Ok(row && row->href == want && !row->state, std::string("the public's ") + type + " menu, live");
+    }
+    for (const char* type : {"map", "pin", "marker", "zone"}) {
+        OWJsonParseResult held =
+            OWJson::Parse("{\"id\": \"" + Element + "\", \"type\": \"" + type + "\", \"name\": \"Held\"}");
+        OWOpenersOptions options;
+        options.element = &held.value;
+        const std::string want = std::string(type) == "zone" ? site + "&type=zone&element=" + Element : NotOffered;
+        t.Eq(offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf(type), Member(true), options)),
+             want, std::string("a ") + type + " held as served");
     }
 }
 

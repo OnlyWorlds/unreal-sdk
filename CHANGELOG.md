@@ -31,6 +31,12 @@ Nothing is released yet; the history before this file is in the git log.
   and reads nothing. Parity with the TypeScript SDK 4.142.0's `layoutOf` and the Python package 0.110.0's
   `layout_of`: every one of the fixture's 21 `layout_cases`, whole answers in key order, and the two packages' vectors
   beyond the fixture. `MapSpaceOf` is unchanged. Core only: there is no Blueprint door.
+- `OWTools` repinned at the tools list's `aa00969` (tools.json sha256 `2140d2b9…`): one new row, the OnlyWorlds mapper
+  (`mapper`, listed, client `mapper`), with a world door and an element door that need an account, open a public
+  world with none (`opens_public`), skip an element in map space (`element_skips: ["map_space"]`) and open every type
+  (`element_types: null`). So the Open with menu offers it, last, on a world's menu and on every element's, a Map, a
+  Pin or a Marker held as served excepted (a Zone is content); the public's row is live, as Atlas's is. Seven rows
+  baked where there were six; every menu of a world or an element outside map space has one row more.
 - `OWTools` repinned at the tools list's `53a05e4` (tools.json sha256 `198f62a2…`), the list the TypeScript SDK's and
   the Python package's pins name: one new row, Windrose (`windrose`, listed), with no `open`, so the Open with menu
   offers it nowhere. No other row's door changed (Little Lens's `element_skips` is only re-wrapped in the list). Six
