@@ -1,4 +1,4 @@
-// OWRecord on the record profile's conformance fixture (schema-dist profiles/record.fixture.json, dist.122's copy, its
+// OWRecord on the record profile's conformance fixture (schema-dist profiles/record.fixture.json, dist.123's copy, its
 // sha256 held to MANIFEST.json): every case by name, the mark (MarkOf) and the records (RecordsOf) over the fixture's
 // one world, the mark's field and members held equal to the fixture's; then readings the fixture leaves open (the
 // instant's arithmetic, played_at's form at its edges, the tool's and the outcome's bounds, an element that cannot be
@@ -21,8 +21,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.122's MANIFEST.json records it.
-const char* const DistSha256 = "2074962221bd23169b6ce331e2c79ba63e4e67d0ca8fcfe444562a821666376b";
+// The fixture's sha256 as dist.123's MANIFEST.json records it.
+const char* const DistSha256 = "a0dc588db339eeb9ae2732a6828af34412235ac8a9aaa27bef566391685f611e";
 
 const char* const Fluffington = "019a8000-0000-7000-8000-000000000101";
 const char* const Ford = "019a8000-0000-7000-8000-000000000201";
@@ -147,7 +147,7 @@ std::string Played(const std::string& at) { return R"({"tool": "subs", "played_a
 OW_TEST(record_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the record fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.122's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.123's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -166,9 +166,9 @@ OW_TEST(record_fixture_is_the_pinned_one) {
         if (Str(c, "kind") == "mark") ++marks;
         if (Str(c, "kind") == "records") ++records;
     }
-    t.Eq(cases->Size(), size_t(41), "41 cases");
-    t.Eq(names.size(), size_t(41), "each name its own");
-    t.Eq(marks, size_t(29), "29 mark cases");
+    t.Eq(cases->Size(), size_t(46), "46 cases");
+    t.Eq(names.size(), size_t(46), "each name its own");
+    t.Eq(marks, size_t(34), "34 mark cases");
     t.Eq(records, size_t(12), "12 records cases");
     const OWJsonValue* mark = doc->Find("mark");
     t.Eq(mark ? Str(*mark, "field") : std::string(), std::string(OWRecord::Mark), "the mark's field");

@@ -224,9 +224,8 @@ Nothing is released yet; the history before this file is in the git log.
   marks; a time without its seconds (`2026-11-01T00:30Z`) is no longer one. Year `0000` reads, as the message grammar
   reads it (before the first instant of 0001, so `InstantOf` is negative there). `RecordsOf` still orders newest first
   by the instant to the millisecond, a fraction truncated past three digits, a tie by the Event's id. A game that wrote
-  `played_at` without seconds writes them now: such a mark is no longer read. Four cases of the record fixture
-  vendored at dist.122 hold the old grammar (an offset that was no mark, a leap day written without seconds that was
-  one, and the two records lists those Events join) and answer otherwise until the fixture's next pin.
+  `played_at` without seconds writes them now: such a mark is no longer read. The record fixture at dist.123 holds
+  the grammar (the pin below); four of its cases at dist.122 held the old one.
 - **One clock per lens: an element's clock is the newest of its three readable stamps.** `OWLens::Resolve` reads one
   clock per element, the newest of its `updated_at`, `server_updated_at` and `local_updated_at` that read as a time
   (a folder's element carries the last two), decided element by element; a value that cannot be read is ignored.
@@ -246,6 +245,19 @@ Nothing is released yet; the history before this file is in the git log.
   Charter's newest pick, which already broke its ties by the higher id. The three readings beside the message fixture
   that held the old ties (`tests/data/message-beside-the-fixture.json`: two marks written at the same time, two equal
   once the fraction is cut at its sixth digit, and two that cannot be read) now want the higher id.
+- Schema pin to `v0.34.0-dist.123` (canonical `00.34.00` unchanged; no schema file or `schema.json` moved). The
+  record, lens and message pages rule the three moves above: one time grammar, one clock per lens, and the read
+  mark's ties. The fixtures gain cases: `profiles/record.fixture.json` eight, three of dist.122's gone with the old
+  grammar (46; of the four dist.122 cases that held the old grammar, three read as wanted under their names and
+  `no-mark-played-offset` is gone, its Event now written with no colon in the offset), `profiles/lens.fixture.json`
+  eleven `resolve` and one `graph` (233), `profiles/message.fixture.json` seven `mark` (100),
+  `profiles/strand.fixture.json` one with its world (27, 24 worlds: a mark naming its story in upper case is no
+  strand); every one of these reads as wanted here. The address page rules an address found in prose (where it ends,
+  and the run after `/w/` read whole) and `profiles/address.fixture.json` gains fifty-seven `prose` cases (197): they
+  are a finder's, and this SDK has none (`OWAddress::Parse` reads one string whole), so they are counted and not run.
+  The checks fixture gains two rules and two cases on `one_of` over a list; this SDK has no checks reader. The
+  core's and the plugin's fixture tests moved their sha256 and counts. The generated files changed in their stamp
+  lines only.
 - **A Charter's skill ids match an Object's own id as written.** `OWCharter::CharterOf` still finds an id in the
   Charter's text in either case and takes it in lowercase, but now matches it against the ids of the Objects the
   reader sees as they are written, where it lowercased those too. So an Object whose own id is held in upper case is

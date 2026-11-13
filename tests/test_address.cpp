@@ -1,8 +1,9 @@
 // OWAddress on the address profile's conformance fixture (schema-dist profiles/address.fixture.json, the pinned copy,
-// dist.122's, the lens key's three cases added): every format case through WriteJson, every parse case through Parse,
-// each refusal by the reason the fixture names. Then the readings the fixture leaves open, as the TypeScript and
-// Python packages and the Unity SDK answer them: the writer's refusal order, a moment with a zero fraction, an empty
-// string, an unknown key.
+// dist.123's, its fifty-seven prose cases added): every format case through WriteJson, every parse case through Parse,
+// each refusal by the reason the fixture names. The prose cases are a finder's (an address found inside a line), and
+// this core has none: Parse reads one string whole, so they are counted and not run. Then the readings the fixture
+// leaves open, as the TypeScript and Python packages and the Unity SDK answer them: the writer's refusal order, a
+// moment with a zero fraction, an empty string, an unknown key.
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -19,8 +20,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.122's MANIFEST.json records it.
-const char* const DistSha256 = "c04fec95ca86f3c97808c6cee703932844df5311661eb65d4faf0c4cad3fa42d";
+// The fixture's sha256 as dist.123's MANIFEST.json records it.
+const char* const DistSha256 = "4c4e4ebbdf08d8a1c29d14d888182e9639f4ac51a1ff8e6f3c0d6878cf3d8eaf";
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "019a1f3c-2b4e-7d10-8c3a-6f2e9b0d4a71";
@@ -127,21 +128,23 @@ std::string Written(const std::string& json) { return OWAddress::WriteJson(J(jso
 OW_TEST(address_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the address fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.122's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.123's");
     auto doc = Fixture();
     t.Eq(Str(*doc, "profile"), std::string("address"), "the address profile's fixture");
     const OWJsonValue* cases = doc->Find("cases");
     t.Ok(cases && cases->IsArray(), "it parses, with its cases");
     if (!cases) return;
-    size_t format = 0, parse = 0, refusals = 0;
+    size_t format = 0, parse = 0, prose = 0, refusals = 0;
     for (const OWJsonValue& c : cases->Items()) {
         format += Str(c, "kind") == "format";
         parse += Str(c, "kind") == "parse";
+        prose += Str(c, "kind") == "prose";
         refusals += c.Has("refuse");
     }
-    t.Eq(cases->Size(), size_t(140), "140 cases");
+    t.Eq(cases->Size(), size_t(197), "197 cases");
     t.Eq(format, size_t(36), "36 format cases");
     t.Eq(parse, size_t(104), "104 parse cases");
+    t.Eq(prose, size_t(57), "57 prose cases, a finder's, not run here");
     t.Eq(refusals, size_t(75), "20 format refusals and 55 parse refusals");
 }
 
@@ -175,8 +178,10 @@ OW_CASES(address_fixture_cases) {
         out.emplace_back("address_fixture:not-found", [](owtest::T& t) { t.Fail("the address fixture did not load"); });
         return out;
     }
+    // A prose case is a finder's (where an address inside a line ends); this core has no finder, so it is not run.
     for (const OWJsonValue& c : cases->Items())
-        out.emplace_back("address_fixture:" + Str(c, "name"), [doc, &c](owtest::T& t) { Case(t, c); });
+        if (Str(c, "kind") != "prose")
+            out.emplace_back("address_fixture:" + Str(c, "name"), [doc, &c](owtest::T& t) { Case(t, c); });
     return out;
 }
 

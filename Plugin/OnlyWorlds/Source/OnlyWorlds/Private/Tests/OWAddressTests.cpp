@@ -147,7 +147,7 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 	const OWJsonValue* Cases = Doc.Find("cases");
 	if (!TestTrue(TEXT("the fixture holds cases"), Cases && Cases->IsArray())) return false;
 
-	int32 Parsed = 0, Written = 0, Failed = 0, RoundTrips = 0;
+	int32 Parsed = 0, Written = 0, Prose = 0, Failed = 0, RoundTrips = 0;
 	TArray<FString> NotCarried;
 	for (const OWJsonValue& Case : Cases->Items())
 	{
@@ -223,14 +223,21 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 				TestEqual(Name + TEXT(": no reason"), W.Reason, FString());
 			}
 		}
+		else if (Kind == TEXT("prose"))
+		{
+			// A finder's case (where an address inside a line ends): ParseAddress reads one string whole, and the
+			// plugin, like its core, has no finder.
+			++Prose;
+		}
 		else
 		{
 			AddError(Name + TEXT(": a case of unknown kind ") + Kind);
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	TestEqual(TEXT("140 cases"), static_cast<int32>(Cases->Items().size()), 140);
+	TestEqual(TEXT("197 cases"), static_cast<int32>(Cases->Items().size()), 197);
 	TestEqual(TEXT("every parse case through ParseAddress"), Parsed, 104);
+	TestEqual(TEXT("the 57 prose cases, a finder's, not carried"), Prose, 57);
 	TestEqual(TEXT("the format cases through WriteAddress"), Written, 33);
 	// The three moments no Integer64 pin holds; the core's own runner reads them through WriteJson.
 	TestEqual(TEXT("not carried: a moment that is not a whole number"), NotCarried.Num(), 3);

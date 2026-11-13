@@ -1,6 +1,6 @@
-// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.122's copy, its sha256
+// OWLens on the lens profile's conformance fixture (schema-dist profiles/lens.fixture.json, dist.123's copy, its sha256
 // held to MANIFEST.json): the pair and the template, the legal values of x_lens, where a seat's choice lives, every
-// resolution over the fixture's nine worlds and their readers, the invariants, the graph kind's 54 cases (each its
+// resolution over the fixture's nine worlds and their readers, the invariants, the graph kind's 55 cases (each its
 // own world, through OWGraph::WorldGraph, the want compared whole) and the degree kind's 5 (OWGraph::DegreeOf and
 // OutDegreeOf over each case's graph, every node a key in the graph's node order). The profile's tables are held
 // equal to the fixture's, the field table to schema.json and the stub's public fields to presentation.json; then
@@ -25,8 +25,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.122's MANIFEST.json records it.
-const char* const DistSha256 = "bb5429a3a75b42719e17974ef6eba1a7cc3a6f49133e66409ebeb9c6fbed2e62";
+// The fixture's sha256 as dist.123's MANIFEST.json records it.
+const char* const DistSha256 = "85128ef45125804848d834387fdbe0bcb7bd657e3d7386f8653e1a76688076c7";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/lens.fixture.json"; }
 
@@ -311,7 +311,7 @@ bool Runs(const std::string& kind) {
 OW_TEST(lens_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the lens fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.122's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.123's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -331,19 +331,19 @@ OW_TEST(lens_fixture_is_the_pinned_one) {
         names.insert(Str(c, "name"));
         if (Runs(Str(c, "kind"))) ++run;
     }
-    t.Eq(cases->Size(), size_t(221), "221 cases");
-    t.Eq(names.size(), size_t(221), "each name its own");
+    t.Eq(cases->Size(), size_t(233), "233 cases");
+    t.Eq(names.size(), size_t(233), "each name its own");
     const std::pair<const char*, size_t> want[] = {{"shape", 6},   {"keys", 25},      {"uses", 5},
-                                                   {"resolve", 122}, {"invariant", 4}, {"graph", 54},
+                                                   {"resolve", 133}, {"invariant", 4}, {"graph", 55},
                                                    {"degree", 5}};
     size_t sum = 0;
     for (const auto& [kind, n] : want) {
         t.Eq(kinds[kind], n, std::string("kind ") + kind);
         sum += n;
     }
-    t.Eq(sum, size_t(221), "the seven kinds are every case");
+    t.Eq(sum, size_t(233), "the seven kinds are every case");
     t.Eq(kinds.size(), size_t(7), "and no other kind");
-    t.Eq(run, size_t(221), "every case runs here, the 54 graph and the 5 degree cases among them");
+    t.Eq(run, size_t(233), "every case runs here, the 55 graph and the 5 degree cases among them");
 }
 
 OW_TEST(lens_tables_are_the_fixtures) {
