@@ -31,6 +31,10 @@ Nothing is released yet; the history before this file is in the git log.
   and reads nothing. Parity with the TypeScript SDK 4.142.0's `layoutOf` and the Python package 0.110.0's
   `layout_of`: every one of the fixture's 21 `layout_cases`, whole answers in key order, and the two packages' vectors
   beyond the fixture. `MapSpaceOf` is unchanged. Core only: there is no Blueprint door.
+- `OWTools` repinned at the tools list's `53a05e4` (tools.json sha256 `198f62a2…`), the list the TypeScript SDK's and
+  the Python package's pins name: one new row, Windrose (`windrose`, listed), with no `open`, so the Open with menu
+  offers it nowhere. No other row's door changed (Little Lens's `element_skips` is only re-wrapped in the list). Six
+  rows baked where there were five.
 - `OWTools` repinned at the tools list's `0a7539c` (tools.json sha256 `f1fac743…`), the list the TypeScript SDK
   4.158.1 bakes and the Python package 0.120.0 pins: one new row, Subs (`subs`, listed), whose only door is an
   element's, for a Character (`element_types: ["character"]`, needs an account), so the Open with menu offers it

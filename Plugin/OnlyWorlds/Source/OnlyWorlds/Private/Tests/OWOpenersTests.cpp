@@ -166,7 +166,8 @@ bool FOWOpenersWorldTest::RunTest(const FString& Parameters)
 	// href kept: the menu draws it as one that opens nothing. Atlas needs one too but opens a public world with none
 	// (opens_public, the list at 9452529), so the public's Atlas row is live. Little Lens needs none. Tangle opens a
 	// world or a Character (its element_types), so it is on the world's menu and on Ana's; Subs opens a Character and
-	// has no world door (the list at 0a7539c), so it is on Ana's menu, last, and not on the world's.
+	// has no world door (the list at 0a7539c), so it is on Ana's menu, last, and not on the world's. Windrose (the list
+	// at 53a05e4) is listed with no open, so it is on no menu and no count below moves.
 	const FString NoAccount = TEXT("Needs an account");
 	FMenu M = CallOpenersFor(*this, World, FString(), Surface(EOWAudience::Public));
 	TestTrue(TEXT("public, the world: the site's page, Atlas, Lantern needing an account, Little Lens, Tangle needing one (") + M.Show() + TEXT(")"),

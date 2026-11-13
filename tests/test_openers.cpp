@@ -674,8 +674,10 @@ OW_TEST(openers_the_baked_list_offers_tactical_tangle_on_a_world_and_a_character
     const OWTool* tangle = nullptr;
     for (const OWTool& x : OWTools::All()) {
         if (x.id == "tangle") tangle = &x;
-        // Subs (the list at 0a7539c) opens Characters too: its own test above.
-        else if (x.id != "subs") t.Ok(x.open && !x.open->element_types, x.id + ": opens every type");
+        // Subs (the list at 0a7539c) opens Characters too, and Windrose (the list at 53a05e4) opens nothing: each has its
+        // own test.
+        else if (x.id != "subs" && x.id != "windrose")
+            t.Ok(x.open && !x.open->element_types, x.id + ": opens every type");
     }
     t.Ok(tangle && tangle->rung == "listed" && tangle->open && tangle->open->world && tangle->open->element,
          "Tactical Tangle is listed, with a world door and an element door");
@@ -717,6 +719,33 @@ OW_TEST(openers_the_baked_list_offers_tactical_tangle_on_a_world_and_a_character
     t.Ok(visitor.ok && visitor.rows.size() >= 2 && visitor.rows[visitor.rows.size() - 2].id == "tangle" &&
              tail == std::vector<std::string>{"tangle: needs", "subs: needs"},
          "the public's Character menu: Tangle, then Subs, last, each Needs an account");
+}
+
+// Windrose (the list at 53a05e4): listed with no `open`, so no menu offers it, a member's or the public's, on a world
+// or on any type.
+OW_TEST(openers_the_baked_list_lists_windrose_and_offers_it_on_no_menu) {
+    const OWTool* windrose = nullptr;
+    for (const OWTool& x : OWTools::All())
+        if (x.id == "windrose") windrose = &x;
+    t.Ok(windrose && windrose->rung == "listed" && !windrose->open, "Windrose: listed, with no open");
+    OWOpenerSurface pub;
+    pub.audience = OWOpeners::Public;
+    auto offered = [](const OWOpenersResult& r) {
+        for (const OWOpener& o : r.rows)
+            if (o.id == "windrose") return true;
+        return false;
+    };
+    OWAddressParts world;
+    world.form = OWAddress::Human;
+    world.world = World;
+    t.Ok(!offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::World, world, Member(true))), "a member's world menu");
+    t.Ok(!offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::World, world, pub)), "the public's world menu");
+    for (const char* type : OWAddress::TypeWords) {
+        t.Ok(!offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf(type), Member(true))),
+             std::string("a member's ") + type + " menu");
+        t.Ok(!offered(OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf(type), pub)),
+             std::string("the public's ") + type + " menu");
+    }
 }
 
 OW_TEST(openers_the_elements_own_id_is_read_as_written_the_addresss_in_either_case) {
