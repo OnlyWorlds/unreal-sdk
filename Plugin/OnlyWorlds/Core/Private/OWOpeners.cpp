@@ -308,18 +308,28 @@ std::optional<OWOpenersResult> CheckAudience(const std::string& audience) {
 }
 
 // The element given for the menu: only an element's, and only the one the address names (the address profile's rule for
-// the same id: the address's id taken in lowercase, the element's own id read as written, so an element held in upper
-// case is not the one the address names); on success fills its marks (MarksOf). Null is no element.
+// the same id: the address's id taken in lowercase, the element's own id read as written); on success fills its marks
+// (MarksOf). Null is no element. An element whose own id differs from the address's only by case is held in upper case:
+// no address can name it, so its menu is no rows (`unnamed`, answered by the caller after every other check), which is
+// no refusal; an id that differs past case is the caller's mistake.
 std::optional<OWOpenersResult> CheckElement(std::string_view kind, const OWJsonValue* element, const std::string& id,
-                                            std::vector<std::string>& marks) {
+                                            std::vector<std::string>& marks, bool& unnamed) {
+    unnamed = false;
     if (!element || element->IsNull()) return std::nullopt;
     if (!element->IsObject()) return Mistake("options element is the element as served, an object, or null");
     if (kind != Element) return Mistake("options element is for an element's menu; a world's menu takes none");
     const OWJsonValue* eid = element->Find("id");
-    if (!eid || !eid->IsString() || eid->Text() != id)
+    if (!eid || !eid->IsString() || AsciiLower(eid->Text()) != id)
         return Mistake("options element is the element the address names: its id differs");
+    unnamed = eid->Text() != id;
     marks = MarksOf(*element);
     return std::nullopt;
+}
+
+// The rows, or none for an element no address can name; a refusal is kept whatever the element.
+OWOpenersResult Unnamed(OWOpenersResult r, bool unnamed) {
+    if (r.ok && unnamed) r.rows.clear();
+    return r;
 }
 
 OWOpenersResult Typed(const std::vector<OWTool>& tools, std::string_view kind, const std::optional<std::string>& world,
@@ -330,8 +340,9 @@ OWOpenersResult Typed(const std::vector<OWTool>& tools, std::string_view kind, c
     if (auto bad = CheckAddress(kind, world, type, id, page, w, t, i)) return *bad;
     if (auto bad = CheckAudience(surface.audience)) return *bad;
     std::vector<std::string> marks;
-    if (auto bad = CheckElement(kind, options.element, i, marks)) return *bad;
-    return Rows(tools, kind == Element, page, w, t, i, surface, marks);
+    bool unnamed = false;
+    if (auto bad = CheckElement(kind, options.element, i, marks, unnamed)) return *bad;
+    return Unnamed(Rows(tools, kind == Element, page, w, t, i, surface, marks), unnamed);
 }
 
 }  // namespace
@@ -417,11 +428,12 @@ OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, 
     }
 
     std::vector<std::string> marks;
+    bool unnamed = false;
     if (options) {
         if (!options->IsObject()) return Mistake("the options are an object ({ element })");
         for (const std::string& key : options->Keys())
             if (key != "element") return Mistake("unknown key '" + key + "' in the options. The keys are element.");
-        if (auto bad = CheckElement(kind, options->Find("element"), i, marks)) return *bad;
+        if (auto bad = CheckElement(kind, options->Find("element"), i, marks, unnamed)) return *bad;
     }
 
     std::vector<OWTool> rows;
@@ -496,7 +508,7 @@ OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, 
         }
         rows.push_back(std::move(tool));
     }
-    return Rows(rows, kind == Element, page, w, t, i, s, marks);
+    return Unnamed(Rows(rows, kind == Element, page, w, t, i, s, marks), unnamed);
 }
 
 }  // namespace OWOpeners

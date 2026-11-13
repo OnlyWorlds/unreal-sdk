@@ -272,6 +272,14 @@ Nothing is released yet; the history before this file is in the git log.
   names the Object held in lowercase, and a kept skill is always the Object's own id. This follows the address
   profile's rule for the same id: an id is read in either case only at an address and in a text, and what it is then
   matched against is read as written, as every other reader of the core already reads ids.
+- **An element held in upper case has a menu of no rows, not a refusal.** `OWOpeners::OpenersFor` and
+  `OpenersForJson` given an element whose own id differs from the address's only by case (held as `0199C3A1-…`, the
+  address naming `0199c3a1-…`) answer ok with no rows: no address can name such an element, so no door opens it, and
+  that is not a caller's mistake (a surface still draws its mark). An id that differs past case is still refused
+  ("its id differs"), and the empty answer comes only after every other check, so a tools row that is not one is
+  refused for such an element too. On Blueprints, `UOWOpeners::OpenersFor` on a world element held in upper case
+  answers true with no rows. Parity with the TypeScript SDK 4.161.0 and the Python package 0.122.0: the shared
+  openers fixture is re-vendored (111 cases, sha256 `8af6f6da…`), its `skips-id-case-held-upper` wanting no rows.
 - **The openers' check reads the given element's own id as written.** `OWOpeners::OpenersFor` with an
   `OWOpenersOptions` element still reads the address's id in either case and takes it in lowercase, but now compares
   the element's own `id` to it as written, where it lowercased that too. An element held in upper case is not the

@@ -42,7 +42,9 @@
 // audience, a surface value of the wrong type, an element given for a world's menu or naming another element than the
 // address, a tools row that is not one (a needs, an element_skips or an element_types word outside the list's format,
 // an empty or repeating element_types, skips or element_types on a row with no element door, or an opens_public that
-// is not true or false or is true beside a needs other than "account", included).
+// is not true or false or is true beside a needs other than "account", included). An element whose own id is held in
+// upper case, the address's lowercase id otherwise its own, is no refusal: no address can name it, so the answer is ok
+// with no rows, given only after every other check (a surface draws its mark with an empty menu).
 
 #include "OWAddress.h"
 #include "OWJson.h"

@@ -511,7 +511,8 @@ bool FOWOpenersAddressTest::RunTest(const FString& Parameters)
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	// The fixture at 111 cases (its id-case case split in two; both carry the element as served, so neither is carried).
+	// The fixture at 111 cases (its two id-case cases carry the element as served, so neither is carried; the held-upper
+	// one now wants no rows where it wanted a refusal, which moves only its not-carried reason).
 	TestEqual(TEXT("111 cases"), static_cast<int32>(Cases->Items().size()), 111);
 	TestEqual(TEXT("the row cases carried"), RowCases, 50);
 	TestEqual(TEXT("the address refusals carried"), Refusals, 6);

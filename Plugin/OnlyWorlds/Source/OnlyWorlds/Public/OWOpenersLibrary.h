@@ -102,6 +102,8 @@ public:
 	 * element's menu reads the element itself (ServedElement): a tool whose element door skips a mark it carries
 	 * (room, hidden, proposed, map space, a reading aid: the list's element_skips) is not there, nor is a tool whose
 	 * element door opens other types (the list's element_types: Tactical Tangle opens Characters), world door and all.
+	 * An element whose own id is held in upper case is one no address can name: true, with no rows (a surface still
+	 * draws its mark), as the core answers it.
 	 */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Open with")
 	static bool OpenersFor(const UOWWorld* World, const FString& ElementId, const FOWOpenerSurface& Surface,

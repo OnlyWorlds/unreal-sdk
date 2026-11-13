@@ -21,9 +21,10 @@ using owtest::P;
 
 namespace {
 
-// The npm SDK's test/fixtures/openers.fixture.json at 111 cases: its id-case case split in two, an element held in
-// upper case under a lowercase address (refused) and a lowercase element under an upper-case address (the rows).
-const char* const FixtureSha256 = "ac14435bc287e92bd18e651871f39a0c66870bb041be0eb394d3eb868eb76978";
+// The npm SDK's test/fixtures/openers.fixture.json at 111 cases (4.161.0; the Python package 0.122.0 holds the same
+// bytes): its id-case cases, an element held in upper case under a lowercase address (no rows: no address can name
+// it) and a lowercase element under an upper-case address (the rows).
+const char* const FixtureSha256 = "8af6f6daded20444184303a66c73ce72b76a5aa111f639ffc4a9e9072fb07c74";
 const size_t CaseCount = 111;
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
@@ -801,7 +802,9 @@ OW_TEST(openers_the_baked_list_offers_the_mapper_on_every_element) {
 OW_TEST(openers_the_elements_own_id_is_read_as_written_the_addresss_in_either_case) {
     // The address profile's rule for the same id at the openers' check: the address's id is read in either case and
     // taken in lowercase, the given element's own id is read as written. An element held in lowercase is the address's
-    // element whatever the address's case; one held in upper case is not, whatever the address's case.
+    // element whatever the address's case; one held in upper case is one no address can name, so its menu has no rows,
+    // whatever the address's case (the packages' release of serial 123: npm 4.161.0, Python 0.122.0), and that is no
+    // refusal.
     auto upper = [](std::string s) {
         for (char& c : s)
             if (c >= 'a' && c <= 'z') c = char(c - 'a' + 'A');
@@ -823,7 +826,61 @@ OW_TEST(openers_the_elements_own_id_is_read_as_written_the_addresss_in_either_ca
         if (c.same)
             t.Ok(r.ok && !r.rows.empty(), label + ": the address's element, its rows");
         else
-            t.Ok(!r.ok && r.message.find("its id differs") != std::string::npos, label + ": refused, its id differs (got " +
-                                                                                     r.message + ")");
+            t.Ok(r.ok && r.rows.empty() && r.message.empty(),
+                 label + ": no address can name it, no rows and no refusal (got " + std::to_string(r.rows.size()) +
+                     " rows, '" + r.message + "')");
     }
+}
+
+// The order of the held-upper answer: an id that differs by more than case is still the caller's mistake, and the empty
+// answer comes after every other check, so a tools row that is not one is refused for a held-upper element too, through
+// either door (the typed one and the JSON one). Kills an early return of no rows at the element's check.
+OW_TEST(openers_a_held_upper_element_answers_no_rows_only_after_every_other_check) {
+    auto upper = [](std::string s) {
+        for (char& c : s)
+            if (c >= 'a' && c <= 'z') c = char(c - 'a' + 'A');
+        return s;
+    };
+    auto held = [](const std::string& id) {
+        return OWJson::Parse("{\"id\": \"" + id + "\", \"type\": \"character\", \"name\": \"The element\"}").value;
+    };
+    const OWJsonValue upper_element = held(upper(Element));
+    OWOpenersOptions options;
+    options.element = &upper_element;
+    // Past case: still refused.
+    std::string other = Element;
+    other.back() = other.back() == 'a' ? 'b' : 'a';
+    const OWJsonValue other_element = held(other);
+    OWOpenersOptions past;
+    past.element = &other_element;
+    OWOpenersResult p = OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf("character"), Member(true), past);
+    t.Ok(!p.ok && p.message.find("its id differs") != std::string::npos, "an id that differs past case: refused (" + p.message + ")");
+    // A tools row that is not one: refused before the empty answer.
+    OWTool bad;
+    bad.id = "kite";
+    bad.name = "Kite";
+    bad.url = "https://kite.example";
+    bad.rung = "listed";
+    bad.open = OWToolOpen{std::string("https://kite.example/{world}"), std::nullopt, std::string("nope")};
+    OWOpenersResult r = OWOpeners::OpenersFor({bad}, OWOpeners::Element, ElementOf("character"), Member(true), options);
+    t.Ok(!r.ok && r.message.find("open.needs") != std::string::npos,
+         "a bad tools row, a held-upper element: refused for the row (got " + std::to_string(r.rows.size()) + " rows, '" +
+             r.message + "')");
+    // The JSON door: the same two answers.
+    OWJsonParseResult address = OWJson::Parse("{\"form\": \"human\", \"world\": \"" + World +
+                                              "\", \"type\": \"character\", \"id\": \"" + Element + "\"}");
+    OWJsonParseResult surface = OWJson::Parse("{\"audience\": \"member\", \"signed_in\": true}");
+    OWJsonValue opts = OWJsonValue::Object();
+    opts.Set("element", upper_element);
+    OWJsonParseResult good = OWJson::Parse(
+        "[{\"id\": \"kite\", \"name\": \"Kite\", \"rung\": \"listed\", \"open\": {\"world\": \"https://kite.example/{world}\", "
+        "\"element\": \"https://kite.example/{world}/{id}\", \"needs\": null}}]");
+    OWOpenersResult j = OWOpeners::OpenersForJson(good.value, OWOpeners::Element, address.value, surface.value, &opts);
+    t.Ok(j.ok && j.rows.empty() && j.message.empty(), "the JSON door, a held-upper element: no rows, no refusal ('" + j.message + "')");
+    OWJsonParseResult nope = OWJson::Parse(
+        "[{\"id\": \"kite\", \"name\": \"Kite\", \"rung\": \"listed\", \"open\": {\"world\": \"https://kite.example/{world}\", "
+        "\"needs\": \"nope\"}}]");
+    OWOpenersResult jn = OWOpeners::OpenersForJson(nope.value, OWOpeners::Element, address.value, surface.value, &opts);
+    t.Ok(!jn.ok && jn.message.find("open.needs") != std::string::npos,
+         "the JSON door, a bad tools row, a held-upper element: refused for the row ('" + jn.message + "')");
 }
