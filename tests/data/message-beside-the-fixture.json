@@ -719,7 +719,8 @@
   },
   {
    "kind": "mark",
-   "name": "mark-unreadable-only-keeps-the-first",
+   "name": "mark-unreadable-only-the-higher-id",
+   "note": "When no mark's updated_at can be read, the higher id (code point, as written) is the mark (e036). npm 4.102.4 kept the first in the list (e035); the message page's read mark sentence moved the answer.",
    "relations": [
     {
      "id": "019a3b10-0000-7000-8000-00000000e035",
@@ -740,7 +741,7 @@
     }
    ],
    "reader": "019a3b10-0000-7000-8000-0000000000a1",
-   "mark": "019a3b10-0000-7000-8000-00000000e035"
+   "mark": "019a3b10-0000-7000-8000-00000000e036"
   },
   {
    "kind": "mark",

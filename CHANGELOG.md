@@ -235,15 +235,14 @@ Nothing is released yet; the history before this file is in the git log.
   stamped only by the folder sorted as undated. The budget keeps the newest, and an element edited locally yesterday is
   now newer than one the server stamped last week. An element with no readable clock still sorts after every one that
   has one; on the wire, where an element carries `updated_at` alone, nothing moves.
-- **The read mark's tie goes to the higher id.** `OWMessage::ReadMarkOf` still takes the reader's mark with the newest
-  `updated_at` read as an instant, and a mark whose `updated_at` cannot be read never wins over one that can, in either
-  list order. Two marks at the same instant now tie by the higher id, compared by code point as written, where the
-  first in the list won before; an instant written two ways (`10:00:00Z` and `11:00:00+01:00`) is the same instant, so
-  it ties too. The answer no longer depends on the order the server lists the Relations in, and matches the Charter's
-  newest pick, which already broke its tie by the higher id. Two marks that both cannot be read still keep the first.
-  The two readings beside the message fixture that held the old tie (`tests/data/message-beside-the-fixture.json`:
-  two marks written at the same time, and two equal once the fraction is cut at its sixth digit) now want the higher
-  id.
+- **The read mark's tie goes to the higher id.** `OWMessage::ReadMarkOf` reads the message profile's sentence: a lone
+  mark is the mark. Among several, the newest readable `updated_at` wins; one that cannot be read never beats one that
+  can; among equal instants, or when none can be read, the higher id (code point, as written) is the mark. Before, the
+  first in the list won both ties. An instant written two ways (`10:00:00Z` and `11:00:00+01:00`) is the same instant,
+  so it ties too. The answer no longer depends on the order the server lists the Relations in, and matches the
+  Charter's newest pick, which already broke its ties by the higher id. The three readings beside the message fixture
+  that held the old ties (`tests/data/message-beside-the-fixture.json`: two marks written at the same time, two equal
+  once the fraction is cut at its sixth digit, and two that cannot be read) now want the higher id.
 - **A Charter's skill ids match an Object's own id as written.** `OWCharter::CharterOf` still finds an id in the
   Charter's text in either case and takes it in lowercase, but now matches it against the ids of the Objects the
   reader sees as they are written, where it lowercased those too. So an Object whose own id is held in upper case is

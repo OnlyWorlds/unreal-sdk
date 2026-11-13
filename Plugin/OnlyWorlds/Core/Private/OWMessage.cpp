@@ -294,9 +294,11 @@ const OWJsonValue* ReadMarkOf(const std::vector<const OWJsonValue*>& relations, 
         // Its author is the reader: the sender rule on actor, where created_by exists.
         if (has_author && HandOf(*rel, members) != std::optional<std::string>(std::string(character_id))) continue;
         std::optional<OWTimeKey> key = TimeKey(rel->Find("updated_at"));
-        // A readable time beats an unreadable one; the newer wins; two at one instant, the higher id by code point.
+        // A lone mark is the mark. A readable time beats an unreadable one; the newer wins; at one instant, or when
+        // neither can be read, the higher id by code point.
         bool newer = !mark || (key && (!mark_key || *mark_key < *key));
-        if (!newer && key && mark_key && *key == *mark_key) newer = id_of(*rel) > id_of(*mark);
+        bool tied = key ? mark_key && *key == *mark_key : !mark_key;
+        if (!newer && tied) newer = id_of(*rel) > id_of(*mark);
         if (newer) {
             mark = rel;
             mark_key = key;

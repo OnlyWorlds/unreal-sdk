@@ -446,8 +446,8 @@ std::string MarkAmong(const std::vector<OWJsonValue>& marks) {
 
 // The read mark's tie: of two marks at the same instant, the higher id wins (by code point, the id as written), in
 // either list order; an instant written two ways (an offset, a fraction of zeros, a lowercase t and z) is the same
-// instant. A mark whose updated_at cannot be read never wins over one that can. Two that cannot be read keep the first
-// in the list. Kills: a tie kept by list order, a tie by the lower id, an id compared folded, the text compared in
+// instant. A mark whose updated_at cannot be read never wins over one that can. Two that cannot be read: the higher
+// id. Kills: a tie kept by list order, a tie by the lower id, an id compared folded, the text compared in
 // place of the instant.
 OW_TEST(message_read_mark_tie_goes_to_the_higher_id) {
     const char* const ten = "\"2026-10-27T10:00:00Z\"";
@@ -469,6 +469,31 @@ OW_TEST(message_read_mark_tie_goes_to_the_higher_id) {
         t.Eq(MarkAmong({AdasMark("m-ff", unread), AdasMark("m-00", ten)}), std::string("m-00"), shown + ", listed first");
     }
     t.Eq(MarkAmong({AdasMark("m-00", ten), AdasMark("m-ff", nullptr)}), std::string("m-00"), "beside no updated_at");
-    t.Eq(MarkAmong({AdasMark("m-00", nullptr), AdasMark("m-ff", "\"garbage\"")}), std::string("m-00"),
-         "two that cannot be read: the first in the list");
+    t.Eq(MarkAmong({AdasMark("m-00", nullptr), AdasMark("m-ff", "\"garbage\"")}), std::string("m-ff"),
+         "two that cannot be read: the higher id");
+}
+
+// The message page's read mark, the sentence as ruled: a lone mark is the mark. Among several, the newest readable
+// updated_at wins; one that cannot be read never beats one that can; among equal instants, or when none can be read,
+// the higher id (code point, as written) is the mark. Each case in both list orders. Kills: a tie kept by list order,
+// an unreadable mark winning on its id, a lone unreadable mark dropped.
+OW_TEST(message_read_mark_the_ruled_sentence) {
+    auto both = [&](const OWJsonValue& a, const OWJsonValue& b, const std::string& want, const std::string& what) {
+        t.Eq(MarkAmong({a, b}), want, what + ", listed one way");
+        t.Eq(MarkAmong({b, a}), want, what + ", listed the other way");
+    };
+    // Equal instants written two ways: the higher id.
+    both(AdasMark("m-1", "\"2026-10-27T10:00:00Z\""), AdasMark("m-2", "\"2026-10-27T11:00:00+01:00\""), "m-2",
+         "10:00:00Z and 11:00:00+01:00");
+    // Readable beats unreadable, whatever the ids.
+    both(AdasMark("m-1", "\"2026-10-27T10:00:00Z\""), AdasMark("m-2", "\"garbage\""), "m-1", "readable beside garbage");
+    both(AdasMark("m-1", "\"2026-10-27T10:00:00Z\""), AdasMark("m-2", nullptr), "m-1", "readable beside none");
+    // None can be read: the higher id.
+    both(AdasMark("m-1", nullptr), AdasMark("m-2", "\"garbage\""), "m-2", "none readable, two");
+    t.Eq(MarkAmong({AdasMark("m-2", "\"2026-10-27\""), AdasMark("m-3", "null"), AdasMark("m-1", nullptr)}),
+         std::string("m-3"), "none readable, three");
+    // A lone mark is the mark, readable or not.
+    t.Eq(MarkAmong({AdasMark("m-1", "\"garbage\"")}), std::string("m-1"), "a lone unreadable mark");
+    t.Eq(MarkAmong({AdasMark("m-1", nullptr)}), std::string("m-1"), "a lone mark with no updated_at");
+    t.Eq(MarkAmong({AdasMark("m-1", "\"2026-10-27T10:00:00Z\"")}), std::string("m-1"), "a lone readable mark");
 }
