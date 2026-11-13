@@ -251,6 +251,14 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.121` (canonical `00.34.00` unchanged; no schema file, `schema.json` or walk reader
+  moved, and no answer of a reader moves). The message profile gives the one form a `created_at` is read in (a time
+  with no offset is UTC, every part in its range, a year any four digits, a fraction counted to its sixth digit), and
+  `profiles/message.fixture.json` gains five `unread` cases (93). The report profile's rule 9 says a parent that is no
+  string is no parent, a padded one is read as written, one id given twice keeps the first, and reports that name each
+  other in a ring are each grouped and linted; `profiles/report.fixture.json` gains seven thread cases (27).
+  `OWMessage` and `OWReport::ThreadsOf` answer every new case as they stood; the core's and the plugin's fixture tests
+  moved their counts. The generated files changed in their stamp lines only.
 - Schema pin to `v0.34.0-dist.120` (canonical `00.34.00` unchanged; no schema file, `schema.json` or walk reader
   moved, and no answer of a reader moves). The report profile gains `parent_narrative` in its table, a section on a
   report that continues earlier work (it names the first report of that work, never the one before it), and rule 9,

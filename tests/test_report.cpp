@@ -1,8 +1,9 @@
-// OWReport::ThreadsOf on the report profile's conformance fixture (schema-dist profiles/report.fixture.json, dist.120's
+// OWReport::ThreadsOf on the report profile's conformance fixture (schema-dist profiles/report.fixture.json, dist.121's
 // copy, its sha256 held to MANIFEST.json): every thread case by name, its own test row, the want's three parts compared
 // as the fixture says (`parents` per report, `groups` and `lints` each as a set, a group's reports in order). Then the
-// corners the fixture holds no case for, each answered as the npm SDK 4.159.0's reportThreadsOf and the Python package
-// 0.120.0's report_threads_of answer it (their own tests' vectors, read, not run here).
+// corners dist.120's fixture held no case for, each answered as the npm SDK 4.159.0's reportThreadsOf and the Python
+// package 0.120.0's report_threads_of answer it (their own tests' vectors, read, not run here); dist.121's fixture holds
+// a case for the first four, named on each.
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -25,8 +26,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.120's MANIFEST.json records it.
-const char* const DistSha256 = "5826bc58609ebc35862b4b9a364cad92822c2a6a50279dc5418dc674f5afd185";
+// The fixture's sha256 as dist.121's MANIFEST.json records it.
+const char* const DistSha256 = "f0b6a370cca7ccf00e8c36f237a568c38784eb02bfe8a367428dbc68cc25cb1d";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/report.fixture.json"; }
 
@@ -133,7 +134,7 @@ std::string B(const std::string& id) {
 OW_TEST(report_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the report fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.120's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.121's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -155,7 +156,7 @@ OW_TEST(report_fixture_is_the_pinned_one) {
          "both pairs are room pairs");
 }
 
-OW_TEST(report_fixture_holds_twenty_thread_cases) {
+OW_TEST(report_fixture_holds_twenty_seven_thread_cases) {
     std::set<std::string> names;
     size_t whole = 0;
     for (const OWJsonValue* c : Cases()) {
@@ -163,9 +164,9 @@ OW_TEST(report_fixture_holds_twenty_thread_cases) {
         const OWJsonValue* want = c->Find("want");
         if (c->Find("narratives") && want && want->Find("parents") && want->Find("groups") && want->Find("lints")) ++whole;
     }
-    t.Eq(Cases().size(), size_t(20), "20 thread cases (dist.120)");
-    t.Eq(names.size(), size_t(20), "each name its own");
-    t.Eq(whole, size_t(20), "every case has narratives and a want of three parts");
+    t.Eq(Cases().size(), size_t(27), "27 thread cases (dist.121)");
+    t.Eq(names.size(), size_t(27), "each name its own");
+    t.Eq(whole, size_t(27), "every case has narratives and a want of three parts");
 }
 
 OW_CASES(report_fixture_cases) {
@@ -180,10 +181,11 @@ OW_CASES(report_fixture_cases) {
     return out;
 }
 
-// -- the corners the fixture holds no case for ---------------------------------------------------------------------
+// -- the corners dist.120's fixture held no case for (dist.121's holds the first four) ----------------------------
 
 // A created_at with no offset reads as UTC (the message profile's order, OWMessage::InCreatedOrder): 09:30 with no
-// zone comes after 10:00+02:00 (08:00Z) and before 09:45Z. No fixture case carries a time without an offset.
+// zone comes after 10:00+02:00 (08:00Z) and before 09:45Z. The fixture's case:
+// thread-created-at-with-no-offset-is-read-as-utc.
 OW_TEST(report_threads_a_created_at_with_no_offset_reads_as_utc) {
     std::string got = Answer("[" + R("r0") + ", " +
                              R("a", R"("parent_narrative": "r0", "created_at": "2026-10-26T09:45:00Z")") + ", " +
@@ -195,7 +197,7 @@ OW_TEST(report_threads_a_created_at_with_no_offset_reads_as_utc) {
 
 // Of two elements with one id, the first is read and the later copy is ignored entirely: no report and no parent.
 // Here the first p is a board entry, so r1 reads board; the second r1 (naming x) is not read at all. The npm SDK's
-// vector.
+// vector. The fixture's case (two reports under one id): one-id-given-twice-keeps-the-first.
 OW_TEST(report_threads_of_two_with_one_id_the_first_is_read) {
     std::string got = Answer("[" + B("p") + ", " + R("p") + ", " + R("r1", R"("parent_narrative": "p")") + ", " +
                              R("r1", R"("parent_narrative": "x")") + "]");
@@ -209,7 +211,8 @@ OW_TEST(report_threads_of_two_with_one_id_the_first_is_read) {
 }
 
 // A parent that is no string reads none and is never matched as text: a number, true, a list, and an expanded parent
-// object ({"id": "r0"}, the shape an expanded link takes), beside r0 itself.
+// object ({"id": "r0"}, the shape an expanded link takes), beside r0 itself. The fixture's case (a number, a list, an
+// object): parent-that-is-not-a-string.
 OW_TEST(report_threads_a_parent_that_is_no_string_reads_none) {
     std::string got = Answer("[" + R("r0") + ", " + R("r1", R"("parent_narrative": 7)") + ", " +
                              R("r2", R"("parent_narrative": true)") + ", " + R("r3", R"("parent_narrative": ["r0"])") +
@@ -220,7 +223,8 @@ OW_TEST(report_threads_a_parent_that_is_no_string_reads_none) {
 }
 
 // A parent with content is read as written, never trimmed before the lookup: " r0 " and "r0\n" read missing beside an
-// r0; one empty once trimmed of White_Space (a tab, U+3000, U+00A0, a line break) reads none.
+// r0; one empty once trimmed of White_Space (a tab, U+3000, U+00A0, a line break) reads none. The fixture's case:
+// parent-is-a-held-id-with-a-space-at-each-end.
 OW_TEST(report_threads_a_padded_parent_is_read_as_written) {
     std::string got = Answer("[" + R("r0") + ", " + R("r1", R"("parent_narrative": " r0 ")") + ", " +
                              R("r2", R"("parent_narrative": "r0\n")") + ", " +

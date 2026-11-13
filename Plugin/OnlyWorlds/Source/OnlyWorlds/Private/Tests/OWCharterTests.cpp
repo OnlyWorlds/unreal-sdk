@@ -524,7 +524,7 @@ bool FOWCharterFixtureTest::RunTest(const FString& Parameters)
 		}
 		if (!bHeld) ++Failed;
 	}
-	// The fixture as vendored since dist.115 (unchanged at the pin, dist.120): 5 element cases and 26 charter cases.
+	// The fixture as vendored since dist.115 (unchanged at the pin, dist.121): 5 element cases and 26 charter cases.
 	TestEqual(TEXT("the 5 element cases carried"), Elements, 5);
 	TestEqual(TEXT("the 26 charter cases carried"), Packets, 26);
 	TestTrue(TEXT("none left out: ") + FString::Join(Left, TEXT("; ")), Left.Num() == 0);

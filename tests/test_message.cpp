@@ -1,4 +1,4 @@
-// OWMessage on the message profile's conformance fixture (schema-dist profiles/message.fixture.json, dist.95's copy):
+// OWMessage on the message profile's conformance fixture (schema-dist profiles/message.fixture.json, dist.121's copy):
 // every case by name, dispatched on its kind, each answer as the fixture gives it. Then tests/data/
 // message-beside-the-fixture.json: 79 cases in the fixture's own shapes that it does not hold (the pair's trim and fold,
 // addressing and sender edges, the read mark's ties and times, created_at readings, threads through a Note, the Note's
@@ -26,8 +26,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.95's MANIFEST.json records it.
-const char* const DistSha256 = "c7dafdab913996f6c5ccdaf454a156abce413ba59a97d5d64a5abaddba96b88f";
+// The fixture's sha256 as dist.121's MANIFEST.json records it.
+const char* const DistSha256 = "823a081c9f30e3593a4fffb75ff02674329db1c4816eb649ff4eb6ef1822ffc1";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/message.fixture.json"; }
 std::string BesidePath() { return P().root + "/tests/data/message-beside-the-fixture.json"; }
@@ -158,7 +158,7 @@ owtest::Cases CasesOf(const std::shared_ptr<OWJsonValue>& doc, const std::string
 OW_TEST(message_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the message fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.95's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.121's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -176,17 +176,17 @@ OW_TEST(message_fixture_is_the_pinned_one) {
         ++kinds[Str(c, "kind")];
         names.insert(Str(c, "name"));
     }
-    t.Eq(cases->Size(), size_t(88), "88 cases");
-    t.Eq(names.size(), size_t(88), "each name its own");
+    t.Eq(cases->Size(), size_t(93), "93 cases");
+    t.Eq(names.size(), size_t(93), "each name its own");
     const std::pair<const char*, size_t> want[] = {{"pair", 10},  {"addressed", 11}, {"sent_by", 3}, {"sender", 14},
-                                                   {"unread", 17}, {"mark", 11},     {"thread", 4},  {"unseen", 3},
+                                                   {"unread", 22}, {"mark", 11},     {"thread", 4},  {"unseen", 3},
                                                    {"everyone", 3}, {"edited", 4},   {"note", 8}};
     size_t sum = 0;
     for (const auto& [kind, n] : want) {
         t.Eq(kinds[kind], n, std::string("kind ") + kind);
         sum += n;
     }
-    t.Eq(sum, size_t(88), "the eleven kinds are every case");
+    t.Eq(sum, size_t(93), "the eleven kinds are every case");
     t.Eq(kinds.size(), size_t(11), "and no other kind");
 }
 
@@ -305,7 +305,9 @@ std::optional<OWMessage::OWTimeKey> KeyOf(const char* text) {
 // The TypeScript SDK 4.159.0's edge case `created-at-order-and-the-readable-rule` (its test/fixtures/message-edges.json,
 // the bytes the Unity SDK vendors), its 28 created_at texts and wanted order as the file gives them, through UnreadFor's
 // created_at order. A time with no offset is UTC; a fraction counts to its sixth digit, later digits dropped, not
-// rounded; a date alone, a space for the T and the other unreadable texts sort last, in the list's order.
+// rounded; a date alone, a space for the T and the other unreadable texts sort last, in the list's order. Since dist.121
+// the fixture holds five unread cases on these readings (`created-at-with-no-offset-is-read-as-utc` and the four after
+// it); this test and the two below stay to pin TimeKey beside them.
 OW_TEST(message_created_at_order_and_the_readable_rule_as_the_typescript_sdk) {
     const std::vector<std::pair<const char*, const char*>> rows = {
         {"t01", "\"2026-10-26T10:00:00Z\""},
