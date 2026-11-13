@@ -857,9 +857,9 @@ bool FOWLensFixtureTest::RunTest(const FString& Parameters)
 		++Carried;
 		if (!bHeld) ++Failed;
 	}
-	// The fixture as vendored since dist.115 (unchanged at the pin, dist.121): 6 shape, 25 keys, 5 uses, 121 resolve,
-	// 4 invariant, every case of these kinds; the 54 graph and 5 degree cases are the graph's.
-	TestEqual(TEXT("the 161 shape, keys, uses, resolve and invariant cases carried"), Carried, 161);
+	// The fixture as vendored at dist.122: 6 shape, 25 keys, 5 uses, 122 resolve, 4 invariant, every case of these
+	// kinds; the 54 graph and 5 degree cases are the graph's.
+	TestEqual(TEXT("the 162 shape, keys, uses, resolve and invariant cases carried"), Carried, 162);
 	TestEqual(TEXT("the graph's 59 left to OWWorldGraphTests.cpp"), Others, 59);
 	TestTrue(TEXT("none left out: ") + FString::Join(Left, TEXT("; ")), Left.Num() == 0);
 	TestEqual(TEXT("cases failed"), Failed, 0);

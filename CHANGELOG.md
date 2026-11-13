@@ -272,6 +272,19 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.122` (canonical `00.34.00` unchanged; no schema file or `schema.json` moved). The
+  address profile rules the same id: inside a world two ids are the same when they are written the same, an id is
+  read in either case and taken in lowercase only at an address and in a text a page says is searched for ids, and
+  what it is then matched against is read as written. The two moves above (a Charter's skill ids, the openers'
+  check) are this SDK's part of it. The pages that order by a time read `created_at` and `updated_at` as the message
+  profile reads one, and refusal 9 of the address page says the `lens` key is compared as written. The fixtures gain
+  cases: `profiles/address.fixture.json` three (140), `profiles/charter.fixture.json` seven (38),
+  `profiles/lens.fixture.json` one (221), `profiles/record.fixture.json` one (41), `profiles/report.fixture.json` two
+  (29 thread cases); every case reads as wanted here. Against the code before the two moves, one answer moves: the
+  charter case whose skill Object is held in upper case kept that Object (lowercased) and now keeps it not. The checks
+  fixture gains a rule and two cases, `views.json` one clause on the conversation layout and the folder lint a
+  warning for an id not lowercase in the form; this SDK has no reader of the three. The core's and the plugin's
+  fixture tests moved their sha256 and counts. The generated files changed in their stamp lines only.
 - Schema pin to `v0.34.0-dist.121` (canonical `00.34.00` unchanged; no schema file, `schema.json` or walk reader
   moved, and no answer of a reader moves). The message profile gives the one form a `created_at` is read in (a time
   with no offset is UTC, every part in its range, a year any four digits, a fraction counted to its sixth digit), and

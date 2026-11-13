@@ -1,4 +1,4 @@
-// OWReport::ThreadsOf on the report profile's conformance fixture (schema-dist profiles/report.fixture.json, dist.121's
+// OWReport::ThreadsOf on the report profile's conformance fixture (schema-dist profiles/report.fixture.json, dist.122's
 // copy, its sha256 held to MANIFEST.json): every thread case by name, its own test row, the want's three parts compared
 // as the fixture says (`parents` per report, `groups` and `lints` each as a set, a group's reports in order). Then the
 // corners dist.120's fixture held no case for, each answered as the npm SDK 4.159.0's reportThreadsOf and the Python
@@ -26,8 +26,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.121's MANIFEST.json records it.
-const char* const DistSha256 = "f0b6a370cca7ccf00e8c36f237a568c38784eb02bfe8a367428dbc68cc25cb1d";
+// The fixture's sha256 as dist.122's MANIFEST.json records it.
+const char* const DistSha256 = "c87c6165829858b58126bc5ccab2391647e8e4971a46deee39dde9b5d1f3593e";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/report.fixture.json"; }
 
@@ -134,7 +134,7 @@ std::string B(const std::string& id) {
 OW_TEST(report_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the report fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.121's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.122's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -156,7 +156,7 @@ OW_TEST(report_fixture_is_the_pinned_one) {
          "both pairs are room pairs");
 }
 
-OW_TEST(report_fixture_holds_twenty_seven_thread_cases) {
+OW_TEST(report_fixture_holds_twenty_nine_thread_cases) {
     std::set<std::string> names;
     size_t whole = 0;
     for (const OWJsonValue* c : Cases()) {
@@ -164,9 +164,9 @@ OW_TEST(report_fixture_holds_twenty_seven_thread_cases) {
         const OWJsonValue* want = c->Find("want");
         if (c->Find("narratives") && want && want->Find("parents") && want->Find("groups") && want->Find("lints")) ++whole;
     }
-    t.Eq(Cases().size(), size_t(27), "27 thread cases (dist.121)");
-    t.Eq(names.size(), size_t(27), "each name its own");
-    t.Eq(whole, size_t(27), "every case has narratives and a want of three parts");
+    t.Eq(Cases().size(), size_t(29), "29 thread cases (dist.122)");
+    t.Eq(names.size(), size_t(29), "each name its own");
+    t.Eq(whole, size_t(29), "every case has narratives and a want of three parts");
 }
 
 OW_CASES(report_fixture_cases) {
