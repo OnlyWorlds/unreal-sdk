@@ -60,7 +60,8 @@ bool OWFrame::RootMap(const UOWWorld* World, FOWMap& Map, TArray<FOWPin>& Pins)
 	if (Map.Id.IsEmpty()) return false;
 	for (const FOWPin& P : UOWElements::GetAllPins(World))
 	{
-		if (P.Map == Map.Id && P.bHasX && P.bHasY) Pins.Add(P);
+		// Exact, as the core reads a Pin's map: FString's == ignores case (the address profile's rule for the same id).
+		if (P.Map.Equals(Map.Id, ESearchCase::CaseSensitive) && P.bHasX && P.bHasY) Pins.Add(P);
 	}
 	return true;
 }
@@ -70,8 +71,9 @@ UTexture2D* OWFrame::MapImage(const UOWWorld* World, const FString& MapId, FStri
 	File.Empty();
 	const OnlyWorlds::OWWorld* Native = World ? World->Native() : nullptr;
 	if (!Native || MapId.IsEmpty()) return nullptr;
-	// The map's folder named as on disk, where Windows takes the id in any case: compared without case, as the files
-	// are keyed by their path inside the world ("media/<id>/base-image/<name>").
+	// A path, not an id: the files are keyed by their path inside the world ("media/<id>/base-image/<name>"), named as
+	// on disk, and a world's paths are one name whatever their case (the archive refuses two that differ by case alone,
+	// and Windows opens either), so the folder is found without case, as the file system finds it.
 	const FString Prefix = TEXT("media/") + MapId + TEXT("/base-image/");
 	for (const auto& Entry : Native->other_files)
 	{

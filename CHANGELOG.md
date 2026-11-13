@@ -205,8 +205,21 @@ Nothing is released yet; the history before this file is in the git log.
   map-space profile's rule 8, read through `OWMapSpace::LayoutOf`). A parentless layout map read after the ground
   (its file name sorting later, as `sikelia-layout--…` after `sikelia--…`) was taken as the map to draw. A world whose
   only Maps are layout maps has no root Map. Held by `OnlyWorlds.Frame.RootMapSkipsLayoutMaps`, which needs no renderer.
+- `OWFrame::RootMap` puts a Pin on the root Map only when its `map` is the Map's id as written. `FString`'s `==`
+  ignores case, so a Pin whose `map` spelled the Map's id in upper case was drawn on it, where the core's map-space
+  reader on the same world compares exactly. Held by `OnlyWorlds.Frame.RootMapPinsByTheMapsIdAsWritten`. The Map's
+  image is still found under `media/<map id>/base-image/` without case: that is a path, and a world's paths are one
+  name whatever their case.
 
 ### Changed
+
+- **A Charter's skill ids match an Object's own id as written.** `OWCharter::CharterOf` still finds an id in the
+  Charter's text in either case and takes it in lowercase, but now matches it against the ids of the Objects the
+  reader sees as they are written, where it lowercased those too. So an Object whose own id is held in upper case is
+  not the Object a lowercase id in the text names, and is no longer kept; an id named in upper case in the text still
+  names the Object held in lowercase, and a kept skill is always the Object's own id. This follows the address
+  profile's rule for the same id: an id is read in either case only at an address and in a text, and what it is then
+  matched against is read as written, as every other reader of the core already reads ids.
 
 - **`OWBulkSlot::id` is `std::optional<std::string>`** (breaking for C++ callers): a string, or `nullopt` when the slot
   answers none (a failure before the item was identified), as the API document types it and the TypeScript and Unity

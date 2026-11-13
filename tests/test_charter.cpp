@@ -275,7 +275,7 @@ const char* const Rules = R"([
   {"id": "c1", "type": "law", "name": "Rules", "supertype": "Charter", "x_charter_of": "w",
    "created_at": "2026-10-01T12:00:00Z", "x_checks_rules": [{"rule": "r"}],
    "description": "Read ow://object/0A0A0A0A-0000-7000-8000-000000000001 and 0a0a0a0a-0000-7000-8000-000000000002."},
-  {"id": "0A0A0A0A-0000-7000-8000-000000000001", "type": "object", "name": "Upper"},
+  {"id": "0a0a0a0a-0000-7000-8000-000000000001", "type": "object", "name": "Named in upper case"},
   {"id": "0a0a0a0a-0000-7000-8000-000000000002", "type": "object", "name": "Proposed",
    "x_review_proposed": {"by": "seat"}}
 ])";
@@ -286,7 +286,7 @@ OW_TEST(charter_a_guest_reads_the_charter_whole_even_as_a_stub) {
     // stub still reads its name, its rules and its skill.
     OWJsonValue world = WorldWith(Rules);
     OWReadingAids a = OWCharter::CharterOf(
-        world, Parse(R"({"rung": "guest", "whole": ["0A0A0A0A-0000-7000-8000-000000000001"], "known_of": ["c1"]})"));
+        world, Parse(R"({"rung": "guest", "whole": ["0a0a0a0a-0000-7000-8000-000000000001"], "known_of": ["c1"]})"));
     t.Ok(a.charter.has_value(), "the Charter is there");
     if (!a.charter) return;
     t.Eq(a.charter->name, std::string("Rules"), "its name");
@@ -294,13 +294,39 @@ OW_TEST(charter_a_guest_reads_the_charter_whole_even_as_a_stub) {
     t.Eq(a.charter->skill.size(), size_t(1), "its skill");
 }
 
-OW_TEST(charter_skill_matches_an_id_in_any_case) {
-    // keel compares UUIDs, so an Object stored with an uppercase id is the one the text names; the skill is lowercase.
+OW_TEST(charter_skill_reads_the_texts_id_in_any_case) {
+    // The text names the Object in upper case: taken in lowercase, it is the Object held in lowercase, its own id.
     OWReadingAids a = OWCharter::CharterOf(WorldWith(Rules), Parse(R"({"rung": "owner"})"));
     t.Ok(a.charter.has_value(), "the Charter is there");
     if (!a.charter) return;
     t.Ok(!a.charter->skill.empty() && a.charter->skill[0] == "0a0a0a0a-0000-7000-8000-000000000001",
-         "the uppercase Object, lowercase");
+         "the Object named in upper case, its own id");
+}
+
+OW_TEST(charter_skill_named_in_lowercase_is_not_an_object_held_in_upper_case) {
+    // The address profile's rule for the same id, at the Charter's door: the id found in the text is taken in
+    // lowercase, the Object's own id is read as written, so an Object held in upper case is not the one it names.
+    OWReadingAids a = OWCharter::CharterOf(WorldWith(R"([
+      {"id": "c1", "type": "law", "name": "Rules", "supertype": "Charter", "x_charter_of": "w",
+       "description": "Read ow://object/0b0b0b0b-0000-7000-8000-0000000000bf."},
+      {"id": "0B0B0B0B-0000-7000-8000-0000000000BF", "type": "object", "name": "Upper"}
+    ])"), Parse(R"({"rung": "owner"})"));
+    t.Ok(a.charter.has_value(), "the Charter is there");
+    if (!a.charter) return;
+    t.Eq(a.charter->skill.size(), size_t(0), "not kept");
+}
+
+OW_TEST(charter_skill_named_in_upper_case_is_the_object_held_in_lowercase) {
+    // An id found in the text is read in either case and taken in lowercase: the Object held in lowercase, its own id.
+    OWReadingAids a = OWCharter::CharterOf(WorldWith(R"([
+      {"id": "c1", "type": "law", "name": "Rules", "supertype": "Charter", "x_charter_of": "w",
+       "description": "Read 0B0B0B0B-0000-7000-8000-0000000000BE."},
+      {"id": "0b0b0b0b-0000-7000-8000-0000000000be", "type": "object", "name": "Lower"}
+    ])"), Parse(R"({"rung": "owner"})"));
+    t.Ok(a.charter.has_value(), "the Charter is there");
+    if (!a.charter) return;
+    t.Ok(a.charter->skill.size() == 1 && a.charter->skill[0] == "0b0b0b0b-0000-7000-8000-0000000000be",
+         "kept, as the Object's own id");
 }
 
 OW_TEST(charter_skill_leaves_a_proposed_object_out) {

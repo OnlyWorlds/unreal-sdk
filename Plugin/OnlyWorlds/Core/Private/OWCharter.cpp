@@ -95,12 +95,13 @@ std::vector<std::string> IdsIn(const std::string& text) {
     return out;
 }
 
-// keel's charter_skill: the ids the Charter's text names, kept when each is an Object of this world the reader sees
-// (keel compares UUIDs, so an id's case never matters), the first SkillMax of those kept.
+// keel's charter_skill: the ids the Charter's text names, kept when each is an Object of this world the reader sees,
+// the first SkillMax of those kept. The text's id is taken in lowercase (IdsIn) and the Object's own id is read as
+// written (the address profile's rule for the same id): an Object held in upper case is not the one a text names.
 std::vector<std::string> Skill(const OWLensView::Sight& s, const std::string& text) {
     std::set<std::string> objects;
     for (size_t j = 0; j < s.els.size(); ++j)
-        if (s.view[j] && s.types[j] == "object") objects.insert(Lower(s.ids[j]));
+        if (s.view[j] && s.types[j] == "object") objects.insert(s.ids[j]);
     std::vector<std::string> out;
     for (const std::string& id : IdsIn(text)) {
         if (out.size() >= OWCharter::SkillMax) break;

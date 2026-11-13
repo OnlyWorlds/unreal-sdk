@@ -236,4 +236,42 @@ bool FOWFrameLayoutMapTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// -- a Pin is on the root Map when its map is the Map's id as written -----------------------------------------------------
+// The address profile's rule for the same id: inside a world two ids are the same when they are written the same. FString's
+// == ignores case, so the frame compares exactly, as the core's map-space reader does. Needs no renderer.
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWFramePinMapTest, "OnlyWorlds.Frame.RootMapPinsByTheMapsIdAsWritten",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ClientContext | EAutomationTestFlags::ProductFilter)
+
+bool FOWFramePinMapTest::RunTest(const FString& Parameters)
+{
+	auto PinBody = [](const char* Id, const char* MapId)
+	{
+		OWJsonValue P = OWJsonValue::Object();
+		P.Set("id", OWJsonValue::String(Id));
+		P.Set("type", OWJsonValue::String("pin"));
+		P.Set("name", OWJsonValue::String(Id));
+		P.Set("map", OWJsonValue::String(MapId));
+		P.Set("x", OWJsonValue::Number(int64_t(10)));
+		P.Set("y", OWJsonValue::Number(int64_t(20)));
+		return P;
+	};
+	auto Native = std::make_unique<OnlyWorlds::OWWorld>();
+	Native->info = OWJsonValue::Object();
+	Native->info.Set("id", OWJsonValue::String("019a3b10-0000-7000-8000-00000000f100"));
+	Native->Add("map", FrameMapBody("019a3b10-0000-7000-8000-0000000000a1", "Ground"));
+	Native->Add("pin", PinBody("on", "019a3b10-0000-7000-8000-0000000000a1"));
+	Native->Add("pin", PinBody("upper", "019A3B10-0000-7000-8000-0000000000A1"));
+	UOWWorld* World = NewObject<UOWWorld>(GetTransientPackage());
+	World->SetNative(std::move(Native));
+	FOWMap Map;
+	TArray<FOWPin> Pins;
+	if (!TestTrue(TEXT("a root map"), OWFrame::RootMap(World, Map, Pins))) return false;
+	TArray<FString> Ids;
+	for (const FOWPin& P : Pins) Ids.Add(P.Id);
+	TestEqual(TEXT("one Pin on the root Map"), Ids.Num(), 1);
+	TestTrue(TEXT("the Pin whose map is the Map's id as written"), Ids.Num() == 1 && Ids[0].Equals(TEXT("on"), ESearchCase::CaseSensitive));
+	return true;
+}
+
 #endif  // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
