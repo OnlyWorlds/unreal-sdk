@@ -468,15 +468,16 @@ Time MachineNow() {
     return t;
 }
 
-// When an element last changed, as changed_within reads it: the newer of a folder element's server_updated_at and
-// local_updated_at where either reads as a time, else its updated_at.
+// An element's clock, the one rule 5's order and changed_within read: the newest of its updated_at, server_updated_at
+// and local_updated_at that read as a time (a folder element carries the last two), decided element by element; a
+// value that cannot be read is ignored; absent when none can be read.
 std::optional<Time> ChangedAt(const OWJsonValue& el) {
     std::optional<Time> at;
-    for (const char* key : {"server_updated_at", "local_updated_at"}) {
+    for (const char* key : {"updated_at", "server_updated_at", "local_updated_at"}) {
         std::optional<Time> k = OWMessage::TimeKey(Get(el, key));
         if (k && (!at || *at < *k)) at = k;
     }
-    return at ? at : OWMessage::TimeKey(Get(el, "updated_at"));
+    return at;
 }
 
 // -- one reader's view of the world ------------------------------------------------------------------------------------
@@ -647,9 +648,9 @@ struct View {
     // keel's _stops (rule 4): nothing hops on out of a room element, nor out of a reading aid whose pair is not named.
     bool Stops(size_t i, const Recipe& r) const { return room[i] || (!aid[i].empty() && !r.types.count(Pair(i))); }
 
-    // Rule 5 past the anchors: the schema's type order, newest first by the clock changed_within reads (ChangedAt: on
-    // the wire updated_at, in a folder the newer of server_updated_at and local_updated_at), then by id. One clock per
-    // lens. An element with no readable clock sorts after every one that has one (the profile's owner, 2026-10-30, as
+    // Rule 5 past the anchors: the schema's type order, newest first by the element's clock (ChangedAt: the newest of
+    // its readable updated_at, server_updated_at and local_updated_at, the clock changed_within reads), then by id. One
+    // clock per lens. An element with no readable clock comes last of its type (the profile's owner, 2026-10-30, as
     // the npm and Python packages read it; keel read it as now, the newest).
     std::vector<size_t> Ordered(std::vector<size_t> list) const {
         auto rank = [&](size_t i) { return size_t(std::find(Order.begin(), Order.end(), types[i]) - Order.begin()); };

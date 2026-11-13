@@ -227,14 +227,17 @@ Nothing is released yet; the history before this file is in the git log.
   `played_at` without seconds writes them now: such a mark is no longer read. Four cases of the record fixture
   vendored at dist.122 hold the old grammar (an offset that was no mark, a leap day written without seconds that was
   one, and the two records lists those Events join) and answer otherwise until the fixture's next pin.
-- **One clock per lens: rule 5 orders by the clock `changed_within` reads.** `OWLens::Resolve`'s order past the
-  anchors (the schema's type order, newest first, then by id) now reads an element's time as `changed_within` reads it:
-  on the wire its `updated_at`; for a folder's element the newer of `server_updated_at` and `local_updated_at` where
-  either reads as a time, else its `updated_at`. It read `updated_at` alone before, so one reading could cut an
-  element `stale` by its folder clock and rank it by an `updated_at` the cut had not used, and a folder element
-  stamped only by the folder sorted as undated. The budget keeps the newest, and an element edited locally yesterday is
-  now newer than one the server stamped last week. An element with no readable clock still sorts after every one that
-  has one; on the wire, where an element carries `updated_at` alone, nothing moves.
+- **One clock per lens: an element's clock is the newest of its three readable stamps.** `OWLens::Resolve` reads one
+  clock per element, the newest of its `updated_at`, `server_updated_at` and `local_updated_at` that read as a time
+  (a folder's element carries the last two), decided element by element; a value that cannot be read is ignored.
+  Rule 5's order past the anchors (the schema's type order, newest first, then by id) and `changed_within` both read
+  it. Rule 5 read `updated_at` alone before, so one reading could cut an element `stale` by a folder stamp and rank
+  it by an `updated_at` the cut had not used, and an element stamped only by a folder sorted as undated.
+  `changed_within` read a folder element's newer folder stamp before, else `updated_at`; it now moves where
+  `updated_at` is newer than both folder stamps (a wire stamp newer than a local edit wins) or a folder stamp cannot
+  be read. The budget keeps the newest, and an element edited locally yesterday is newer than one the server stamped
+  last week. An element with no readable clock still comes last of its type and is never cut `stale`; on the wire,
+  where an element carries `updated_at` alone, nothing moves.
 - **The read mark's tie goes to the higher id.** `OWMessage::ReadMarkOf` reads the message profile's sentence: a lone
   mark is the mark. Among several, the newest readable `updated_at` wins; one that cannot be read never beats one that
   can; among equal instants, or when none can be read, the higher id (code point, as written) is the mark. Before, the

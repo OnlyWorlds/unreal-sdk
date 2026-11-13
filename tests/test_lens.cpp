@@ -583,10 +583,9 @@ OW_TEST(lens_an_element_with_no_updated_at_sorts_last) {
     t.Ok(r.kept == std::vector<std::string>{"c0", "c3", "c1"}, "a budget cuts the undated-by-change first");
 }
 
-// One clock per lens: rule 5 orders by the clock changed_within reads, the newer of a folder element's
-// server_updated_at and local_updated_at where either reads as a time, else its updated_at. A budget of one keeps the
-// newer of e1 (the stamps given) and e2 (updated_at 10-20). Kills: rule 5 reading updated_at alone, the newest of all
-// three stamps, a folder clock that cannot be read taken over updated_at.
+// One clock per lens: rule 5 orders by the clock changed_within reads, the newest of an element's readable
+// updated_at, server_updated_at and local_updated_at. A budget of one keeps the newer of e1 (the stamps given) and e2
+// (updated_at 10-20). Kills: rule 5 reading updated_at alone, a folder clock that cannot be read taken over updated_at.
 OW_TEST(lens_rule_5_orders_by_the_clock_changed_within_reads) {
     auto kept = [](const std::string& e1_stamps) {
         OWJsonValue world = Parse(R"({"elements": [
@@ -607,8 +606,8 @@ OW_TEST(lens_rule_5_orders_by_the_clock_changed_within_reads) {
     t.Eq(kept(R"(, "local_updated_at": )" + newer), std::string("e1"), "local_updated_at alone, newer");
     t.Eq(kept(R"(, "updated_at": )" + older + R"(, "server_updated_at": )" + newer), std::string("e1"),
          "an older updated_at beside a newer server_updated_at");
-    t.Eq(kept(R"(, "updated_at": )" + newer + R"(, "local_updated_at": )" + older), std::string("e2"),
-         "a newer updated_at beside an older local_updated_at: the folder clock, as changed_within reads it");
+    t.Eq(kept(R"(, "updated_at": )" + newer + R"(, "local_updated_at": )" + older), std::string("e1"),
+         "a newer updated_at beside an older local_updated_at: the newest of the three");
     t.Eq(kept(R"(, "server_updated_at": )" + older + R"(, "local_updated_at": )" + newer), std::string("e1"),
          "the newer of the two folder clocks");
     t.Eq(kept(R"(, "updated_at": )" + newer + R"(, "server_updated_at": "garbage")"), std::string("e1"),
@@ -616,6 +615,44 @@ OW_TEST(lens_rule_5_orders_by_the_clock_changed_within_reads) {
     t.Eq(kept(R"(, "updated_at": )" + newer + R"(, "server_updated_at": "2026-09-01")"), std::string("e1"),
          "a date alone is no time: updated_at");
     t.Eq(kept(R"(, "server_updated_at": "garbage")"), std::string("e2"), "no clock at all sorts after one");
+}
+
+// An element's clock is the newest of its readable updated_at, server_updated_at and local_updated_at, decided element
+// by element; a value that cannot be read is ignored. Rule 5's order and changed_within read that one clock. The
+// profile's two cases in this core's own strings: a wire updated_at newer than both folder stamps orders the budget;
+// under changed_within a local edit and a wire stamp each keep their element. Kills: the folder stamps first, then
+// updated_at; updated_at alone.
+OW_TEST(lens_an_elements_clock_is_the_newest_of_its_three_readable_stamps) {
+    auto resolve = [](const std::string& elements, const std::string& x_lens) {
+        OWJsonValue world = Parse(R"({"elements": [
+            {"id": "f0", "type": "family", "name": "The Kin", "languages": ["l1", "l2"],
+             "updated_at": "2026-11-01T12:00:00Z"},)" + elements + "]}");
+        OWJsonValue lens = Parse(R"({"id": "L", "type": "construct", "supertype": "Lens", "families": ["f0"],
+            "x_lens": )" + x_lens + "}");
+        OWLensOptions o;
+        o.clock = "2026-11-20T12:00:00Z";
+        OWLensReading r = OWLens::Resolve(world, lens, Parse(R"({"rung": "owner"})"), o);
+        std::string out;
+        for (const std::string& id : r.kept) out += (out.empty() ? "" : " ") + id;
+        for (const auto& [why, n] : r.cut) out += " | " + why + " " + std::to_string(n);
+        return out;
+    };
+    t.Eq(resolve(R"({"id": "l1", "type": "language", "name": "Peatspeech", "server_updated_at": "2026-10-01T12:00:00Z",
+                     "local_updated_at": "2026-10-02T12:00:00Z", "updated_at": "2026-11-05T12:00:00Z"},
+                    {"id": "l2", "type": "language", "name": "Turfcant", "updated_at": "2026-11-01T12:00:00Z"})",
+                 R"({"budget": 2})"),
+         std::string("f0 l1 | budget 1"), "an updated_at newer than both folder stamps: l1 is 11-05, kept over l2");
+    t.Eq(resolve(R"({"id": "l1", "type": "language", "name": "Mossspeech", "updated_at": "2026-10-01T12:00:00Z",
+                     "local_updated_at": "2026-11-18T12:00:00Z"},
+                    {"id": "l2", "type": "language", "name": "Lichencant", "server_updated_at": "2026-10-01T12:00:00Z",
+                     "updated_at": "2026-11-18T12:00:00Z"})",
+                 R"({"changed_within": 7})"),
+         std::string("f0 l1 l2"), "changed_within: a local edit and a wire stamp, each newer, keep their element");
+    t.Eq(resolve(R"({"id": "l1", "type": "language", "name": "Mudspeech", "server_updated_at": "2026-11-19 12:00:00Z",
+                     "updated_at": "2026-10-01T12:00:00Z"},
+                    {"id": "l2", "type": "language", "name": "Reedcant", "local_updated_at": "garbage"})",
+                 R"({"changed_within": 7})"),
+         std::string("f0 l2 | stale 1"), "a folder stamp that cannot be read is ignored: l1 is 10-01; l2 has no clock");
 }
 
 OW_TEST(lens_lenses_in_use_reads_each_id_once_and_drops_the_empty_one) {
