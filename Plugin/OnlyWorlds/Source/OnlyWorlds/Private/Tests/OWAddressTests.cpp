@@ -147,8 +147,8 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 	const OWJsonValue* Cases = Doc.Find("cases");
 	if (!TestTrue(TEXT("the fixture holds cases"), Cases && Cases->IsArray())) return false;
 
-	int32 Parsed = 0, Written = 0, Prose = 0, Failed = 0, RoundTrips = 0;
-	TArray<FString> NotCarried;
+	int32 Parsed = 0, Written = 0, Failed = 0, RoundTrips = 0;
+	TArray<FString> NotCarried, ProseSkipped;
 	for (const OWJsonValue& Case : Cases->Items())
 	{
 		const FString Name = TextOf(Case.Find("name"));
@@ -225,9 +225,9 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 		}
 		else if (Kind == TEXT("prose"))
 		{
-			// A finder's case (where an address inside a line ends): ParseAddress reads one string whole, and the
-			// plugin, like its core, has no finder.
-			++Prose;
+			// A finder's case (where an address inside a line ends, the packages' readOwLinkAt): ParseAddress reads one
+			// string whole, and the plugin, like its core, has no finder. Skipped by name, counted below.
+			ProseSkipped.Add(Name);
 		}
 		else
 		{
@@ -237,7 +237,10 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 	}
 	TestEqual(TEXT("197 cases"), static_cast<int32>(Cases->Items().size()), 197);
 	TestEqual(TEXT("every parse case through ParseAddress"), Parsed, 104);
-	TestEqual(TEXT("the 57 prose cases, a finder's, not carried"), Prose, 57);
+	TestEqual(TEXT("the 57 prose cases, a finder's, each skipped by name"), ProseSkipped.Num(), 57);
+	AddInfo(FString::Printf(TEXT("address fixture: %d prose cases skipped: a finder's case (readOwLinkAt), and the plugin has "
+		"no finder, ParseAddress reads one string whole (the port: OW Gaming #1527): %s"), ProseSkipped.Num(),
+		*FString::Join(ProseSkipped, TEXT(", "))));
 	TestEqual(TEXT("the format cases through WriteAddress"), Written, 33);
 	// The three moments no Integer64 pin holds; the core's own runner reads them through WriteJson.
 	TestEqual(TEXT("not carried: a moment that is not a whole number"), NotCarried.Num(), 3);

@@ -1,7 +1,8 @@
 // OWAddress on the address profile's conformance fixture (schema-dist profiles/address.fixture.json, the pinned copy,
 // dist.123's, its fifty-seven prose cases added): every format case through WriteJson, every parse case through Parse,
 // each refusal by the reason the fixture names. The prose cases are a finder's (an address found inside a line), and
-// this core has none: Parse reads one string whole, so they are counted and not run. Then the readings the fixture
+// this core has none: Parse reads one string whole, so each is a named skip, counted (the port is OW Gaming #1527);
+// every other kind runs. Then the readings the fixture
 // leaves open, as the TypeScript and Python packages and the Unity SDK answer them: the writer's refusal order, a
 // moment with a zero fraction, an empty string, an unknown key.
 
@@ -84,6 +85,12 @@ bool SameReading(const OWJsonValue& want, const OWJsonValue& got) {
     return true;
 }
 
+// Why a prose case is skipped: it is a finder's (where an address found inside a line ends, the packages'
+// readOwLinkAt), and this core has none.
+const char* const ProseSkip =
+    "prose: a finder's case (readOwLinkAt); this core has no finder, OWAddress::Parse reads one string whole "
+    "(the port: OW Gaming #1527)";
+
 void Case(owtest::T& t, const OWJsonValue& c) {
     std::string name = Str(c, "name"), kind = Str(c, "kind"), refuse = Str(c, "refuse");
     if (kind == "format") {
@@ -109,6 +116,8 @@ void Case(owtest::T& t, const OWJsonValue& c) {
             t.Ok(want && SameReading(*want, got),
                  "parse/" + name + ": gave " + Compact(got) + ", the fixture says " + (want ? Compact(*want) : "nothing"));
         }
+    } else if (kind == "prose") {
+        t.Skip(ProseSkip);
     } else {
         t.Fail("case " + name + ": a case of unknown kind '" + kind + "'");
     }
@@ -144,7 +153,7 @@ OW_TEST(address_fixture_is_the_pinned_one) {
     t.Eq(cases->Size(), size_t(197), "197 cases");
     t.Eq(format, size_t(36), "36 format cases");
     t.Eq(parse, size_t(104), "104 parse cases");
-    t.Eq(prose, size_t(57), "57 prose cases, a finder's, not run here");
+    t.Eq(prose, size_t(57), "57 prose cases, a finder's, each skipped by name (OW Gaming #1527)");
     t.Eq(refusals, size_t(75), "20 format refusals and 55 parse refusals");
 }
 
@@ -178,10 +187,9 @@ OW_CASES(address_fixture_cases) {
         out.emplace_back("address_fixture:not-found", [](owtest::T& t) { t.Fail("the address fixture did not load"); });
         return out;
     }
-    // A prose case is a finder's (where an address inside a line ends); this core has no finder, so it is not run.
+    // Every case by name; a prose case skips by name, with its reason (ProseSkip).
     for (const OWJsonValue& c : cases->Items())
-        if (Str(c, "kind") != "prose")
-            out.emplace_back("address_fixture:" + Str(c, "name"), [doc, &c](owtest::T& t) { Case(t, c); });
+        out.emplace_back("address_fixture:" + Str(c, "name"), [doc, &c](owtest::T& t) { Case(t, c); });
     return out;
 }
 

@@ -260,7 +260,7 @@ Nothing is released yet; the history before this file is in the git log.
   `profiles/strand.fixture.json` one with its world (27, 24 worlds: a mark naming its story in upper case is no
   strand); every one of these reads as wanted here. The address page rules an address found in prose (where it ends,
   and the run after `/w/` read whole) and `profiles/address.fixture.json` gains fifty-seven `prose` cases (197): they
-  are a finder's, and this SDK has none (`OWAddress::Parse` reads one string whole), so they are counted and not run.
+  are a finder's, and this SDK has none (`OWAddress::Parse` reads one string whole), so each is a named, counted skip in the tests.
   The checks fixture gains two rules and two cases on `one_of` over a list; this SDK has no checks reader. The
   core's and the plugin's fixture tests moved their sha256 and counts. The generated files changed in their stamp
   lines only.
