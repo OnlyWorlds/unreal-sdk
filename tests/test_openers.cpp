@@ -422,6 +422,37 @@ OW_TEST(openers_the_baked_list_little_lens_skips_four_marks_atlas_and_lantern_no
     t.Ok(r.ok && ids == std::vector<std::string>{"onlyworlds", "atlas", "lantern"}, "a Pin's menu leaves Little Lens out: " + r.message);
 }
 
+// Subs (the list at 0a7539c): listed with an element door for a Character only and no world door, so a Character's
+// menu offers it and a world's or a Pin's does not.
+OW_TEST(openers_the_baked_list_offers_subs_beside_a_character_only) {
+    const OWTool* subs = nullptr;
+    for (const OWTool& x : OWTools::All())
+        if (x.id == "subs") subs = &x;
+    t.Ok(subs && subs->rung == "listed" && subs->open && !subs->open->world && subs->open->element &&
+             subs->open->element_types == std::optional<std::vector<std::string>>(std::vector<std::string>{"character"}),
+         "Subs: listed, an element door for a Character, no world door");
+    auto menu = [&](const std::string& type, std::string_view kind) {
+        OWJsonParseResult body = OWJson::Parse("{\"id\": \"" + Element + "\", \"type\": \"" + type + "\", \"name\": \"A\"}");
+        OWAddressParts parts;
+        parts.form = OWAddress::Human;
+        parts.world = World;
+        if (kind == OWOpeners::Element) {
+            parts.type = type;
+            parts.id = Element;
+        }
+        OWOpenersOptions options;
+        options.element = kind == OWOpeners::Element ? &body.value : nullptr;
+        std::vector<std::string> ids;
+        for (const OWOpener& o : OWOpeners::OpenersFor(OWTools::All(), kind, parts, Member(true), options).rows)
+            ids.push_back(o.id);
+        return ids;
+    };
+    auto has = [](const std::vector<std::string>& ids) { return std::find(ids.begin(), ids.end(), "subs") != ids.end(); };
+    t.Ok(has(menu("character", OWOpeners::Element)), "a Character's menu offers Subs");
+    t.Ok(!has(menu("pin", OWOpeners::Element)), "a Pin's does not");
+    t.Ok(!has(menu("", OWOpeners::World)), "a world's does not");
+}
+
 OW_TEST(openers_a_skip_outside_the_words_is_refused_a_row_built_in_code_too) {
     OWTool thorn;
     thorn.id = "thorn";
@@ -643,7 +674,8 @@ OW_TEST(openers_the_baked_list_offers_tactical_tangle_on_a_world_and_a_character
     const OWTool* tangle = nullptr;
     for (const OWTool& x : OWTools::All()) {
         if (x.id == "tangle") tangle = &x;
-        else t.Ok(x.open && !x.open->element_types, x.id + ": opens every type");
+        // Subs (the list at 0a7539c) opens Characters too: its own test above.
+        else if (x.id != "subs") t.Ok(x.open && !x.open->element_types, x.id + ": opens every type");
     }
     t.Ok(tangle && tangle->rung == "listed" && tangle->open && tangle->open->world && tangle->open->element,
          "Tactical Tangle is listed, with a world door and an element door");
@@ -677,7 +709,12 @@ OW_TEST(openers_the_baked_list_offers_tactical_tangle_on_a_world_and_a_character
     OWOpenerSurface pub;
     pub.audience = OWOpeners::Public;
     OWOpenersResult visitor = OWOpeners::OpenersFor(OWTools::All(), OWOpeners::Element, ElementOf("character"), pub);
-    t.Ok(visitor.ok && !visitor.rows.empty() && visitor.rows.back().id == "tangle" &&
-             visitor.rows.back().state.value_or("") == OWOpeners::NeedsAnAccount,
-         "the public's Character menu: Tangle last, Needs an account");
+    // The list's order: Tangle, then Subs (the list at 0a7539c), each saying it needs an account.
+    std::vector<std::string> tail;
+    for (const OWOpener& o : visitor.rows)
+        if (o.id == "tangle" || o.id == "subs")
+            tail.push_back(o.id + (o.state.value_or("") == OWOpeners::NeedsAnAccount ? ": needs" : ": open"));
+    t.Ok(visitor.ok && visitor.rows.size() >= 2 && visitor.rows[visitor.rows.size() - 2].id == "tangle" &&
+             tail == std::vector<std::string>{"tangle: needs", "subs: needs"},
+         "the public's Character menu: Tangle, then Subs, last, each Needs an account");
 }
