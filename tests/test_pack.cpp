@@ -14,6 +14,8 @@
 
 #include <chrono>
 #include <cstdio>
+#include <iterator>
+#include <set>
 
 using namespace OnlyWorlds;
 using owtest::P;
@@ -186,7 +188,40 @@ void PackReal(owtest::T& t, const std::string& root, const std::string& label, b
     long long ms_read = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
     t.Ok(r.ok, label + " reads back (" + r.reason + " " + r.message + ")");
     OWFileMap files = w.ToFiles();
-    t.Ok(r.files == files, label + ": every packed file is the world's bytes, and no other");
+    // Section 4.5 rule 11: a producer the world's records/RECORDS.json marks "private": true is left out of the pack whole
+    // (Sikelia marks its build and lab records so since its world commit 1958bdc). The marks are read here from the
+    // world's own RECORDS.json, not from the pack's left_out, so a pack that kept a private producer is caught.
+    std::set<std::string> marked, left(packed.left_out.begin(), packed.left_out.end());
+    auto manifest = files.find("records/RECORDS.json");
+    if (manifest != files.end()) {
+        OWJsonParseResult m = OWJson::Parse(manifest->second);
+        if (m.ok && m.value.IsArray())
+            for (const OWJsonValue& entry : m.value.Items()) {
+                const OWJsonValue* p = entry.IsObject() ? entry.Find("private") : nullptr;
+                const OWJsonValue* producer = entry.IsObject() ? entry.Find("producer") : nullptr;
+                if (p && p->IsBool() && p->AsBool() && producer && producer->IsString()) marked.insert(producer->Text());
+            }
+    }
+    // A producer marked private with no files in the world has nothing to leave out (Sikelia marks lab, holds no
+    // records/lab/), so the pack names only the marked producers the world holds files for.
+    for (auto it = marked.begin(); it != marked.end();) {
+        std::string prefix = "records/" + *it + "/";
+        auto at = files.lower_bound(prefix);
+        bool held = at != files.end() && at->first.compare(0, prefix.size(), prefix) == 0;
+        it = held ? std::next(it) : marked.erase(it);
+    }
+    auto join = [](const std::set<std::string>& s) {
+        std::string out;
+        for (const std::string& x : s) out += (out.empty() ? "" : " ") + x;
+        return "[" + out + "]";
+    };
+    t.Eq(join(left), join(marked), label + ": the pack leaves out exactly the producers RECORDS.json marks private");
+    for (const std::string& producer : packed.left_out) {
+        std::string prefix = "records/" + producer + "/";
+        for (auto it = files.begin(); it != files.end();)
+            it = it->first.compare(0, prefix.size(), prefix) == 0 ? files.erase(it) : std::next(it);
+    }
+    t.Ok(r.files == files, label + ": every packed file is the world's bytes, private producers left out, and no other");
     std::unique_ptr<OWWorld> again = OWWorld::FromFiles(r.files);
     t.Eq(again->elements.size(), owtest::CountElementFiles(root), label + ": every element in the archive");
     std::printf("       %s: %zu entries, %.1f MB, packed in %lld ms, read back (every rule, every CRC) in %lld ms; "
