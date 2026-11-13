@@ -884,3 +884,43 @@ OW_TEST(openers_a_held_upper_element_answers_no_rows_only_after_every_other_chec
     t.Ok(!jn.ok && jn.message.find("open.needs") != std::string::npos,
          "the JSON door, a bad tools row, a held-upper element: refused for the row ('" + jn.message + "')");
 }
+
+// The same order with a good tools row first and a bad one behind it: the good row gives a row, then the bad one is
+// still refused for a held-upper element, through either door. Kills an answer of no rows given between one tools row
+// and the next (a single bad row is refused before any row is made, so it cannot).
+OW_TEST(openers_a_held_upper_element_is_refused_for_a_bad_tools_row_behind_a_good_one) {
+    std::string upper = Element;
+    for (char& c : upper)
+        if (c >= 'a' && c <= 'z') c = char(c - 'a' + 'A');
+    const OWJsonValue element =
+        OWJson::Parse("{\"id\": \"" + upper + "\", \"type\": \"character\", \"name\": \"The element\"}").value;
+    OWOpenersOptions options;
+    options.element = &element;
+    OWTool bad;
+    bad.id = "bad";
+    bad.name = "Bad";
+    bad.url = "https://bad.example";
+    bad.rung = "listed";
+    bad.open = OWToolOpen{std::string("https://bad.example/{world}"), std::nullopt, std::string("nope")};
+    OWOpenersResult good_alone =
+        OWOpeners::OpenersFor({Kite(std::nullopt)}, OWOpeners::Element, ElementOf("character"), Member(true), options);
+    t.Ok(good_alone.ok && good_alone.rows.empty(), "the good row alone, a held-upper element: no rows ('" + good_alone.message + "')");
+    OWOpenersResult r =
+        OWOpeners::OpenersFor({Kite(std::nullopt), bad}, OWOpeners::Element, ElementOf("character"), Member(true), options);
+    t.Ok(!r.ok && r.message.find("open.needs") != std::string::npos,
+         "a good row, then a bad one, a held-upper element: refused for the bad row (got " + std::to_string(r.rows.size()) +
+             " rows, '" + r.message + "')");
+    OWJsonParseResult address = OWJson::Parse("{\"form\": \"human\", \"world\": \"" + World +
+                                              "\", \"type\": \"character\", \"id\": \"" + Element + "\"}");
+    OWJsonParseResult surface = OWJson::Parse("{\"audience\": \"member\", \"signed_in\": true}");
+    OWJsonValue opts = OWJsonValue::Object();
+    opts.Set("element", element);
+    OWJsonParseResult tools = OWJson::Parse(
+        "[{\"id\": \"kite\", \"name\": \"Kite\", \"rung\": \"listed\", \"open\": {\"world\": \"https://kite.example/{world}\", "
+        "\"element\": \"https://kite.example/{world}/{id}\", \"needs\": null}}, "
+        "{\"id\": \"bad\", \"name\": \"Bad\", \"rung\": \"listed\", \"open\": {\"world\": \"https://bad.example/{world}\", "
+        "\"needs\": \"nope\"}}]");
+    OWOpenersResult j = OWOpeners::OpenersForJson(tools.value, OWOpeners::Element, address.value, surface.value, &opts);
+    t.Ok(!j.ok && j.message.find("open.needs") != std::string::npos,
+         "the JSON door, a good row then a bad one, a held-upper element: refused for the bad row ('" + j.message + "')");
+}
