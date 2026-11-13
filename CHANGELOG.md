@@ -236,6 +236,14 @@ Nothing is released yet; the history before this file is in the git log.
   double within int64 as whole: `9007199254740993.0` read as 9007199254740992, and `-9223372036854775809.0` as int64's
   least. An integer literal is still read exactly within int64. Parity with the TypeScript SDK 4.129.2 (a reader's
   integer range is the range it holds exactly), its test vector ported.
+- Schema pin to `v0.34.0-dist.120` (canonical `00.34.00` unchanged; no schema file, `schema.json` or walk reader
+  moved, and no answer of a reader moves). The report profile gains `parent_narrative` in its table, a section on a
+  report that continues earlier work (it names the first report of that work, never the one before it), and rule 9,
+  threads: a reader that groups reports groups them by `parent_narrative` as written, a report's thread in the
+  message profile's `created_at` order, a board entry's group the reports of the talks under it. Its first fixture,
+  `profiles/report.fixture.json` (20 cases), is vendored here. The views fixture's two quotes of the report page
+  moved one line down with the new row (lines 22 and 24); this SDK has no reader of that fixture. The generated
+  files changed in their stamp lines only.
 - Schema pin to `v0.34.0-dist.119` (canonical `00.34.00` unchanged; no schema file, `schema.json` or walk reader
   moved, and no answer of a reader moves). The map-space page gains rule 11 (a layout map is no candidate when a tool
   picks the Map that stands for the world's space, and a Pin or a Marker on one is a place in that drawing, never in
