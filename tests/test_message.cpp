@@ -366,6 +366,9 @@ OW_TEST(message_created_at_at_the_years_two_ends) {
         {"E2", "0000-01-01T00:00:00Z", -62167219200LL},
         {"R", "2026-11-12T10:00:00Z", 1794477600LL},
         {"E3", "0000-01-01T00:00:00+01:00", -62167222800LL},
+        // The leap rule on the year number as written: 0000 is a leap year, so its 29 February reads (one day before
+        // 0000-03-01, -62162035200).
+        {"L", "0000-02-29T00:00:00Z", -62162121600LL},
     };
     std::vector<OWJsonValue> given;
     for (const auto& [id, text, seconds] : times) {
@@ -375,9 +378,9 @@ OW_TEST(message_created_at_at_the_years_two_ends) {
         if (k) t.Eq(k->micros, int64_t(0), std::string(id) + ": no fraction");
         given.push_back(TimedMessage(id, (std::string("\"") + text + "\"").c_str()));
     }
-    t.Eq(Joined(UnreadIds(given)), std::string("E3 E2 R E1"), "as given");
+    t.Eq(Joined(UnreadIds(given)), std::string("E3 E2 L R E1"), "as given");
     std::reverse(given.begin(), given.end());
-    t.Eq(Joined(UnreadIds(given)), std::string("E3 E2 R E1"), "reversed");
+    t.Eq(Joined(UnreadIds(given)), std::string("E3 E2 L R E1"), "reversed");
 }
 
 // The forms of a created_at, a row each: what reads and what does not.
