@@ -583,6 +583,41 @@ OW_TEST(lens_an_element_with_no_updated_at_sorts_last) {
     t.Ok(r.kept == std::vector<std::string>{"c0", "c3", "c1"}, "a budget cuts the undated-by-change first");
 }
 
+// One clock per lens: rule 5 orders by the clock changed_within reads, the newer of a folder element's
+// server_updated_at and local_updated_at where either reads as a time, else its updated_at. A budget of one keeps the
+// newer of e1 (the stamps given) and e2 (updated_at 10-20). Kills: rule 5 reading updated_at alone, the newest of all
+// three stamps, a folder clock that cannot be read taken over updated_at.
+OW_TEST(lens_rule_5_orders_by_the_clock_changed_within_reads) {
+    auto kept = [](const std::string& e1_stamps) {
+        OWJsonValue world = Parse(R"({"elements": [
+            {"id": "e1", "type": "character", "name": "One")" + e1_stamps + R"(},
+            {"id": "e2", "type": "character", "name": "Two", "updated_at": "2026-10-20T12:00:00Z"}]})");
+        OWJsonValue lens = Parse(R"({"id": "L", "type": "construct", "supertype": "Lens",
+            "x_lens": {"types": ["character"], "budget": 1}})");
+        OWLensOptions o;
+        o.clock = "2026-11-01T00:00:00Z";
+        OWLensReading r = OWLens::Resolve(world, lens, Parse(R"({"rung": "owner"})"), o);
+        std::string out;
+        for (const std::string& id : r.kept) out += (out.empty() ? "" : " ") + id;
+        return out;
+    };
+    const std::string newer = R"("2026-10-25T12:00:00Z")", older = R"("2026-10-15T12:00:00Z")";
+    t.Eq(kept(R"(, "updated_at": )" + newer), std::string("e1"), "control: updated_at alone, newer");
+    t.Eq(kept(R"(, "server_updated_at": )" + newer), std::string("e1"), "server_updated_at alone, newer");
+    t.Eq(kept(R"(, "local_updated_at": )" + newer), std::string("e1"), "local_updated_at alone, newer");
+    t.Eq(kept(R"(, "updated_at": )" + older + R"(, "server_updated_at": )" + newer), std::string("e1"),
+         "an older updated_at beside a newer server_updated_at");
+    t.Eq(kept(R"(, "updated_at": )" + newer + R"(, "local_updated_at": )" + older), std::string("e2"),
+         "a newer updated_at beside an older local_updated_at: the folder clock, as changed_within reads it");
+    t.Eq(kept(R"(, "server_updated_at": )" + older + R"(, "local_updated_at": )" + newer), std::string("e1"),
+         "the newer of the two folder clocks");
+    t.Eq(kept(R"(, "updated_at": )" + newer + R"(, "server_updated_at": "garbage")"), std::string("e1"),
+         "a folder clock that cannot be read falls back to updated_at");
+    t.Eq(kept(R"(, "updated_at": )" + newer + R"(, "server_updated_at": "2026-09-01")"), std::string("e1"),
+         "a date alone is no time: updated_at");
+    t.Eq(kept(R"(, "server_updated_at": "garbage")"), std::string("e2"), "no clock at all sorts after one");
+}
+
 OW_TEST(lens_lenses_in_use_reads_each_id_once_and_drops_the_empty_one) {
     // The profile's owner, 2026-10-30 (fixture cases with serial 93): the choice's strings each once, in the order
     // given, "" dropped, as the npm and Python packages read it; the membership still wins whole.

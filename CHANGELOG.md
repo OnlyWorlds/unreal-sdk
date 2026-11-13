@@ -217,6 +217,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- **One clock per lens: rule 5 orders by the clock `changed_within` reads.** `OWLens::Resolve`'s order past the
+  anchors (the schema's type order, newest first, then by id) now reads an element's time as `changed_within` reads it:
+  on the wire its `updated_at`; for a folder's element the newer of `server_updated_at` and `local_updated_at` where
+  either reads as a time, else its `updated_at`. It read `updated_at` alone before, so one reading could cut an
+  element `stale` by its folder clock and rank it by an `updated_at` the cut had not used, and a folder element
+  stamped only by the folder sorted as undated. The budget keeps the newest, and an element edited locally yesterday is
+  now newer than one the server stamped last week. An element with no readable clock still sorts after every one that
+  has one; on the wire, where an element carries `updated_at` alone, nothing moves.
 - **The read mark's tie goes to the higher id.** `OWMessage::ReadMarkOf` still takes the reader's mark with the newest
   `updated_at` read as an instant, and a mark whose `updated_at` cannot be read never wins over one that can, in either
   list order. Two marks at the same instant now tie by the higher id, compared by code point as written, where the
