@@ -1,10 +1,10 @@
 // OWAddress on the address profile's conformance fixture (schema-dist profiles/address.fixture.json, the pinned copy,
 // dist.123's, its fifty-seven prose cases added): every format case through WriteJson, every parse case through Parse,
 // each refusal by the reason the fixture names. The prose cases are a finder's (an address found inside a line), and
-// this core has none: Parse reads one string whole, so each is a named skip, counted (the port is OW Gaming #1527);
-// every other kind runs. Then the readings the fixture
-// leaves open, as the TypeScript and Python packages and the Unity SDK answer them: the writer's refusal order, a
-// moment with a zero fraction, an empty string, an unknown key.
+// this core has none: each checks the half Parse owns (the line holds the address at the index, and Parse reads it
+// whole as the case's reading), then is a named, counted skip (the port is OW Gaming #1527). Then the readings the
+// fixture leaves open, as the TypeScript and Python packages and the Unity SDK answer them: the writer's refusal
+// order, a moment with a zero fraction, an empty string, an unknown key.
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -88,8 +88,7 @@ bool SameReading(const OWJsonValue& want, const OWJsonValue& got) {
 // Why a prose case is skipped: it is a finder's (where an address found inside a line ends, the packages'
 // readOwLinkAt), and this core has none.
 const char* const ProseSkip =
-    "prose: a finder's case (readOwLinkAt); this core has no finder, OWAddress::Parse reads one string whole "
-    "(the port: OW Gaming #1527)";
+    "skipped by kind 'prose': no finder of an address in prose in this SDK yet (OW Gaming #1527)";
 
 void Case(owtest::T& t, const OWJsonValue& c) {
     std::string name = Str(c, "name"), kind = Str(c, "kind"), refuse = Str(c, "refuse");
@@ -117,6 +116,24 @@ void Case(owtest::T& t, const OWJsonValue& c) {
                  "parse/" + name + ": gave " + Compact(got) + ", the fixture says " + (want ? Compact(*want) : "nothing"));
         }
     } else if (kind == "prose") {
+        // The half this core owns: where the case names an address, the line holds it at the index (every prose case is
+        // ASCII to its address's end, so a byte index is the fixture's), and the whole-string parser reads it as the
+        // case's reading. A failed check fails the case; then the finding itself, which needs a finder, is skipped.
+        const OWJsonValue* expect = c.Find("expect");
+        const OWJsonValue* address = expect ? expect->Find("address") : nullptr;
+        if (address && address->IsString()) {
+            const std::string text = Str(c, "text"), found = address->Text();
+            const OWJsonValue* at = c.Find("index");
+            const size_t index = at && at->IsNumber() ? size_t(std::stoll(at->Text())) : std::string::npos;
+            t.Eq(index < text.size() ? text.substr(index, found.size()) : std::string(), found,
+                 "prose/" + name + ": the line holds the address at its index");
+            OWAddressReading r = OWAddress::Parse(found);
+            t.Ok(r.ok, "prose/" + name + ": the address, read whole, refused as " + r.reason);
+            const OWJsonValue* want = expect->Find("reading");
+            OWJsonValue got = AsJson(r);
+            t.Ok(want && SameReading(*want, got), "prose/" + name + ": read whole, gave " + Compact(got) +
+                                                      ", the fixture says " + (want ? Compact(*want) : "nothing"));
+        }
         t.Skip(ProseSkip);
     } else {
         t.Fail("case " + name + ": a case of unknown kind '" + kind + "'");
