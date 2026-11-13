@@ -614,13 +614,13 @@ bool FOWGraphRunTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Sikelia: every element's answers as the core's"), Mismatches(*this, Instance, OnSikelia, TEXT("Sikelia"), true), 0);
 	TestEqual(TEXT("Moppetopia: every element's answers as the core's"), Mismatches(*this, Instance, OnMoppetopia, TEXT("Moppetopia"), true), 0);
 
-	// The answers are not empty ones: a word, a calendar's words, five rows (the site, Atlas, Lantern, Little Lens and
-	// Tactical Tangle, which opens Characters), and the refusals carried as values.
+	// The answers are not empty ones: a word, a calendar's words, six rows (the site, Atlas, Lantern, Little Lens,
+	// Tactical Tangle and Subs, which open Characters), and the refusals carried as values.
 	FInputs Ana = OnSikelia[0];
 	for (const FInputs& In : OnSikelia) if (In.Type == TEXT("character") && In.Link.StartsWith(TEXT("https"))) { Ana = In; break; }
 	const FAnswer A = RunGraph(*this, Instance, Ana);
-	TestTrue(TEXT("a character: read, written back, five rows, a word (") + A.Show() + TEXT(")"), A.bParsed && A.bWritten
-		&& A.Written == Ana.Link.ToLower() && A.bOpeners && A.Rows.Num() == 5 && A.Rows[1].State == TEXT("Opens in your browser")
+	TestTrue(TEXT("a character: read, written back, six rows, a word (") + A.Show() + TEXT(")"), A.bParsed && A.bWritten
+		&& A.Written == Ana.Link.ToLower() && A.bOpeners && A.Rows.Num() == 6 && A.Rows[1].State == TEXT("Opens in your browser")
 		&& A.bWord && (A.Word == TEXT("Employees") || A.Word == TEXT("Lords")));
 	FInputs Dated = OnMoppetopia[0];
 	Dated.Step = 249;

@@ -161,32 +161,36 @@ bool FOWOpenersWorldTest::RunTest(const FString& Parameters)
 	const FString Ana = Characters[0].ToLower();
 	const FString AnaPage = Site + TEXT("/character/") + Ana;
 
-	// The world's own rows. The baked list (Atlas, Lantern, Little Lens, Tactical Tangle): Atlas, Lantern and Tangle need
-	// an account, so the public (the signed-out reader) sees each as a row that says "Needs an account", its href kept:
-	// the menu draws it as one that opens nothing. Little Lens needs none. Tangle opens a world or a Character (its
-	// element_types), so it is on the world's menu and on Ana's.
+	// The world's own rows. The baked list (Atlas, Lantern, Little Lens, Tactical Tangle, Subs): Lantern, Tangle and
+	// Subs need an account, so the public (the signed-out reader) sees each as a row that says "Needs an account", its
+	// href kept: the menu draws it as one that opens nothing. Atlas needs one too but opens a public world with none
+	// (opens_public, the list at 9452529), so the public's Atlas row is live. Little Lens needs none. Tangle opens a
+	// world or a Character (its element_types), so it is on the world's menu and on Ana's; Subs opens a Character and
+	// has no world door (the list at 0a7539c), so it is on Ana's menu, last, and not on the world's.
 	const FString NoAccount = TEXT("Needs an account");
 	FMenu M = CallOpenersFor(*this, World, FString(), Surface(EOWAudience::Public));
-	TestTrue(TEXT("public, the world: the site's page, Atlas and Lantern needing an account, Little Lens, Tangle needing one (") + M.Show() + TEXT(")"),
+	TestTrue(TEXT("public, the world: the site's page, Atlas, Lantern needing an account, Little Lens, Tangle needing one (") + M.Show() + TEXT(")"),
 		M.bOk && M.Reason.IsEmpty() && M.Rows.Num() == 5 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), Site, FString() }
-		&& M.Rows[1] == FRow{ TEXT("atlas"), TEXT("Atlas"), TEXT("https://atlas.onlyworlds.com/#/open/") + Id, NoAccount }
+		&& M.Rows[1] == FRow{ TEXT("atlas"), TEXT("Atlas"), TEXT("https://atlas.onlyworlds.com/#/open/") + Id, FString() }
 		&& M.Rows[2] == FRow{ TEXT("lantern"), TEXT("Lantern"), TEXT("https://lantern.onlyworlds.com/#/open/") + Id, NoAccount }
 		&& M.Rows[3] == FRow{ TEXT("little-lens"), TEXT("Little Lens"), TEXT("https://little-lens.onlyworlds.com/#/open/") + Id, FString() }
 		&& M.Rows[4] == FRow{ TEXT("tangle"), TEXT("Tactical Tangle"), TEXT("https://tangle.onlyworlds.com/#/open/") + Id, NoAccount });
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Public));
-	TestTrue(TEXT("public, an element: its page, Atlas and Lantern needing an account, Little Lens, Tangle needing one (") + M.Show() + TEXT(")"),
-		M.bOk && M.Rows.Num() == 5 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), AnaPage, FString() }
-		&& M.Rows[1] == FRow{ TEXT("atlas"), TEXT("Atlas"), TEXT("https://atlas.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, NoAccount }
+	TestTrue(TEXT("public, an element: its page, Atlas, Lantern needing an account, Little Lens, Tangle and Subs needing one (") + M.Show() + TEXT(")"),
+		M.bOk && M.Rows.Num() == 6 && M.Rows[0] == FRow{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), AnaPage, FString() }
+		&& M.Rows[1] == FRow{ TEXT("atlas"), TEXT("Atlas"), TEXT("https://atlas.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, FString() }
 		&& M.Rows[2] == FRow{ TEXT("lantern"), TEXT("Lantern"), TEXT("https://lantern.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, NoAccount }
 		&& M.Rows[3] == FRow{ TEXT("little-lens"), TEXT("Little Lens"), TEXT("https://little-lens.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, FString() }
-		&& M.Rows[4] == FRow{ TEXT("tangle"), TEXT("Tactical Tangle"), TEXT("https://tangle.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, NoAccount });
+		&& M.Rows[4] == FRow{ TEXT("tangle"), TEXT("Tactical Tangle"), TEXT("https://tangle.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, NoAccount }
+		&& M.Rows[5] == FRow{ TEXT("subs"), TEXT("Subs"), TEXT("https://subs.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, NoAccount });
 	// Signed in or not, in a browser or not: the public's account rows say the same.
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Public, true, EOWSignIn::SignedIn));
 	TestTrue(TEXT("public, signed in, in a browser: still Needs an account (") + M.Show() + TEXT(")"),
-		M.bOk && M.Rows.Num() == 5 && M.Rows[1].State == NoAccount && M.Rows[2].State == NoAccount && M.Rows[3].State.IsEmpty()
-		&& M.Rows[4].State == NoAccount);
+		M.bOk && M.Rows.Num() == 6 && M.Rows[1].State.IsEmpty() && M.Rows[2].State == NoAccount && M.Rows[3].State.IsEmpty()
+		&& M.Rows[4].State == NoAccount && M.Rows[5].State == NoAccount);
 
-	// A member in a game: Atlas, Lantern and Tangle need an account it cannot see, so each says "Opens in your browser"; Little Lens needs none.
+	// A member in a game: Atlas, Lantern, Tangle and Subs need an account it cannot see, so each says "Opens in your
+	// browser"; Little Lens needs none.
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member));
 	const TArray<FRow> Game = {
 		{ TEXT("onlyworlds"), TEXT("onlyworlds.com"), AnaPage, FString() },
@@ -194,8 +198,9 @@ bool FOWOpenersWorldTest::RunTest(const FString& Parameters)
 		{ TEXT("lantern"), TEXT("Lantern"), TEXT("https://lantern.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, TEXT("Opens in your browser") },
 		{ TEXT("little-lens"), TEXT("Little Lens"), TEXT("https://little-lens.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, FString() },
 		{ TEXT("tangle"), TEXT("Tactical Tangle"), TEXT("https://tangle.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, TEXT("Opens in your browser") },
+		{ TEXT("subs"), TEXT("Subs"), TEXT("https://subs.onlyworlds.com/#/open/") + Id + TEXT("/element/") + Ana, TEXT("Opens in your browser") },
 	};
-	TestTrue(TEXT("a member in a game: five rows, each account tool's word (") + M.Show() + TEXT(")"), M.bOk && M.Rows == Game);
+	TestTrue(TEXT("a member in a game: six rows, each account tool's word (") + M.Show() + TEXT(")"), M.bOk && M.Rows == Game);
 	M = CallOpenersFor(*this, World, FString(), Surface(EOWAudience::Member));
 	TestTrue(TEXT("the world's rows in a game (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 5
 		&& M.Rows[1].Href == TEXT("https://atlas.onlyworlds.com/#/open/") + Id && M.Rows[2].State == TEXT("Opens in your browser")
@@ -224,21 +229,21 @@ bool FOWOpenersWorldTest::RunTest(const FString& Parameters)
 
 	// In a browser: the sign-in decides, and only when it is known.
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member, true, EOWSignIn::SignedOut));
-	TestTrue(TEXT("signed out in a browser: Sign in to <name> first (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 5
+	TestTrue(TEXT("signed out in a browser: Sign in to <name> first (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 6
 		&& M.Rows[1].State == TEXT("Sign in to Atlas first") && M.Rows[2].State == TEXT("Sign in to Lantern first") && M.Rows[3].State.IsEmpty()
-		&& M.Rows[4].State == TEXT("Sign in to Tactical Tangle first"));
+		&& M.Rows[4].State == TEXT("Sign in to Tactical Tangle first") && M.Rows[5].State == TEXT("Sign in to Subs first"));
 	for (EOWSignIn SignIn : { EOWSignIn::SignedIn, EOWSignIn::Unknown })
 	{
 		M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member, true, SignIn));
 		TestTrue(FString::Printf(TEXT("sign-in %d in a browser: no word (%s)"), static_cast<int32>(SignIn), *M.Show()),
-			M.bOk && M.Rows.Num() == 5 && M.Rows[1].State.IsEmpty() && M.Rows[2].State.IsEmpty() && M.Rows[3].State.IsEmpty()
-			&& M.Rows[4].State.IsEmpty());
+			M.bOk && M.Rows.Num() == 6 && M.Rows[1].State.IsEmpty() && M.Rows[2].State.IsEmpty() && M.Rows[3].State.IsEmpty()
+			&& M.Rows[4].State.IsEmpty() && M.Rows[5].State.IsEmpty());
 	}
 	// The surface's own tool, by its client name: You are here, before any other word.
 	M = CallOpenersFor(*this, World, Characters[0], Surface(EOWAudience::Member, false, EOWSignIn::SignedOut, TEXT("atlas")));
-	TestTrue(TEXT("Atlas's own surface: You are here (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 5
+	TestTrue(TEXT("Atlas's own surface: You are here (") + M.Show() + TEXT(")"), M.bOk && M.Rows.Num() == 6
 		&& M.Rows[1].State == TEXT("You are here") && M.Rows[2].State == TEXT("Opens in your browser") && M.Rows[3].State.IsEmpty()
-		&& M.Rows[4].State == TEXT("Opens in your browser"));
+		&& M.Rows[4].State == TEXT("Opens in your browser") && M.Rows[5].State == TEXT("Opens in your browser"));
 
 	// A tool whose element door opens only some types (the list's element_types) is left off every other type's menu,
 	// world door and all: Tangle opens Characters, so a Location's menu has no Tangle row, through either door.
@@ -495,8 +500,9 @@ bool FOWOpenersAddressTest::RunTest(const FString& Parameters)
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	TestEqual(TEXT("100 cases"), static_cast<int32>(Cases->Items().size()), 100);
-	TestEqual(TEXT("the row cases carried"), RowCases, 46);
+	// The fixture at 110 cases (the TypeScript SDK 4.133.0: open.opens_public).
+	TestEqual(TEXT("110 cases"), static_cast<int32>(Cases->Items().size()), 110);
+	TestEqual(TEXT("the row cases carried"), RowCases, 50);
 	TestEqual(TEXT("the address refusals carried"), Refusals, 6);
 	TestEqual(TEXT("cases failed"), Failed, 0);
 	AddInfo(FString::Printf(TEXT("openers fixture: %d row cases and %d address refusals through the Blueprint path; not carried (%d): %s"),
