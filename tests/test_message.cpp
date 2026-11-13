@@ -12,10 +12,14 @@
 #include "OWJson.h"
 #include "OWMessage.h"
 
+#include <algorithm>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
+#include <tuple>
+#include <vector>
 
 using namespace OnlyWorlds;
 using owtest::P;
@@ -263,6 +267,142 @@ OW_TEST(message_time_key_reads_rfc_3339) {
     t.Ok(k && k->seconds == -62162035200LL, "year 0 is a leap year, proleptic Gregorian");
     OWJsonValue n = OWJsonValue::Number(int64_t(5));
     t.Ok(!OWMessage::TimeKey(&n) && !OWMessage::TimeKey(nullptr), "a number, and nothing, cannot be read");
+}
+
+namespace {
+
+// A message to a1 from a3 (no created_by, so the narrator is trusted and a1 reads it as unread), its created_at the
+// JSON text given (nullptr: no created_at key).
+OWJsonValue TimedMessage(const std::string& id, const char* created_at_json) {
+    std::string body = R"({"id": ")" + id + R"(", "type": "narrative", "supertype": "Message", "name": ")" + id +
+                       R"(", "story": "", "narrator": "a3", "characters": ["a1"])";
+    if (created_at_json) body += std::string(R"(, "created_at": )") + created_at_json;
+    OWJsonParseResult r = OWJson::Parse(body + "}");
+    return r.ok ? std::move(r.value) : OWJsonValue();
+}
+
+std::vector<std::string> UnreadIds(const std::vector<OWJsonValue>& messages) {
+    std::vector<const OWJsonValue*> list;
+    for (const OWJsonValue& m : messages) list.push_back(&m);
+    std::vector<std::string> out;
+    for (const OWJsonValue* m : OWMessage::UnreadFor(list, "a1", nullptr, nullptr)) out.push_back(Str(*m, "id"));
+    return out;
+}
+
+std::string Joined(const std::vector<std::string>& ids) {
+    std::string s;
+    for (const std::string& id : ids) s += (s.empty() ? "" : " ") + id;
+    return s;
+}
+
+std::optional<OWMessage::OWTimeKey> KeyOf(const char* text) {
+    OWJsonValue v = OWJsonValue::String(text);
+    return OWMessage::TimeKey(&v);
+}
+
+}  // namespace
+
+// The TypeScript SDK 4.159.0's edge case `created-at-order-and-the-readable-rule` (its test/fixtures/message-edges.json,
+// the bytes the Unity SDK vendors), its 28 created_at texts and wanted order as the file gives them, through UnreadFor's
+// created_at order. A time with no offset is UTC; a fraction counts to its sixth digit, later digits dropped, not
+// rounded; a date alone, a space for the T and the other unreadable texts sort last, in the list's order.
+OW_TEST(message_created_at_order_and_the_readable_rule_as_the_typescript_sdk) {
+    const std::vector<std::pair<const char*, const char*>> rows = {
+        {"t01", "\"2026-10-26T10:00:00Z\""},
+        {"t02", "\"2026-10-26T12:00:00+02:00\""},
+        {"t03", "\"2026-10-26t09:00:00z\""},
+        {"t04", "\"2026-10-26T09:30:00\""},
+        {"t05", "\"2026-10-26T09:30:00.5Z\""},
+        {"t06", "\"2026-10-26T09:30:00.000001Z\""},
+        {"t07", "\"2026-02-29T00:00:00Z\""},
+        {"t08", "\"2024-02-29T00:00:00Z\""},
+        {"t09", "\"2026-10-26\""},
+        {"t10", "\"2026-10-26 10:00:00Z\""},
+        {"t11", "\" 2026-10-26T10:00:00Z\""},
+        {"t12", "\"2026-10-26T24:00:00Z\""},
+        {"t13", "\"2026-10-26T23:59:60Z\""},
+        {"t14", "\"2026-10-26T10:00:00+24:00\""},
+        {"t15", "\"2026-10-26T10:00Z\""},
+        {"t16", "\"2026-10-26T10:00:00,5Z\""},
+        {"t17", "null"},
+        {"t18", nullptr},
+        {"t19", "5"},
+        {"t20", "\"yesterday\""},
+        {"t21", "\"0000-01-01T00:00:00+01:00\""},
+        {"t22", "\"9999-12-31T23:59:59.9999999Z\""},
+        {"t23", "\"2026-10-26T09:30:00.0000005Z\""},
+        {"t24", "\"2026-10-26T10:00:00-00:30\""},
+        {"t25", "\"2026-10-26T09:61:00Z\""},
+        {"t26", "\"2026-1-26T10:00:00Z\""},
+        {"t27", "\"\\uff12\\uff10\\uff12\\uff16-10-26T10:00:00Z\""},
+        {"t28", "\"2026-10-26T10:00:00Z\\n\""},
+    };
+    const std::vector<std::string> want = {"t21", "t08", "t03", "t04", "t23", "t06", "t05", "t01", "t02", "t24",
+                                           "t22", "t07", "t09", "t10", "t11", "t12", "t13", "t14", "t15", "t16",
+                                           "t17", "t18", "t19", "t20", "t25", "t26", "t27", "t28"};
+    std::vector<OWJsonValue> messages;
+    for (const auto& [id, created_at] : rows) messages.push_back(TimedMessage(id, created_at));
+    t.Eq(messages.size(), size_t(28), "the case's 28 messages");
+    t.Eq(Joined(UnreadIds(messages)), Joined(want), "the order the file wants");
+
+    // On the instant reader's value: no offset is UTC, after 09:00Z; 0.0000005 is the same instant as no fraction (the
+    // seventh digit dropped); 0.000001 is one microsecond later; a date alone is no time.
+    auto nine = KeyOf("2026-10-26T09:00:00Z"), bare = KeyOf("2026-10-26T09:30:00"),
+         zulu = KeyOf("2026-10-26T09:30:00Z"), seventh = KeyOf("2026-10-26T09:30:00.0000005Z"),
+         sixth = KeyOf("2026-10-26T09:30:00.000001Z");
+    t.Ok(nine && bare && *nine < *bare && bare->seconds - nine->seconds == 1800, "no offset reads as UTC, 30 min after 09:00Z");
+    t.Ok(bare && zulu && *bare == *zulu, "no offset is the same instant as Z");
+    t.Ok(seventh && bare && *seventh == *bare && seventh->micros == 0, "the seventh digit is dropped, not rounded");
+    t.Ok(sixth && bare && sixth->seconds == bare->seconds && sixth->micros == 1, "the sixth digit counts");
+    t.Ok(!KeyOf("2026-10-26"), "a date alone cannot be read");
+}
+
+// The year's two ends: any four digits are a year, the calendar runs on in both directions, and an offset may carry a
+// time before year 0000 or past the end of 9999. The seconds since 1970 are the TypeScript SDK 4.159.0's and
+// onlyworlds 0.120.0's for the same texts; every step of the arithmetic is int64_t (Digits, DaysFromCivil, the key).
+OW_TEST(message_created_at_at_the_years_two_ends) {
+    const std::vector<std::tuple<const char*, const char*, int64_t>> times = {
+        {"E1", "9999-12-31T23:00:00-02:00", 253402304400LL},
+        {"E2", "0000-01-01T00:00:00Z", -62167219200LL},
+        {"R", "2026-11-12T10:00:00Z", 1794477600LL},
+        {"E3", "0000-01-01T00:00:00+01:00", -62167222800LL},
+    };
+    std::vector<OWJsonValue> given;
+    for (const auto& [id, text, seconds] : times) {
+        auto k = KeyOf(text);
+        t.Ok(k.has_value(), std::string(id) + " " + text + " reads");
+        if (k) t.Eq(k->seconds, seconds, std::string(id) + " " + text + ": seconds since 1970");
+        if (k) t.Eq(k->micros, int64_t(0), std::string(id) + ": no fraction");
+        given.push_back(TimedMessage(id, (std::string("\"") + text + "\"").c_str()));
+    }
+    t.Eq(Joined(UnreadIds(given)), std::string("E3 E2 R E1"), "as given");
+    std::reverse(given.begin(), given.end());
+    t.Eq(Joined(UnreadIds(given)), std::string("E3 E2 R E1"), "reversed");
+}
+
+// The forms of a created_at, a row each: what reads and what does not.
+OW_TEST(message_created_at_forms_read_or_not) {
+    const std::vector<std::pair<const char*, bool>> rows = {
+        {"2026-11-12t10:00:00z", true},           // lower-case t and z
+        {"2026-11-12T10:00:00.1234567891Z", true},  // a ten-digit fraction
+        {"2026-11-12 10:00:00Z", false},          // a space for the T
+        {"2026-11-12T10:00Z", false},             // no seconds
+        {"2026-11-12T10:00:00+0200", false},      // an offset without its colon
+        {"2026-02-30T10:00:00Z", false},          // 30 February
+        {"2026-11-12T24:00:00Z", false},          // hour 24
+        {"2026-11-12T10:00:60Z", false},          // second 60
+        {"2026-11-12T10:00:00+24:00", false},     // an offset of 24 hours
+        {"2026-11-12T10:00:00Z\n", false},        // one line break after the time
+    };
+    for (const auto& [text, reads] : rows) {
+        std::string shown = text;
+        if (!shown.empty() && shown.back() == '\n') shown = shown.substr(0, shown.size() - 1) + "\\n";
+        t.Eq(KeyOf(text).has_value(), reads, shown + (reads ? " reads" : " does not read"));
+    }
+    auto ten = KeyOf("2026-11-12T10:00:00.1234567891Z");
+    t.Ok(ten && ten->micros == 123456, "the ten-digit fraction counts to its sixth digit");
+    auto lower = KeyOf("2026-11-12t10:00:00z"), upper = KeyOf("2026-11-12T10:00:00Z");
+    t.Ok(lower && upper && *lower == *upper, "t and z read as T and Z");
 }
 
 OW_TEST(message_empty_id_and_wrong_kinds_read_as_no) {
