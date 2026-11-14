@@ -105,6 +105,11 @@ OWAddressReading Parse(std::string_view text);
 // is not part of an address found in prose: the address ends before its ?, & or #. What follows is prose, a full stop
 // included. Parse itself still reads a string whole: "ow://object/<id>." handed to it is refused.
 //
+// An address begins at the start of the text or after a character that does not glue it to a word: after a letter of
+// any script, a combining mark or an underscore the start is inside a word and this answers nothing (elbow://...); a
+// hyphen, a digit, white space or punctuation does not glue (x-ow://, 3ow://, (ow://). The same set read from both
+// ends; the character before is decoded whole (staged: ruled 2026-11-14, publishes with a later serial).
+//
 // `index` and `end` are byte offsets into the UTF-8 text (not UTF-16 units as in JavaScript, nor code points as in
 // Python); an index past the end, or inside a character's bytes, reads nothing.
 std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index = 0);

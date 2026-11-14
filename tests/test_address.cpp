@@ -398,6 +398,61 @@ OW_TEST(address_read_at_the_sites_form_a_run_cut_inside_a_word_is_no_address) {
     t.Eq(found ? found->end : size_t(0), (h + "hyperion").size(), "an emoji is no letter: the run ends before it");
 }
 
+// -- Where an address in prose begins (staged: ruled 2026-11-14, publishes with a later serial) -------------------------
+// The mirror of the cut after a run: a letter of any script, a combining mark or an underscore before the prefix glues
+// it into a word, and the text there is prose; anything else, or the start of the text, does not. The character
+// before is decoded whole: in UTF-8 a letter past ASCII is two to four bytes, and one byte back is only its last.
+
+OW_CASES(address_start_cases) {
+    const std::string id = "01a1d4ef-0000-7000-8000-000000000084";
+    struct Start {
+        const char* name;
+        std::string text, prefix;
+        bool found;
+    };
+    const std::vector<Start> starts = {
+        {"glued-letter", "Built the gate: elbow://object/" + id + ".", "ow://", false},
+        {"glued-underscore", "tag_ow://object/" + id + " here", "ow://", false},
+        {"glued-non-ascii-letter", "caf\xC3\xA9ow://object/" + id, "ow://", false},
+        {"glued-combining-mark", "e\xCC\x81ow://object/" + id, "ow://", false},
+        {"glued-astral-letter", "\xF0\x9D\x92\x9Cow://object/" + id, "ow://", false},
+        {"after-hyphen", "x-ow://object/" + id, "ow://", true},
+        {"after-digit", "3ow://object/" + id, "ow://", true},
+        {"after-space", "Built the gate: ow://object/" + id + ".", "ow://", true},
+        {"after-opening-bracket", "Built the gate (ow://object/" + id + ").", "ow://", true},
+        {"after-quote", "Built the gate \"ow://object/" + id + "\".", "ow://", true},
+        {"start-of-text", "ow://object/" + id + " was built.", "ow://", true},
+        {"glued-letter-site-form", "seehttps://www.onlyworlds.com/w/hyperion/object/" + id, "https://", false},
+    };
+    owtest::Cases out;
+    for (const Start& s : starts) {
+        out.emplace_back(std::string("address_start:") + s.name, [s, id](owtest::T& t) {
+            const size_t index = s.text.find(s.prefix);
+            std::optional<OWAddressFound> found = OWAddress::ReadAt(s.text, index);
+            if (!s.found) {
+                t.Ok(!found, "the start is glued to a word: found " +
+                                 (found ? s.text.substr(index, found->end - index) : std::string()) + " at " +
+                                 std::to_string(index));
+                return;
+            }
+            t.Ok(found.has_value(), "found an address at " + std::to_string(index));
+            if (!found) return;
+            t.Eq(found->reading.id.value_or(""), id, "the id");
+            t.Eq(found->end, index + ("ow://object/" + id).size(), "the address ends where its id ends");
+        });
+    }
+    return out;
+}
+
+OW_TEST(address_start_after_bytes_that_are_not_utf8_does_not_glue) {
+    // A stray continuation byte, or a lead whose sequence is cut short, is no letter: the address is found.
+    const std::string address = "ow://object/" + Element;
+    for (const std::string& before : {std::string("\x80"), std::string("\xE2\x80"), std::string("a\xBF\xBF\xBF")}) {
+        std::optional<OWAddressFound> found = OWAddress::ReadAt(before + address, before.size());
+        t.Ok(found && found->end == before.size() + address.size(), "found after " + std::to_string(before.size()) + " bytes");
+    }
+}
+
 OW_TEST(address_letters_and_marks_table) {
     for (char32_t c : {0x41, 0x7A, 0xE9, 0x301, 0x5D0, 0x938, 0x93F, 0x4E00, 0xAC00, 0x1D49C, 0x20000, 0x2B0, 0x20DD})
         t.Ok(OWUnicode::IsLetterOrMark(c), "L or M: " + std::to_string(uint32_t(c)));

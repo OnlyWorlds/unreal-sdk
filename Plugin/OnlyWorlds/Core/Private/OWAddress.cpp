@@ -399,6 +399,17 @@ char32_t CodePointAt(std::string_view s, size_t i) {
     return cps.size() == 1 ? cps[0] : char32_t(0xFFFD);
 }
 
+// Where the character that ends just before byte i starts: back over up to three continuation bytes (10xxxxxx) to the
+// byte that leads them. When that lead does not announce exactly those bytes (text that is not UTF-8), the byte just
+// before i, which then decodes as no letter.
+size_t CodePointStart(std::string_view s, size_t i) {
+    size_t j = i - 1;
+    while (j > 0 && i - j < 4 && (static_cast<uint8_t>(s[j]) & 0xC0) == 0x80) --j;
+    const uint8_t c = static_cast<uint8_t>(s[j]);
+    const size_t length = c < 0x80 ? 1 : c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : c >= 0xC0 ? 2 : 1;
+    return length == i - j ? j : i - 1;
+}
+
 // Whether the character at byte i glues a run into a word: a letter of any script, a combining mark (Unicode categories
 // L and M) or an underscore.
 bool IsInAWord(std::string_view s, size_t i) {
@@ -414,6 +425,9 @@ bool Parses(std::string_view text, size_t index, size_t end) { return Parse(text
 std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index) {
     const size_t n = text.size();
     if (index > n) return std::nullopt;
+    // A start glued to a word is prose, the mirror of the cut after a run (staged: ruled 2026-11-14, publishes with a
+    // later serial). The character before is decoded whole: a letter past ASCII is two to four bytes.
+    if (index > 0 && IsInAWord(text, CodePointStart(text, index))) return std::nullopt;
     const std::string_view at = text.substr(index);
     const bool human = StartsWith(at, HumanPrefix);
     size_t start;

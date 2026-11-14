@@ -477,6 +477,14 @@ bool FOWAddressProseTest::RunTest(const FString& Parameters)
 		TestTrue(FString::Printf(TEXT("index %d: nothing"), Bad), !None.bOk && None.End == 0 && IsEmptyAddress(None.Address));
 	}
 	TestFalse(TEXT("OW:// is no address in prose"), CallReadAt(*this, TEXT("OW://object/") + Element, 0).bOk);
+
+	// Where it begins (staged: ruled 2026-11-14, publishes with a later serial): a letter above U+FFFF before the
+	// prefix is two UTF-16 units here and four bytes in the core, and glues as any letter does; a hyphen does not.
+	const FString Astral = Str(std::string("\xF0\x9D\x92\x9C")) + TEXT("ow://object/") + Element;
+	TestEqual(TEXT("U+1D49C is two UTF-16 units"), Astral.Find(TEXT("ow://")), 2);
+	TestFalse(TEXT("glued to a letter above U+FFFF: prose"), CallReadAt(*this, Astral, 2).bOk);
+	const FFound Hyphen = CallReadAt(*this, TEXT("x-ow://object/") + Element, 2);
+	TestTrue(TEXT("after a hyphen: the address"), Hyphen.bOk && Hyphen.End == 2 + 12 + 36);
 	return true;
 }
 
