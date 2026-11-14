@@ -167,7 +167,7 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 	const OWJsonValue* Cases = Doc.Find("cases");
 	if (!TestTrue(TEXT("the fixture holds cases"), Cases && Cases->IsArray())) return false;
 
-	int32 Parsed = 0, Written = 0, Prose = 0, Failed = 0, RoundTrips = 0;
+	int32 Parsed = 0, Written = 0, Prose = 0, ProseAll = 0, Failed = 0, RoundTrips = 0;
 	TArray<FString> NotCarried;
 	for (const OWJsonValue& Case : Cases->Items())
 	{
@@ -274,6 +274,30 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 				TestTrue(Name + TEXT(": the case's reading;") + Why, bSame);
 			}
 		}
+		else if (Kind == TEXT("prose-all"))
+		{
+			// FindAddresses finds every address in the text, in order; found is each one's slice, never an index
+			// (serial 128). Called as C++ (its UFUNCTION checked by name below); each reading is ParseAddress's of its
+			// slice, through the Blueprint path.
+			++ProseAll;
+			const FString Text = TextOf(Case.Find("text"));
+			const TArray<FOWAddressFound> All = UOWAddresses::FindAddresses(Text);
+			TArray<FString> Got, Want;
+			for (const FOWAddressFound& F : All)
+			{
+				const FString Slice = Text.Mid(F.Start, F.End - F.Start);
+				Got.Add(Slice);
+				const FParsed P = CallParse(*this, Slice);
+				TestTrue(Name + TEXT(": the slice parses: ") + Slice, P.bOk);
+				TestEqual(Name + TEXT(": its reading's id"), F.Address.Id, P.Address.Id);
+				TestEqual(Name + TEXT(": its reading's world"), F.Address.World, P.Address.World);
+				TestEqual(Name + TEXT(": its reading's form"), F.Address.Form, P.Address.Form);
+			}
+			if (const OWJsonValue* Found = Case.Find("found"); Found && Found->IsArray())
+				for (const OWJsonValue& V : Found->Items()) Want.Add(TextOf(&V));
+			TestTrue(Name + TEXT(": found [") + FString::Join(Got, TEXT(", ")) + TEXT("], the fixture finds [")
+				+ FString::Join(Want, TEXT(", ")) + TEXT("]"), Got == Want);
+		}
 		else
 		{
 			AddError(Name + TEXT(": a case of unknown kind ") + Kind);
@@ -283,6 +307,22 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("218 cases"), static_cast<int32>(Cases->Items().size()), 218);
 	TestEqual(TEXT("every parse case through ParseAddress"), Parsed, 104);
 	TestEqual(TEXT("every prose case through ReadAddressAt"), Prose, 76);
+	TestEqual(TEXT("every prose-all case through FindAddresses"), ProseAll, 2);
+	TestNotNull(TEXT("FindAddresses is a UFUNCTION"), UOWAddresses::StaticClass()->FindFunctionByName(TEXT("FindAddresses")));
+	{
+		// Start and End are UTF-16 units: an emoji (two units, four UTF-8 bytes) before each address.
+		const FString Id = TEXT("01a1d4ef-0000-7000-8000-000000000084");
+		const FString Emoji = FString(TEXT("Built ")) + FString::Chr(0xD83D) + FString::Chr(0xDEA2) + TEXT(" ow://object/") + Id
+			+ TEXT(", then ") + FString::Chr(0xD83D) + FString::Chr(0xDEA2) + TEXT(" ow://object/") + Id + TEXT("@2.");
+		const TArray<FOWAddressFound> Two = UOWAddresses::FindAddresses(Emoji);
+		TestEqual(TEXT("two addresses after the emoji"), Two.Num(), 2);
+		if (Two.Num() == 2)
+		{
+			TestEqual(TEXT("the first starts where Find says"), Two[0].Start, Emoji.Find(TEXT("ow://")));
+			TestEqual(TEXT("the first's slice"), Emoji.Mid(Two[0].Start, Two[0].End - Two[0].Start), TEXT("ow://object/") + Id);
+			TestEqual(TEXT("the second's slice"), Emoji.Mid(Two[1].Start, Two[1].End - Two[1].Start), TEXT("ow://object/") + Id + TEXT("@2"));
+		}
+	}
 	TestEqual(TEXT("the format cases through WriteAddress"), Written, 33);
 	// The three moments no Integer64 pin holds; the core's own runner reads them through WriteJson.
 	TestEqual(TEXT("not carried: a moment that is not a whole number"), NotCarried.Num(), 3);

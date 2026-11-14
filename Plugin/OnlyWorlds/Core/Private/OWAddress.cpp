@@ -477,7 +477,28 @@ std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index) {
             end = lens_end;
     }
 
-    return OWAddressFound{Parse(text.substr(index, end - index)), end};
+    return OWAddressFound{Parse(text.substr(index, end - index)), end, index};
+}
+
+std::vector<OWAddressFound> FindAll(std::string_view text) {
+    std::vector<OWAddressFound> found;
+    const std::string_view text_prefix(TextPrefix), human_prefix(HumanPrefix);
+    size_t next_text = text.find(text_prefix);
+    size_t next_human = text.find(human_prefix);
+    size_t at = 0;
+    for (;;) {
+        if (next_text != std::string_view::npos && next_text < at) next_text = text.find(text_prefix, at);
+        if (next_human != std::string_view::npos && next_human < at) next_human = text.find(human_prefix, at);
+        const size_t start = std::min(next_text, next_human);  // npos is the largest size_t: none is the other
+        if (start == std::string_view::npos) return found;
+        std::optional<OWAddressFound> got = ReadAt(text, start);
+        if (!got) {
+            at = start + 1;
+        } else {
+            at = got->end;
+            found.push_back(std::move(*got));
+        }
+    }
 }
 
 OWAddressWritten Write(const OWAddressParts& parts) {

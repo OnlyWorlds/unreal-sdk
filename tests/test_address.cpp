@@ -152,6 +152,21 @@ void Case(owtest::T& t, const OWJsonValue& c) {
                                                           ", the fixture says " + (want ? Compact(*want) : "nothing"));
             }
         }
+    } else if (kind == "prose-all") {
+        // FindAll finds every address in the text, in order; found is each one's slice of the text, never an index, so
+        // it reads the same in every language (serial 128). Each reading is Parse's of its slice.
+        const std::string text = Str(c, "text");
+        OWJsonValue got = OWJsonValue::Array();
+        const std::vector<OWAddressFound> all = OWAddress::FindAll(text);
+        for (const OWAddressFound& f : all) {
+            got.Push(OWJsonValue::String(text.substr(f.start, f.end - f.start)));
+            OWJsonValue reading = AsJson(f.reading);
+            t.Ok(SameReading(AsJson(OWAddress::Parse(text.substr(f.start, f.end - f.start))), reading),
+                 "prose-all/" + name + ": the reading at " + std::to_string(f.start));
+        }
+        const OWJsonValue* want = c.Find("found");
+        t.Ok(want && got == *want, "prose-all/" + name + ": found " + Compact(got) + ", the fixture finds " +
+                                       (want ? Compact(*want) : "nothing"));
     } else {
         t.Fail("case " + name + ": a case of unknown kind '" + kind + "'");
     }
@@ -428,6 +443,41 @@ OW_TEST(address_read_at_past_the_end_inside_a_character_or_empty_reads_nothing) 
     t.Ok(!OWAddress::ReadAt("", 0), "an empty text");
     t.Ok(!OWAddress::ReadAt("OW://object/" + Element), "the prefix as written, lowercase");
     t.Ok(!OWAddress::ReadAt("\xC3\xA9ow://object/" + Element, 1), "an index inside a character's bytes");
+}
+
+OW_TEST(address_find_all_finds_every_address_in_order_by_read_at_at_each_prefix) {
+    // The TypeScript SDK's doc example: a start glued to a word is prose.
+    const std::string id = "01a1d4ef-0000-7000-8000-000000000084";
+    std::vector<OWAddressFound> one = OWAddress::FindAll("See ow://object/" + id + ", not elbow://object/" + id + ".");
+    t.Eq(one.size(), size_t(1), "one address");
+    if (one.size() == 1) {
+        t.Eq(one[0].start, size_t(4), "where it starts");
+        t.Eq(one[0].end, size_t(52), "where it ends");
+        t.Eq(one[0].reading.type.value_or(""), std::string("object"), "its type");
+        t.Eq(one[0].reading.id.value_or(""), id, "its id");
+    }
+    // Both forms, in the text's order, whichever prefix comes first; a start that reads nothing is passed by.
+    const std::string human = "https://www.onlyworlds.com/w/" + World + "/object/" + Element;
+    const std::string text = "Go to " + human + " then ow://nothing, then ow://object/" + Element + "@3.";
+    std::vector<OWAddressFound> all = OWAddress::FindAll(text);
+    t.Eq(all.size(), size_t(2), "two addresses");
+    if (all.size() == 2) {
+        t.Eq(text.substr(all[0].start, all[0].end - all[0].start), human, "the site's form first");
+        t.Eq(all[0].reading.form, std::string(OWAddress::Human), "its form");
+        t.Eq(text.substr(all[1].start, all[1].end - all[1].start), "ow://object/" + Element + "@3", "then the text form");
+        t.Eq(all[1].reading.moment.value_or(0), int32_t(3), "its moment");
+    }
+    // Each is ReadAt's at its start, a byte offset: an emoji before it is four bytes.
+    const std::string emoji = "Built \xF0\x9F\x9A\xA2 ow://object/" + Element + ".";
+    std::vector<OWAddressFound> e = OWAddress::FindAll(emoji);
+    t.Eq(e.size(), size_t(1), "one address after the emoji");
+    if (e.size() == 1) {
+        t.Eq(e[0].start, emoji.find("ow://"), "its start, in bytes");
+        std::optional<OWAddressFound> at = OWAddress::ReadAt(emoji, e[0].start);
+        t.Ok(at && at->end == e[0].end, "ReadAt's end");
+    }
+    t.Ok(OWAddress::FindAll("").empty(), "an empty text");
+    t.Ok(OWAddress::FindAll("no address here, OW://object/" + Element).empty(), "the prefix as written, lowercase");
 }
 
 OW_TEST(address_read_at_the_sites_form_a_run_cut_inside_a_word_is_no_address) {

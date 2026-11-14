@@ -27,6 +27,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace OnlyWorlds {
 
@@ -61,6 +62,7 @@ struct OWAddressParts {
 struct OWAddressFound {
     OWAddressReading reading;  // what Parse reads from text.substr(index, end - index)
     size_t end = 0;            // the text's first byte that is not part of the address, or its size
+    size_t start = 0;          // the address's first byte: the index ReadAt was given, where FindAll found it
 };
 
 // What Write gives: the address, or a refusal (reason, one of OWAddress::Refusals). WriteJson also fails, with reason
@@ -113,6 +115,15 @@ OWAddressReading Parse(std::string_view text);
 // `index` and `end` are byte offsets into the UTF-8 text (not UTF-16 units as in JavaScript, nor code points as in
 // Python); an index past the end, or inside a character's bytes, reads nothing.
 std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index = 0);
+
+// Every address in a text, in order: what ReadAt reads at each place either prefix (ow://,
+// https://www.onlyworlds.com/w/) starts, so a start glued to a word is prose and what follows an address is prose as
+// ReadAt says (the address page's find-all, schema-dist serial 128; the TypeScript SDK's findOwLinks and the Python
+// package's find_ow_links). The search goes on from the end of each address found, so no two overlap and a prefix
+// inside an address found is no start, and from just past a start that reads nothing. Linear in the text: each
+// prefix's next place is searched once, and a start reads a bounded stretch. Each one's start and end are byte offsets
+// into the UTF-8 text, as ReadAt's are.
+std::vector<OWAddressFound> FindAll(std::string_view text);
 
 // The address a writer writes: lowercase throughout, the world's id (never its slug), the moment before the lens, and
 // nothing else. A world's own address has no type and no id.

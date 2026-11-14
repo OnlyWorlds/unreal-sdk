@@ -68,6 +68,25 @@ struct ONLYWORLDS_API FOWAddress
 	bool bCanonical = false;
 };
 
+/** One address FindAddresses found in a text: what it reads, and where it starts and ends (the FString's UTF-16 units). */
+USTRUCT(BlueprintType)
+struct ONLYWORLDS_API FOWAddressFound
+{
+	GENERATED_BODY()
+
+	/** What ParseAddress reads from Text.Mid(Start, End - Start). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Address")
+	FOWAddress Address;
+
+	/** The index of the address's first character. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Address")
+	int32 Start = 0;
+
+	/** The index just past the address, as ReadAddressAt answers it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Address")
+	int32 End = 0;
+};
+
 /** Addresses: ow:// links and the site's URLs, read and written as every OnlyWorlds package reads and writes them. */
 UCLASS()
 class ONLYWORLDS_API UOWAddresses : public UBlueprintFunctionLibrary
@@ -93,6 +112,16 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Address")
 	static bool ReadAddressAt(const FString& Text, int32 Index, FOWAddress& Address, int32& End);
+
+	/**
+	 * Every address in a text, in order: what ReadAddressAt reads at each place either prefix (ow://,
+	 * https://www.onlyworlds.com/w/) starts, so a start glued to a word is prose. The search goes on from the end of each
+	 * address found, so no two overlap and a prefix inside an address is no start. Start and End count the FString's
+	 * characters (UTF-16 units), as ReadAddressAt's do. The address page's find-all (schema-dist serial 128); the
+	 * TypeScript SDK's `findOwLinks`.
+	 */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Address")
+	static TArray<FOWAddressFound> FindAddresses(const FString& Text);
 
 	/**
 	 * The address a writer writes: lowercase, the world's id, the moment before the lens, nothing else. False with

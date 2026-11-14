@@ -28,6 +28,14 @@ Nothing is released yet; the history before this file is in the git log.
   The address fixture's fifteen new prose cases run in the core's runner and the plugin's automation: the core's
   fixture loop walks each case's code point `index` into its UTF-8 byte offset (it held every case ASCII before its
   index until now), and the plugin's reads `index_utf16` where a case gives it, the FString's UTF-16 units.
+- Every address in a text (the address page's find-all, schema-dist serial 128), the TypeScript SDK's `findOwLinks`
+  and the Python package's `find_ow_links`. In the core, `OWAddress::FindAll(text)` answers each `OWAddressFound`
+  `ReadAt` reads at a place where either prefix starts, in order; `OWAddressFound` gains `start`, the address's first
+  byte. In the plugin, `UOWAddresses::FindAddresses(Text)` (BlueprintPure) answers an array of the new
+  `FOWAddressFound` (`Address`, `Start`, `End`, the FString's UTF-16 units). The search goes on from the end of each
+  address found, so no two overlap and a prefix inside an address is no start, and two addresses written back to back
+  are found as two where `ReadAt` ends the first. The address fixture's two `prose-all` cases run in the core's runner
+  and the plugin's automation.
 - `OWReport::ThreadsOf(narratives)` in the core (`OWReport.h`), the report profile's rule 9 (schema-dist serial
   120): the reports among the Narratives, as served and in that order, grouped by `parent_narrative` as written.
   `OWReportThreads` holds `parents` (each report's parent: `none`, `report`, `board`, `missing`, `other` or `self`),

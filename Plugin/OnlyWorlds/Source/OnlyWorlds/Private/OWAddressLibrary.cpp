@@ -92,6 +92,30 @@ bool UOWAddresses::ReadAddressAt(const FString& Text, int32 Index, FOWAddress& A
 	return true;
 }
 
+TArray<FOWAddressFound> UOWAddresses::FindAddresses(const FString& Text)
+{
+	TArray<FOWAddressFound> Out;
+	// The core counts UTF-8 bytes, the FString UTF-16 units: each offset is the unit count of the bytes before it,
+	// counted on from the last one (the found addresses come in order).
+	const std::string Whole = Utf8(Text);
+	size_t Byte = 0;
+	int32 Units = 0;
+	auto UnitsAt = [&](size_t To)
+	{
+		Units += Str(Whole.substr(Byte, To - Byte)).Len();
+		Byte = To;
+		return Units;
+	};
+	for (const OnlyWorlds::OWAddressFound& Found : OnlyWorlds::OWAddress::FindAll(Whole))
+	{
+		FOWAddressFound& F = Out.AddDefaulted_GetRef();
+		F.Address = OWAddressDoor::FromReading(Found.reading);
+		F.Start = UnitsAt(Found.start);
+		F.End = UnitsAt(Found.end);
+	}
+	return Out;
+}
+
 bool UOWAddresses::WriteAddress(const FOWAddress& Address, FString& Text, FString& Reason)
 {
 	Text.Reset();
