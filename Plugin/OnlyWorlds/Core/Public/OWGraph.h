@@ -103,7 +103,9 @@ const std::vector<std::string>& OwnerOnlyEdgeReasons();
 // sees them) proposed ones, map space (Map, Pin, Marker; a Zone is a node by default) and the reading aids (counted
 // reading_aid), each back with its flag. With a lens, the nodes are its kept. The edges are the schema's
 // single and list links and the declared extension links, between nodes only; a link to an id that is not in the world
-// (or not of the field's type) is dropped and not counted. Pure: it never writes.
+// (or not of the field's type) is dropped and not counted. A list names each element once: one that names a target
+// twice is one edge, or one link counted, in its first place, and its index stays that place in the list as served
+// (serial 128). Pure: it never writes.
 OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, const OWGraphOptions& options = {});
 
 // Each node's degree: its edges, in or out, each edge counted once for every node it touches (a mirror pair is two

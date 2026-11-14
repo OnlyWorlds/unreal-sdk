@@ -168,8 +168,12 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
     }
 
     std::map<std::string, int64_t> cut_edges;
-    auto visit = [&](size_t source, const std::string& field, std::optional<size_t> target, int64_t index) {
+    auto visit = [&](size_t source, const std::string& field, std::optional<size_t> target, int64_t index,
+                     std::set<size_t>& met) {
         if (!target) return;  // a dangling link, not a visibility fact: not counted
+        // A multi-link names each element once: a repeat is read once, in its first place, an edge or a cut alike
+        // (schema-dist serial 128). An element is found by its id as written, so two spellings are two elements.
+        if (!met.insert(*target).second) return;
         if (node[*target]) {
             g.edges.push_back({r.ids[source], field, r.ids[*target], index});
             return;
@@ -195,22 +199,27 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
                 list.push_back(v);
             }
             int64_t served = 0;
+            std::set<size_t> met;
             for (size_t i = 0; i < list.size(); ++i) {
                 std::optional<size_t> t = list[i]->IsString() ? r.Find(f.target, list[i]->Text()) : std::nullopt;
-                visit(source, f.name, t, seen_owner ? int64_t(i) : served);
-                if (seen_owner || (t && r.scoped[*t])) ++served;  // as served: a proposed id below the public rung too
+                visit(source, f.name, t, seen_owner ? int64_t(i) : served, met);
+                // As served: a proposed id below the public rung too, and a repeat, so an index points into the list
+                // as served.
+                if (seen_owner || (t && r.scoped[*t])) ++served;
             }
         }
-        // A declared extension link names any element by id, and is served as stored to every reader.
+        // A declared extension link names any element by id, is served as stored to every reader, and names each
+        // element once as a multi-link does.
         for (const std::string& field : Declared) {
             const OWJsonValue* v = el.Find(field);
             if (!v || !v->IsArray()) continue;
+            std::set<size_t> met;
             for (size_t i = 0; i < v->Size(); ++i) {
                 const OWJsonValue& t = v->Items()[i];
                 std::optional<size_t> j;
                 if (t.IsString())
                     if (auto it = r.by_id.find(t.Text()); it != r.by_id.end()) j = it->second;
-                visit(source, field, j, int64_t(i));
+                visit(source, field, j, int64_t(i), met);
             }
         }
     }

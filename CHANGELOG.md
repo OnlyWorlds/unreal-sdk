@@ -253,6 +253,11 @@ Nothing is released yet; the history before this file is in the git log.
   and counts follow: address 218 (two `prose-all`), landing 33 (its doubled-target case now one edge), lens 235
   (resolve 134, graph 56), message 102 (two `recipients`, twelve kinds); the plugin's automation tests carry the same
   counts (address 218, lens 174 carried and 61 left to the graph, graph 56, message 102).
+- `OWGraph::WorldGraph` (and the plugin's `UOWGraph`, which reads through it) reads each element of a list once
+  (serial 128): a schema multi-link, `x_lens_leads_to` or `x_spine_depends_on` that names one target twice is one
+  edge, in its first place, and a repeat to a target that is not a node is counted once in `edges_cut`. An edge's
+  `index` is still its place in the list as served. Ids are compared as written. `OWLanding` reads the graph it is
+  given, so a doubled target is one edge there too. The lens fixture's case 143 and the new graph case pass.
 - Schema pin to `v0.34.1-dist.127` (`f50c526`): canonical `00.34.01` unchanged; no schema file or `schema.json`
   moved, and the generated files moved in their stamp only (the four generators' `--check` hold). The address page
   adds a start rule for an address found in prose (the entry below builds it here); its prose note now says a reader
