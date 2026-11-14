@@ -20,6 +20,11 @@ public class OnlyWorlds : ModuleRules
 		// No unity build: it would merge the core's files with the UObject files (and with each other, whose
 		// anonymous namespaces share names) into one translation unit.
 		bUseUnity = false;
+		// Precise floating point on every target. A game, client or server target defaults to MSVC's /fp:fast, which lets
+		// the compiler reorder arithmetic and, where the CPU target has FMA, fuse a multiply and an add into one rounding;
+		// the default layout (OWLayout.cpp) must round each operation as JavaScript does to give the npm SDK's points to
+		// the bit. Precise is /fp:precise under MSVC and -ffp-contract=off under clang.
+		FPSemantics = FPSemanticsMode.Precise;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
 		// zlib: the engine's own (ThirdParty/zlib/1.3), the same one build.cmd links. Projects: IPluginManager, so

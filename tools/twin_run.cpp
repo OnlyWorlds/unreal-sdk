@@ -7,12 +7,18 @@
 // for resolve {kept, cut, rows, notes_ignored, mail, unreadable} (OWLensReading::ToJson), for graph {nodes, edges,
 // edges_cut, cut, unreadable} (OWWorldGraph::ToJson), and for a call the reader refuses (a graph's `refused`, or an
 // `error` on either) {threw: "refused", names, msg}, names being the flags its message names (npm's TypeError).
+// The layout twin's cases ride in the same shape: {i, kind: "by-kind", graph} or {i, kind: "around", graph, focus,
+// steps}, answered {points} through OWLayout, each point [id, x, y] or [id, depth, x, y] with every coordinate as its
+// float64 bits in 16 hex digits (so no decimal is parsed or printed on either side), or {threw: "refused", msg}.
 
 #include "OWGraph.h"
 #include "OWJson.h"
+#include "OWLayout.h"
 #include "OWLens.h"
 
 #include <chrono>
+#include <cstdint>
+#include <cstring>
 #include <cstdio>
 #include <fstream>
 #include <optional>
@@ -72,8 +78,58 @@ std::optional<std::string> Clock(const OWJsonValue* v) {
     return v->Text();
 }
 
+std::string Hex(double v) {
+    uint64_t b;
+    std::memcpy(&b, &v, sizeof b);
+    char s[17];
+    std::snprintf(s, sizeof s, "%016llx", static_cast<unsigned long long>(b));
+    return s;
+}
+
+OWJsonValue Layout(const OWJsonValue& c, bool byKind) {
+    static const OWJsonValue none;
+    const OWJsonValue* graph = c.Find("graph");
+    OWJsonValue points = OWJsonValue::Array();
+    std::string error;
+    if (byKind) {
+        OWLayoutByKind r = OWLayout::LayoutByKind(graph ? *graph : none);
+        error = r.error;
+        for (const auto& p : r.points) {
+            OWJsonValue row = OWJsonValue::Array();
+            row.Push(OWJsonValue::String(p.id));
+            row.Push(OWJsonValue::String(Hex(p.x)));
+            row.Push(OWJsonValue::String(Hex(p.y)));
+            points.Push(std::move(row));
+        }
+    } else {
+        const OWJsonValue* focus = c.Find("focus");
+        const OWJsonValue* steps = c.Find("steps");
+        OWLayoutAround r = OWLayout::LayoutAround(graph ? *graph : none, focus && focus->IsString() ? focus->Text() : std::string(),
+                                                  steps ? static_cast<int>(steps->AsDouble()) : 1);
+        error = r.error;
+        for (const auto& p : r.points) {
+            OWJsonValue row = OWJsonValue::Array();
+            row.Push(OWJsonValue::String(p.id));
+            row.Push(OWJsonValue::Number(static_cast<int64_t>(p.depth)));
+            row.Push(OWJsonValue::String(Hex(p.x)));
+            row.Push(OWJsonValue::String(Hex(p.y)));
+            points.Push(std::move(row));
+        }
+    }
+    OWJsonValue out = OWJsonValue::Object();
+    if (!error.empty()) {
+        out.Set("threw", OWJsonValue::String("refused"));
+        out.Set("msg", OWJsonValue::String(error));
+    } else {
+        out.Set("points", std::move(points));
+    }
+    return out;
+}
+
 OWJsonValue Answer(const OWJsonValue& c) {
     static const OWJsonValue none;
+    const std::string& kind = c.Find("kind")->Text();
+    if (kind == "by-kind" || kind == "around") return Layout(c, kind == "by-kind");
     const OWJsonValue* world = c.Find("world");
     const OWJsonValue* reader = c.Find("reader");
     if (c.Find("kind")->Text() == "resolve") {

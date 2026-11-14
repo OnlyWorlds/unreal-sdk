@@ -7,6 +7,30 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- The default layout method, in the core: `OWLayout::LayoutByKind(graph)` and `OWLayout::LayoutAround(graph, focus,
+  steps = 1)`, a world's default picture and one element's, the TypeScript SDK's `layoutByKind` and `layoutAround`
+  (4.167.0) and the Python package's `layout_by_kind` and `layout_around` (0.127.0). By kind: each kind of element gets
+  a point on a circle, links act as springs and neighbours push apart for a fixed number of seeded steps, and the
+  answer is fitted into a frame of -1 to 1. Around: the focus at 0, 0, its neighbours on rings round it, and with
+  `steps` 2 their neighbours fanned out beyond. Each takes an `OWWorldGraph` or an `OWJsonValue` `{nodes, edges}`, puts
+  it in one order first, and answers `OWLayoutByKind` or `OWLayoutAround` (`method`, `version` 1, `points` in the order
+  the nodes were handed in, or an `error` naming what it cannot read). By kind gives the TypeScript SDK's points to
+  the last bit, around within 1e-12. The kinds' anchors are a table of bit patterns
+  (`OWLayoutAnchors.generated.cpp`, written by the new `codegen/generate_layout.py` from the shared fixture), never
+  computed. The fixture (`tests/data/by-kind.json`, the TypeScript SDK's bytes) runs whole in `tests/test_layout.cpp`:
+  12 by-kind cases bit for bit, 7 around cases. `tools/twin_run.cpp` answers the layout twin's two kinds as well: on
+  1,500 random graphs against the TypeScript SDK, 159,081 by-kind points equal to the bit and 705 around runs within
+  1e-12. Not yet for Blueprints.
+
+### Changed
+
+- The plugin's module compiles with precise floating point on every target (`FPSemantics = FPSemanticsMode.Precise`
+  in `OnlyWorlds.Build.cs`). A game, client or server target defaulted to MSVC's `/fp:fast`, so a packaged game
+  compiled the core under it, where the compiler may reorder arithmetic and, on a CPU target with FMA, fuse a multiply
+  and an add into one rounding. The layout must round each operation as JavaScript does: built with `/fp:fast
+  /arch:AVX2`, the layout twin found 1,268 of 1,405 by-kind graphs and 182 of 705 around runs off. A game target's
+  build now passes `/fp:precise` (`-ffp-contract=off` under clang) and its layout object holds no fused instruction.
+
 - An address found in prose (the address page's "An address in prose", schema-dist serial 123), the TypeScript SDK's
   `readOwLinkAt` and the Python package's `read_ow_link_at`. In the core, `OWAddress::ReadAt(text, index = 0)`
   answers an `OWAddressFound` (`reading`, `end`): the address that starts exactly at `index` and the index just past
