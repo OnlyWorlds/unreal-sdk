@@ -81,3 +81,20 @@ OW_TEST(room_cases_answer_in_room) {
     t.Eq(run, size_t(38), "every case runs here");
     t.Eq(in, size_t(18), "18 of them in the room");
 }
+
+// Beside the fixture: one presence for both marks (serial 126). x_room_of and x_charter_of each count by presence, a
+// string only when something is left after trimming White_Space, a list or an object only when it holds something,
+// any other value but null (a number, false) a mark; the value is never compared.
+OW_TEST(room_both_marks_one_presence) {
+    const std::pair<const char*, bool> shapes[] = {
+        {R"("w1")", true},   {"7", true},     {"0", true},          {"false", true},
+        {R"(["w1"])", true}, {R"({"a": 1})", true}, {R"("")", false}, {R"("  ")", false},
+        {"null", false},     {"[]", false},   {"{}", false},
+    };
+    for (const auto& [mark, marks] : shapes) {
+        const std::string room = std::string(R"({"type": "narrative", "supertype": "Message", "x_room_of": )") + mark + "}";
+        const std::string aid = std::string(R"({"type": "law", "supertype": "Charter", "x_charter_of": )") + mark + "}";
+        t.Eq(OWLens::IsRoomElement(OWJson::Parse(room).value), marks, std::string("x_room_of ") + mark);
+        t.Eq(OWLens::IsReadingAid(OWJson::Parse(aid).value), marks, std::string("x_charter_of ") + mark);
+    }
+}

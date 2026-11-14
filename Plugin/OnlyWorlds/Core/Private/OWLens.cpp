@@ -329,11 +329,15 @@ std::optional<int64_t> Integral(const OWJsonValue* v) {
     return int64_t(d);
 }
 
-// A mark counts by presence: any value but null, a string only when something is left after trimming White_Space.
+// A mark counts by presence: any value but null, a string only when something is left after trimming White_Space, a
+// list or an object only when it holds something (serial 126: one presence for the room, charter and review marks,
+// since a compact reader leaves an empty list or object out).
 bool HasMark(const OWJsonValue& el, const char* field) {
     const OWJsonValue* v = Get(el, field);
     if (!v || v->IsNull()) return false;
-    return !v->IsString() || !OWMessage::Trim(v->Text()).empty();
+    if (v->IsString()) return !OWMessage::Trim(v->Text()).empty();
+    if (v->IsArray() || v->IsObject()) return v->Size() > 0;
+    return true;
 }
 
 // The element's pair as a `types` word: type and supertype folded, a slash between; "" when either is not text.
@@ -1231,11 +1235,7 @@ bool IsHidden(const OWJsonValue& element) {
     return mark && !mark->IsNull() && !(mark->IsBool() && !mark->AsBool());
 }
 
-bool IsProposed(const OWJsonValue& element) {
-    if (!HasMark(element, ProposedMark)) return false;
-    const OWJsonValue* v = element.Find(ProposedMark);
-    return !((v->IsArray() || v->IsObject()) && v->Size() == 0);
-}
+bool IsProposed(const OWJsonValue& element) { return HasMark(element, ProposedMark); }
 
 OWLensReading Resolve(const OWJsonValue& world, const OWJsonValue& lens, const OWJsonValue& reader,
                       const OWLensOptions& options) {

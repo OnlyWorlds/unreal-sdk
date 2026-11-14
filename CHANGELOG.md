@@ -231,6 +231,16 @@ Nothing is released yet; the history before this file is in the git log.
   pass unchanged. The address page gains four prose cases, skipped by name as serial 123's are (no finder of an address
   in prose). The core tests' fixture pins and counts follow: address 201 (61 prose), charter 41, map-space 39 cases and
   26 layout cases (a second case names its Map by `map_index`), room 38 (18 in the room).
+- **A room or charter mark that is an empty list or an empty object is no mark** (serial 126). `OWLens::HasMark`
+  reads `x_room_of` and `x_charter_of` as the review mark was already read: null, a blank string, `[]` and `{}` are
+  absent, since a compact reader leaves an empty list or object out and the same element must read the same in either
+  served form. Everything that reads the two marks follows: `OWLens::IsRoomElement` and `IsReadingAid`,
+  `OWCharter::IsCharterElement` and the charter packet, the lens and the graph, the openers' marks, `OWReport`'s
+  report and board entry, and the plugin's `UOWLens::IsRoomElement`, `IsReadingAid` and `UOWCharter::IsCharterElement`.
+  `OWLens::IsProposed` reads the review mark through the same `HasMark`, its own empty check folded into it (no reading
+  moves there). A list or object with something in it, a number and `false` are still marks. The room fixture's
+  `mark-empty-list` and `mark-empty-object` and the charter fixture's two empty-mark cases pass, and
+  `room_both_marks_one_presence` holds both marks to the same eleven shapes.
 - Schema pin to `v0.34.1-dist.124` (`094107b`): canonical `00.34.00` moves to `00.34.01`, the first canonical move
   since serial 103 (this SDK spells the canonical version nowhere outside the vendored dist, so no constant moves).
   One description moved and no field: Map's `hierarchy` orders the maps that stand side by side (floors, decks,

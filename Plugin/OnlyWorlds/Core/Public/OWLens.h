@@ -152,16 +152,19 @@ std::vector<std::string> LensesInUse(const OWJsonValue* membership, const OWJson
 // not a whole number; a known-of stub serves none.
 std::optional<int64_t> DateOf(const OWJsonValue& element);
 
-// A room element: its type and supertype, trimmed and folded, one of the room profile's pairs, and the mark x_room_of.
+// A room element: its type and supertype, trimmed and folded, one of the room profile's pairs, and the mark x_room_of,
+// counted by presence (any value but null; a string only when something is left after trimming White_Space; a list or
+// an object only when it holds something, since serial 126).
 bool IsRoomElement(const OWJsonValue& element);
 // A reading aid (rule 4): the charter (law, Charter), its guide (construct, Guide) or a domain (construct, Domain), by
-// the pair AND the mark x_charter_of; the pair without the mark is lore.
+// the pair AND the mark x_charter_of, counted by presence as the room mark is; the pair without the mark is lore.
 bool IsReadingAid(const OWJsonValue& element);
 // The hidden mark on the element's own body (folder spec 4.8): hidden present and not null or false, so a doubt counts
 // as hidden. The lens view reads it beside the world's hidden list; the npm SDK's isHiddenMark.
 bool IsHidden(const OWJsonValue& element);
 // Proposed as a reader reads it (the review profile's rule 1): x_review_proposed present as a mark counts (any value
-// but null, a string only when something is left after trimming White_Space), and not an empty list or object.
+// but null, a string only when something is left after trimming White_Space, not an empty list or object): the one
+// presence the room and charter marks read too since serial 126.
 bool IsProposed(const OWJsonValue& element);
 
 // resolveLens(world, lens, reader, {asOf, clock}): the lens read for one reader over a world snapshot. Pure: it never
