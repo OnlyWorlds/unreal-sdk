@@ -223,6 +223,13 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.124` (`094107b`): canonical `00.34.00` moves to `00.34.01`, the first canonical move
+  since serial 103 (this SDK spells the canonical version nowhere outside the vendored dist, so no constant moves).
+  One description moved and no field: Map's `hierarchy` orders the maps that stand side by side (floors, decks,
+  layers), the maps with the same `parent_map`, without one the maps of the same `location`, without either the maps
+  of the world itself; lower is deeper or earlier, and nesting is said by `parent_map` and `location`, not by the
+  number (`FOWMap`'s field comment follows). No fixture or reader moved; the generated files moved in their stamp
+  only, and the four generators' `--check` hold.
 - **One time grammar: a record's `played_at` is read by the message profile's grammar.** `OWRecord::MarkOf` and
   `OWRecord::InstantOf` now read `played_at` through `OWMessage::TimeKey`, the grammar the message, lens, report and
   charter readers already order by, in place of a grammar of their own. A lowercase `t` or `z` (`2026-11-01t00:30:00z`),
