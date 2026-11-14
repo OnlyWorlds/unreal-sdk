@@ -444,6 +444,40 @@ OW_TEST(message_recipients_each_once_and_only_a_message_has_any) {
     t.Ok(of(R"({"type": "narrative", "characters": ["a1"]})").empty(), "no supertype: not a message");
 }
 
+// Serial 128: the message page's own reader gates all four addressing readers on the pair. A Story beside a message,
+// each with the same characters: the Story is addressed to nobody, never to everyone, and has no unseen recipients,
+// keyless or not.
+OW_TEST(message_addressing_readers_answer_only_for_a_message) {
+    auto body = [](const std::string& json) {
+        OWJsonParseResult r = OWJson::Parse(json);
+        return r.ok ? std::move(r.value) : OWJsonValue();
+    };
+    for (const char* characters : {R"(["a1"])", "[]", "null"}) {
+        const std::string c = characters;
+        OWJsonValue message = body(R"({"type": "narrative", "supertype": "Message", "characters": )" + c + "}");
+        OWJsonValue story = body(R"({"type": "narrative", "supertype": "Story", "characters": )" + c + "}");
+        t.Ok(OWMessage::IsAddressedTo(message, "a1"), "the message is addressed: " + c);
+        t.Ok(!OWMessage::IsAddressedTo(story, "a1"), "a Story is addressed to nobody: " + c);
+        t.Ok(!OWMessage::IsToEveryone(story), "a Story is never to everyone: " + c);
+        t.Ok(OWMessage::RecipientsOf(story).empty(), "a Story has no recipients: " + c);
+    }
+    t.Ok(OWMessage::IsToEveryone(body(R"({"type": "narrative", "supertype": "Message", "characters": []})")),
+         "a message to everyone");
+    for (const char* bare : {"{}", R"({"characters": []})", R"({"type": "narrative", "characters": []})"}) {
+        t.Ok(!OWMessage::IsToEveryone(body(bare)), std::string("not a message, not to everyone: ") + bare);
+        t.Ok(!OWMessage::IsAddressedTo(body(bare), "a1"), std::string("not a message, addressed to nobody: ") + bare);
+    }
+    OWJsonValue trimmed =
+        body(R"({"type": "narrative", "supertype": "Message", "characters": [], "x_served_trimmed": ["characters"]})");
+    OWJsonValue trimmed_story =
+        body(R"({"type": "narrative", "supertype": "Story", "characters": [], "x_served_trimmed": ["characters"]})");
+    t.Ok(OWMessage::HasUnseenRecipients(trimmed) == std::optional<bool>(true), "the message: someone unseen");
+    t.Ok(!OWMessage::HasUnseenRecipients(trimmed, true).has_value(), "the message read keyless: unknown");
+    t.Ok(OWMessage::HasUnseenRecipients(trimmed_story) == std::optional<bool>(false),
+         "a Story has no recipients to be unseen");
+    t.Ok(OWMessage::HasUnseenRecipients(trimmed_story, true) == std::optional<bool>(false), "keyless or not");
+}
+
 namespace {
 
 // One of Ada's read marks, a folder's (no created_by, so it counts), its updated_at the JSON text given (nullptr: no

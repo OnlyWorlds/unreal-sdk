@@ -222,20 +222,22 @@ std::vector<std::string> RecipientsOf(const OWJsonValue& message) {
 }
 
 bool IsAddressedTo(const OWJsonValue& message, std::string_view character_id) {
-    if (!IsBody(message) || IsNote(message) || character_id.empty()) return false;
+    // Only a message is addressed (serial 128), as the three readers beside it are gated.
+    if (!IsBody(message) || !IsMessage(message) || character_id.empty()) return false;
     if (IsToEveryone(message)) return true;
     return Includes(message.Find("characters"), character_id);
 }
 
 bool IsToEveryone(const OWJsonValue& message, bool keyless) {
-    if (!IsBody(message) || IsNote(message) || keyless || HasUnseenRecipients(message) == std::optional<bool>(true))
+    if (!IsBody(message) || !IsMessage(message) || keyless || HasUnseenRecipients(message) == std::optional<bool>(true))
         return false;
     const OWJsonValue* list = message.Find("characters");
     return !list || list->IsNull() || (list->IsArray() && list->Size() == 0);
 }
 
 std::optional<bool> HasUnseenRecipients(const OWJsonValue& message, bool keyless) {
-    if (!IsBody(message) || IsNote(message)) return false;
+    // Not a message: no recipients, so nobody unseen, keyless or not (serial 128).
+    if (!IsBody(message) || !IsMessage(message)) return false;
     if (keyless) return std::nullopt;
     return Includes(message.Find(ServedTrimmed), "characters");
 }

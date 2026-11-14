@@ -738,6 +738,39 @@ bool FOWMessagesBesideTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWMessagesOnlyAMessageTest, "OnlyWorlds.Messages.OnlyAMessage", OWTestFlags)
+
+bool FOWMessagesOnlyAMessageTest::RunTest(const FString& Parameters)
+{
+	// Serial 128: the message page's own reader gates all four addressing readers on the pair. A Story beside a message,
+	// the same characters and the same trimmed mark, through the Blueprint path.
+	std::vector<std::pair<std::string, OWJsonValue>> Bodies;
+	Bodies.emplace_back("narrative", J(R"({"id": "m", "type": "narrative", "supertype": "Message", "name": "M",
+		"characters": ["019a3b10-0000-7000-8000-0000000000a1"]})"));
+	Bodies.emplace_back("narrative", J(R"({"id": "s", "type": "narrative", "supertype": "Story", "name": "S",
+		"characters": ["019a3b10-0000-7000-8000-0000000000a1"]})"));
+	Bodies.emplace_back("narrative", J(R"({"id": "me", "type": "narrative", "supertype": "Message", "name": "ME",
+		"characters": []})"));
+	Bodies.emplace_back("narrative", J(R"({"id": "se", "type": "narrative", "supertype": "Story", "name": "SE",
+		"characters": []})"));
+	Bodies.emplace_back("narrative", J(R"({"id": "mt", "type": "narrative", "supertype": "Message", "name": "MT",
+		"characters": [], "x_served_trimmed": ["characters"]})"));
+	Bodies.emplace_back("narrative", J(R"({"id": "st", "type": "narrative", "supertype": "Story", "name": "ST",
+		"characters": [], "x_served_trimmed": ["characters"]})"));
+	const UOWWorld* World = MakeWorld(std::move(Bodies));
+	TestTrue(TEXT("the message is addressed"), CallWithCharacter(*this, TEXT("IsAddressedTo"), World, TEXT("m"), Ada));
+	TestFalse(TEXT("a Story is addressed to nobody"), CallWithCharacter(*this, TEXT("IsAddressedTo"), World, TEXT("s"), Ada));
+	TestTrue(TEXT("the empty message is to everyone"), CallIsToEveryone(*this, World, TEXT("me"), false));
+	TestFalse(TEXT("an empty Story is never to everyone"), CallIsToEveryone(*this, World, TEXT("se"), false));
+	TestFalse(TEXT("nor addressed to anyone"), CallWithCharacter(*this, TEXT("IsAddressedTo"), World, TEXT("se"), Ada));
+	TestTrue(TEXT("a Story has no recipients"), CallRecipientsOf(*this, World, TEXT("s")).Num() == 0);
+	TestTrue(TEXT("the trimmed message: someone unseen"), CallHasUnseenRecipients(*this, World, TEXT("mt"), false) == EOWUnseenRecipients::Yes);
+	TestTrue(TEXT("the trimmed message read keyless: unknown"), CallHasUnseenRecipients(*this, World, TEXT("mt"), true) == EOWUnseenRecipients::Unknown);
+	TestTrue(TEXT("a trimmed Story: nobody unseen"), CallHasUnseenRecipients(*this, World, TEXT("st"), false) == EOWUnseenRecipients::No);
+	TestTrue(TEXT("a trimmed Story read keyless: nobody unseen"), CallHasUnseenRecipients(*this, World, TEXT("st"), true) == EOWUnseenRecipients::No);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWMessagesSikeliaTest, "OnlyWorlds.Messages.Sikelia", OWTestFlags)
 
 bool FOWMessagesSikeliaTest::RunTest(const FString& Parameters)

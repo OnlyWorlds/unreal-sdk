@@ -272,6 +272,11 @@ Nothing is released yet; the history before this file is in the git log.
   Narrative with no supertype, a body with no pair) now has none, where before any body but a Note gave its list. The
   message fixture's two `recipients` cases run in the core and the plugin. The suite's own recipients vector
   (`tests/data/message-beside-the-fixture.json`, npm 4.102.4's answer, a repeat kept) now wants the repeat once.
+- `OWMessage::IsAddressedTo`, `IsToEveryone` and `HasUnseenRecipients` (and the plugin's `UOWMessages` calls that pass
+  through them) answer only for a message (serial 128, the message page's own reader gating all four on the pair): a
+  body that is not a message is addressed to nobody, is never to everyone, and has no unseen recipients, false keyless
+  or not; before, any body but a Note was read as a message, so `UnreadFor` never counts one unread now either. A Note
+  reads as before.
 - Schema pin to `v0.34.1-dist.127` (`f50c526`): canonical `00.34.01` unchanged; no schema file or `schema.json`
   moved, and the generated files moved in their stamp only (the four generators' `--check` hold). The address page
   adds a start rule for an address found in prose (the entry below builds it here); its prose note now says a reader

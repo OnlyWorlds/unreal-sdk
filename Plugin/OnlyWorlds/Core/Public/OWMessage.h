@@ -73,13 +73,14 @@ bool IsNote(const OWJsonValue& element);
 // only a message has any (IsMessage): none for a Note, a Story or any other body (serial 128).
 std::vector<std::string> RecipientsOf(const OWJsonValue& message);
 // Addressed to the Character: its id in `characters`, or `characters` empty (absent, null or []) without the trimmed
-// mark naming `characters`. Never to "" and never a Note.
+// mark naming `characters`. Never to "" and only a message (IsMessage): never a Note, a Story or any other body
+// (serial 128).
 bool IsAddressedTo(const OWJsonValue& message, std::string_view character_id);
 // To every member: `characters` absent, null or []; no trimmed mark naming `characters`; served with a credential
-// (keyless false); not a Note.
+// (keyless false); only a message.
 bool IsToEveryone(const OWJsonValue& message, bool keyless = false);
 // Someone the reader cannot see is a recipient: the trimmed mark names `characters`. Absent (unknown) when keyless;
-// false for a Note.
+// false for anything that is not a message, keyless or not.
 std::optional<bool> HasUnseenRecipients(const OWJsonValue& message, bool keyless = false);
 // The claim: `narrator` is the Character. A message with no narrator is sent by nobody.
 bool IsSentBy(const OWJsonValue& message, std::string_view character_id);

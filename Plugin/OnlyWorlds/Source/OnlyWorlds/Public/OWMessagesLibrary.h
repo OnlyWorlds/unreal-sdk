@@ -124,23 +124,25 @@ public:
 
 	/**
 	 * True when the message is addressed to the Character: its id in characters, or the message is to everyone. Not its
-	 * narrator (a sender is not addressed by sending), never "" and never a Note. Mirrors the TypeScript SDK's
-	 * `isAddressedTo`.
+	 * narrator (a sender is not addressed by sending), never "", and only a message: never a Note, a Story or any other
+	 * element (serial 128). Mirrors the TypeScript SDK's `isAddressedTo`.
 	 */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Messages")
 	static bool IsAddressedTo(const UOWWorld* World, const FString& MessageId, const FString& CharacterId);
 
 	/**
 	 * True when the message is to every member: characters absent, null or empty, not trimmed for this reader, and read
-	 * with a credential (bKeyless false). A Note never is. Mirrors the TypeScript SDK's `isToEveryone`.
+	 * with a credential (bKeyless false). Only a message ever is: a Note, a Story or any other element never (serial
+	 * 128). Mirrors the TypeScript SDK's `isToEveryone`.
 	 */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Messages")
 	static bool IsToEveryone(const UOWWorld* World, const FString& MessageId, bool bKeyless);
 
 	/**
 	 * Whether someone this reader cannot see is a recipient (the server's trimmed mark names characters): Yes or No, and
-	 * Unknown when bKeyless (a body read with no credential is never marked). No for a Note, and for an id the world
-	 * does not hold. Mirrors the TypeScript SDK's `hasUnseenRecipients`.
+	 * Unknown when bKeyless (a body read with no credential is never marked). No for anything that is not a message (a
+	 * Note, a Story; serial 128), keyless or not, and for an id the world does not hold. Mirrors the TypeScript SDK's
+	 * `hasUnseenRecipients`.
 	 */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Messages")
 	static EOWUnseenRecipients HasUnseenRecipients(const UOWWorld* World, const FString& MessageId, bool bKeyless);
