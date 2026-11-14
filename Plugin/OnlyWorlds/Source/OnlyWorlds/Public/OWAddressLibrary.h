@@ -84,6 +84,17 @@ public:
 	static bool ParseAddress(const FString& Text, FOWAddress& Address, FString& Reason);
 
 	/**
+	 * The address that starts exactly at Index in a text, found in prose (a sentence, a line of a report), and End, the
+	 * index just past it; false, an empty Address and End 0 when the text there is not an address. Where it ends is the
+	 * grammar's, never the next space's: after the path only @ and a moment, then ?lens= and a lens; any other query key,
+	 * a fragment and a full stop are prose. In the site's form the run after /w/ glued to a letter, a combining mark or
+	 * an underscore is no address. Index and End count the FString's characters (UTF-16 units, as Mid and Find count
+	 * them). ParseAddress still reads a string whole.
+	 */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Address")
+	static bool ReadAddressAt(const FString& Text, int32 Index, FOWAddress& Address, int32& End);
+
+	/**
 	 * The address a writer writes: lowercase, the world's id, the moment before the lens, nothing else. False with
 	 * Reason, in the writer's order: "bad_form", "segments" (a type without an id, or an id without a type),
 	 * "no_world", then the reader's.

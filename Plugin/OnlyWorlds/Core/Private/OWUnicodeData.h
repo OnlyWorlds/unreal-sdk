@@ -29,5 +29,7 @@ extern const size_t CompatDecompCount;
 extern const char32_t CompatDecompData[];
 extern const RangeRow NonspacingMarks[];
 extern const size_t NonspacingMarkCount;
+extern const RangeRow LettersAndMarks[];
+extern const size_t LetterAndMarkCount;
 
 }}  // namespace OnlyWorlds::UnicodeData

@@ -1,5 +1,5 @@
-// The address through UOWAddresses as a Blueprint calls it (OWBlueprintCall.h): ParseAddress and WriteAddress found by
-// name, the text or the parts set by property (FOWAddress member by member, as a Make node), ProcessEvent, and the
+// The address through UOWAddresses as a Blueprint calls it (OWBlueprintCall.h): ParseAddress, ReadAddressAt and
+// WriteAddress found by name, the text or the parts set by property (FOWAddress member by member, as a Make node), ProcessEvent, and the
 // answer read back by property (as a Break node). Every case of the profile's fixture, as the core's runner reads
 // them, then every element of a real world (Sikelia) written and read back, then the door's own rule for an empty part.
 
@@ -57,6 +57,26 @@ namespace
 		R.bOk = Call.ReturnBool();
 		R.Address = BreakAddress(Test, Call.OutStruct(TEXT("Address"), FOWAddress::StaticStruct()));
 		R.Reason = Call.Out<FStrProperty>(TEXT("Reason"));
+		return R;
+	}
+
+	struct FFound
+	{
+		bool bOk = false;
+		FOWAddress Address;
+		int32 End = 0;
+	};
+
+	FFound CallReadAt(FAutomationTestBase& Test, const FString& Text, int32 Index)
+	{
+		FFound R;
+		FCall Call(Test, UOWAddresses::StaticClass(), TEXT("ReadAddressAt"));
+		Call.SetString(TEXT("Text"), Text);
+		if (int32* I = Call.Slot<FIntProperty>(TEXT("Index"))) *I = Index;
+		Call.Invoke();
+		R.bOk = Call.ReturnBool();
+		R.Address = BreakAddress(Test, Call.OutStruct(TEXT("Address"), FOWAddress::StaticStruct()));
+		R.End = Call.Out<FIntProperty>(TEXT("End"));
 		return R;
 	}
 
@@ -147,8 +167,8 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 	const OWJsonValue* Cases = Doc.Find("cases");
 	if (!TestTrue(TEXT("the fixture holds cases"), Cases && Cases->IsArray())) return false;
 
-	int32 Parsed = 0, Written = 0, Failed = 0, RoundTrips = 0;
-	TArray<FString> NotCarried, ProseSkipped;
+	int32 Parsed = 0, Written = 0, Prose = 0, Failed = 0, RoundTrips = 0;
+	TArray<FString> NotCarried;
 	for (const OWJsonValue& Case : Cases->Items())
 	{
 		const FString Name = TextOf(Case.Find("name"));
@@ -225,29 +245,32 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 		}
 		else if (Kind == TEXT("prose"))
 		{
-			// A finder's case (where an address inside a line ends, the packages' readOwLinkAt): ParseAddress reads one
-			// string whole, and the plugin, like its core, has no finder. The half it owns is checked: where the case
-			// names an address, the line holds it at the index (ASCII to the address's end, so a UTF-16 index is the
-			// fixture's), and ParseAddress reads it whole as the case's reading. A failed check fails the case; then
-			// the finding is skipped by name, counted below.
+			// ReadAddressAt finds the address that starts at the case's index: the slice it covers and its reading; or
+			// nothing, where the fixture finds nothing. Index and End are the FString's UTF-16 units, as the fixture's.
+			++Prose;
 			const OWJsonValue* Expect = Case.Find("expect");
 			const OWJsonValue* Found = Expect ? Expect->Find("address") : nullptr;
-			if (Found && Found->IsString())
+			const FString Text = TextOf(Case.Find("text"));
+			const OWJsonValue* At = Case.Find("index");
+			const int32 Index = At && At->IsNumber() ? static_cast<int32>(std::stoll(At->Text())) : -1;
+			const FFound R = CallReadAt(*this, Text, Index);
+			if (!Found || !Found->IsString())
 			{
-				const FString Text = TextOf(Case.Find("text"));
+				TestFalse(Name + TEXT(": no address (found ") + (R.bOk ? Text.Mid(Index, R.End - Index) : FString()) + TEXT(")"), R.bOk);
+				TestEqual(Name + TEXT(": no End"), R.End, 0);
+				TestTrue(Name + TEXT(": an empty Address"), IsEmptyAddress(R.Address));
+			}
+			else
+			{
 				const FString Address = TextOf(Found);
-				const OWJsonValue* At = Case.Find("index");
-				const int32 Index = At && At->IsNumber() ? static_cast<int32>(std::stoll(At->Text())) : -1;
-				TestEqual(Name + TEXT(": the line holds the address at its index"),
-					Index >= 0 && Index < Text.Len() ? Text.Mid(Index, Address.Len()) : FString(), Address);
-				const FParsed R = CallParse(*this, Address);
-				TestTrue(Name + TEXT(": the address, read whole (refused as ") + R.Reason + TEXT(")"), R.bOk);
+				TestTrue(Name + TEXT(": found an address at its index (the fixture finds ") + Address + TEXT(")"), R.bOk);
+				TestEqual(Name + TEXT(": the end"), R.End, Index + Address.Len());
+				TestEqual(Name + TEXT(": the slice at the index"), Text.Mid(Index, R.End - Index), Address);
 				FString Why;
 				const OWJsonValue* Want = Expect->Find("reading");
 				const bool bSame = Want && SameReading(R.Address, *Want, Why);
-				TestTrue(Name + TEXT(": read whole, the case's reading;") + Why, bSame);
+				TestTrue(Name + TEXT(": the case's reading;") + Why, bSame);
 			}
-			ProseSkipped.Add(Name);
 		}
 		else
 		{
@@ -257,15 +280,14 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 	}
 	TestEqual(TEXT("201 cases"), static_cast<int32>(Cases->Items().size()), 201);
 	TestEqual(TEXT("every parse case through ParseAddress"), Parsed, 104);
-	TestEqual(TEXT("the 61 prose cases, a finder's, each skipped by name"), ProseSkipped.Num(), 61);
-	for (const FString& Skipped : ProseSkipped)
-		AddInfo(Skipped + TEXT(": skipped by kind 'prose': no finder of an address in prose in this SDK yet (OW Gaming #1527)"));
+	TestEqual(TEXT("every prose case through ReadAddressAt"), Prose, 61);
 	TestEqual(TEXT("the format cases through WriteAddress"), Written, 33);
 	// The three moments no Integer64 pin holds; the core's own runner reads them through WriteJson.
 	TestEqual(TEXT("not carried: a moment that is not a whole number"), NotCarried.Num(), 3);
 	TestEqual(TEXT("cases failed"), Failed, 0);
-	AddInfo(FString::Printf(TEXT("address fixture: %d parse cases (%d readings written back), %d format cases through the "
-		"Blueprint path; not carried, by the pin's type: %s"), Parsed, RoundTrips, Written, *FString::Join(NotCarried, TEXT(", "))));
+	AddInfo(FString::Printf(TEXT("address fixture: %d parse cases (%d readings written back), %d format cases and %d prose "
+		"cases through the Blueprint path; not carried, by the pin's type: %s"), Parsed, RoundTrips, Written, Prose,
+		*FString::Join(NotCarried, TEXT(", "))));
 	return true;
 }
 
@@ -426,6 +448,35 @@ bool FOWAddressPartsTest::RunTest(const FString& Parameters)
 	const FParsed Good = CallParse(*this, TEXT("ow://object/") + Element, &Stale);
 	TestTrue(TEXT("read over a stale one: no world, no moment"), Good.bOk && Good.Reason.IsEmpty() && !Good.Address.bHasWorld
 		&& Good.Address.World.IsEmpty() && !Good.Address.bHasMoment && Good.Address.Moment == 0 && Good.Address.bCanonical);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWAddressProseTest, "OnlyWorlds.Address.Prose", OWTestFlags)
+
+bool FOWAddressProseTest::RunTest(const FString& Parameters)
+{
+	// Index and End are the FString's UTF-16 units, as the TypeScript SDK's: an emoji before the address is two, so the
+	// address starts at 19 (the core reads it at byte 21), and End lands on the full stop.
+	const FString Element = SampleElement;
+	const FString Address = TEXT("ow://object/") + Element + TEXT("@4");
+	const FString Text = FString(TEXT("Built ")) + Str(std::string("\xF0\x9F\x9A\xA2")) + TEXT(" the gate: ") + Address + TEXT(".");
+	const int32 Index = Text.Find(TEXT("ow://"));
+	TestEqual(TEXT("the emoji is two UTF-16 units: the address at 19"), Index, 19);
+	const FFound R = CallReadAt(*this, Text, Index);
+	TestTrue(TEXT("found"), R.bOk);
+	TestEqual(TEXT("the end"), R.End, Index + Address.Len());
+	TestEqual(TEXT("the slice"), Text.Mid(Index, R.End - Index), Address);
+	TestEqual(TEXT("the full stop after it"), Text.Mid(R.End), FString(TEXT(".")));
+	TestEqual(TEXT("the id"), R.Address.Id, Element);
+	TestTrue(TEXT("the moment"), R.Address.bHasMoment && R.Address.Moment == 4);
+
+	// Nothing: an index below 0 or past the end, an index not at a prefix, a prefix in another case.
+	for (const int32 Bad : {-1, Text.Len() + 1, Index + 1})
+	{
+		const FFound None = CallReadAt(*this, Text, Bad);
+		TestTrue(FString::Printf(TEXT("index %d: nothing"), Bad), !None.bOk && None.End == 0 && IsEmptyAddress(None.Address));
+	}
+	TestFalse(TEXT("OW:// is no address in prose"), CallReadAt(*this, TEXT("OW://object/") + Element, 0).bOk);
 	return true;
 }
 

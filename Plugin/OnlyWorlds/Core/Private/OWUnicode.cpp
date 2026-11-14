@@ -259,5 +259,16 @@ bool IsNonspacingMark(char32_t cp) {
     return false;
 }
 
+bool IsLetterOrMark(char32_t cp) {
+    size_t lo = 0, hi = D::LetterAndMarkCount;
+    while (lo < hi) {
+        size_t mid = (lo + hi) / 2;
+        if (cp < D::LettersAndMarks[mid].first) hi = mid;
+        else if (cp > D::LettersAndMarks[mid].last) lo = mid + 1;
+        else return true;
+    }
+    return false;
+}
+
 }  // namespace OWUnicode
 }  // namespace OnlyWorlds

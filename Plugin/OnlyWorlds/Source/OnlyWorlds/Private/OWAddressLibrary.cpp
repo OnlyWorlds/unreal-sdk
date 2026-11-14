@@ -74,6 +74,24 @@ bool UOWAddresses::ParseAddress(const FString& Text, FOWAddress& Address, FStrin
 	return true;
 }
 
+bool UOWAddresses::ReadAddressAt(const FString& Text, int32 Index, FOWAddress& Address, int32& End)
+{
+	Address = FOWAddress();
+	End = 0;
+	if (Index < 0 || Index > Text.Len()) return false;
+	// The core counts UTF-8 bytes, the FString UTF-16 units: the index is the byte size of the text before it, and End
+	// is the unit count of the bytes before the core's end. A head that is not the whole text's own first bytes (an
+	// index between the two halves of a surrogate pair) holds no address.
+	const std::string Whole = Utf8(Text);
+	const std::string Head = Utf8(Text.Left(Index));
+	if (Head.size() > Whole.size() || Whole.compare(0, Head.size(), Head) != 0) return false;
+	const std::optional<OnlyWorlds::OWAddressFound> Found = OnlyWorlds::OWAddress::ReadAt(Whole, Head.size());
+	if (!Found) return false;
+	Address = OWAddressDoor::FromReading(Found->reading);
+	End = Str(Whole.substr(0, Found->end)).Len();
+	return true;
+}
+
 bool UOWAddresses::WriteAddress(const FOWAddress& Address, FString& Text, FString& Reason)
 {
 	Text.Reset();

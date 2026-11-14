@@ -19,7 +19,8 @@ listed code points, plus singletons and non-starter decompositions derived from 
 rows of CaseFolding. Two more tables serve the core beside the name rules: white space as Python's `str.strip()` has
 it (general category Zs, or bidirectional class WS, B or S: how the reference checker trims a world id), and the
 compatibility decompositions and nonspacing marks (category Mn) that the element filename's slug needs (folder spec
-3.2; the Unity writer's `Slugify` decomposes by NFKD and drops nonspacing marks).
+3.2; the Unity writer's `Slugify` decomposes by NFKD and drops nonspacing marks). One more serves the address finder:
+the letters and combining marks (category L or M) that cut an address found in prose inside a word.
 """
 
 from __future__ import annotations
@@ -135,6 +136,27 @@ def compat_tables(rows) -> dict:
     return {"decomp": {cp: full(cp) for cp in raw}, "mn": mn}
 
 
+def letters_and_marks(rows) -> list[list[int]]:
+    """What glues an address found in prose into a word (the address page's "An address in prose", serial 123): general
+    category L or M, any letter or combining mark, as ranges. A `<..., First>` and `<..., Last>` pair of rows is a
+    range (the CJK ideographs, Hangul syllables and the like). The underscore, the set's third member, is Pc and the
+    reader's own."""
+    lm, first = [], None
+    for fields in rows:
+        cp = int(fields[0], 16)
+        if fields[1].endswith(", First>"):
+            first = cp
+            continue
+        lo = first if fields[1].endswith(", Last>") else cp
+        first = None
+        if fields[2][0] in "LM":
+            if lm and lm[-1][1] == lo - 1:
+                lm[-1][1] = cp
+            else:
+                lm.append([lo, cp])
+    return lm
+
+
 def white_space(rows) -> list[int]:
     """What Python's str.strip() strips: str.isspace, which is general category Zs or bidirectional class WS, B or S
     (Python's own definition, read here from UnicodeData's fields 2 and 4, never from a runtime)."""
@@ -154,7 +176,7 @@ def simple_folds() -> dict[int, int]:
     return folds
 
 
-def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], tag: str) -> str:
+def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], words: list[list[int]], tag: str) -> str:
     def h(cp):
         return "0x%X" % cp
 
@@ -181,6 +203,7 @@ def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], tag: str) -> s
         "// matches a short held value between non-word characters, and a decimal offset in a table once matched one.",
         "// - White space: general category Zs or bidirectional class WS, B or S (Python's str.isspace).",
         "// - The slug's NFKD: every decomposition in field 5 applied recursively, and the nonspacing marks (Mn).",
+        "// - Letters and marks: general category L or M, what glues an address found in prose into a word.",
         "// Every table is sorted by code point (or by pair key) for binary search.",
         "",
         '#include "OWUnicodeData.h"',
@@ -208,7 +231,9 @@ def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], tag: str) -> s
     out += k_data
     out += ["};", "", "const RangeRow NonspacingMarks[] = {"]
     out += ["    {%s, %s}," % (h(a), h(b)) for a, b in compat["mn"]]
-    out += ["};", f"const size_t NonspacingMarkCount = {h(len(compat['mn']))};", "", "}}  // namespace OnlyWorlds::UnicodeData", ""]
+    out += ["};", f"const size_t NonspacingMarkCount = {h(len(compat['mn']))};", "", "const RangeRow LettersAndMarks[] = {"]
+    out += ["    {%s, %s}," % (h(a), h(b)) for a, b in words]
+    out += ["};", f"const size_t LetterAndMarkCount = {h(len(words))};", "", "}}  // namespace OnlyWorlds::UnicodeData", ""]
     return "\n".join(out)
 
 
@@ -220,7 +245,8 @@ def outputs() -> dict[Path, str]:
             print("FAIL:", p)
         sys.exit("The vendored dist is not what the pin says. Re-vendor from the pinned tag; never edit a hash.")
     rows = unicode_data()
-    return {OUT: emit(nfc_tables(rows), compat_tables(rows), simple_folds(), white_space(rows), pin["tag"])}
+    return {OUT: emit(nfc_tables(rows), compat_tables(rows), simple_folds(), white_space(rows), letters_and_marks(rows),
+                      pin["tag"])}
 
 
 def main() -> int:

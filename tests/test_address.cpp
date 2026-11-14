@@ -1,9 +1,7 @@
 // OWAddress on the address profile's conformance fixture (schema-dist profiles/address.fixture.json, the pinned copy,
 // dist.126's, its sixty-one prose cases added at dist.123 and dist.126): every format case through WriteJson, every parse case through Parse,
-// each refusal by the reason the fixture names. The prose cases are a finder's (an address found inside a line), and
-// this core has none: each checks the half Parse owns (the line holds the address at the index, and Parse reads it
-// whole as the case's reading), then is a named, counted skip (the port is OW Gaming #1527). Then the readings the
-// fixture leaves open, as the TypeScript and Python packages and the Unity SDK answer them: the writer's refusal
+// every prose case through ReadAt (an address found inside a line, serial 123), each refusal by the reason the fixture
+// names. Then the readings the fixture leaves open, as the TypeScript and Python packages and the Unity SDK answer them: the writer's refusal
 // order, a moment with a zero fraction, an empty string, an unknown key.
 
 #include "ow_test.h"
@@ -12,6 +10,7 @@
 #include "OWAddress.h"
 #include "OWFiles.h"
 #include "OWJson.h"
+#include "OWUnicode.h"
 
 #include <algorithm>
 #include <memory>
@@ -85,11 +84,6 @@ bool SameReading(const OWJsonValue& want, const OWJsonValue& got) {
     return true;
 }
 
-// Why a prose case is skipped: it is a finder's (where an address found inside a line ends, the packages'
-// readOwLinkAt), and this core has none.
-const char* const ProseSkip =
-    "skipped by kind 'prose': no finder of an address in prose in this SDK yet (OW Gaming #1527)";
-
 void Case(owtest::T& t, const OWJsonValue& c) {
     std::string name = Str(c, "name"), kind = Str(c, "kind"), refuse = Str(c, "refuse");
     if (kind == "format") {
@@ -116,25 +110,35 @@ void Case(owtest::T& t, const OWJsonValue& c) {
                  "parse/" + name + ": gave " + Compact(got) + ", the fixture says " + (want ? Compact(*want) : "nothing"));
         }
     } else if (kind == "prose") {
-        // The half this core owns: where the case names an address, the line holds it at the index (every prose case is
-        // ASCII to its address's end, so a byte index is the fixture's), and the whole-string parser reads it as the
-        // case's reading. A failed check fails the case; then the finding itself, which needs a finder, is skipped.
+        // ReadAt finds the address that starts at the case's index: the slice it covers, and Parse's reading of that
+        // slice; or nothing, where the fixture finds nothing. Every prose case is ASCII up to its index, so the
+        // fixture's index (UTF-16 units) is the same byte offset here.
         const OWJsonValue* expect = c.Find("expect");
         const OWJsonValue* address = expect ? expect->Find("address") : nullptr;
-        if (address && address->IsString()) {
-            const std::string text = Str(c, "text"), found = address->Text();
-            const OWJsonValue* at = c.Find("index");
-            const size_t index = at && at->IsNumber() ? size_t(std::stoll(at->Text())) : std::string::npos;
-            t.Eq(index < text.size() ? text.substr(index, found.size()) : std::string(), found,
-                 "prose/" + name + ": the line holds the address at its index");
-            OWAddressReading r = OWAddress::Parse(found);
-            t.Ok(r.ok, "prose/" + name + ": the address, read whole, refused as " + r.reason);
-            const OWJsonValue* want = expect->Find("reading");
-            OWJsonValue got = AsJson(r);
-            t.Ok(want && SameReading(*want, got), "prose/" + name + ": read whole, gave " + Compact(got) +
-                                                      ", the fixture says " + (want ? Compact(*want) : "nothing"));
+        const std::string text = Str(c, "text");
+        const OWJsonValue* at = c.Find("index");
+        const size_t index = at && at->IsNumber() ? size_t(std::stoll(at->Text())) : std::string::npos;
+        t.Ok(index != std::string::npos && OWUnicode::IsAscii(std::string_view(text).substr(0, std::min(index, text.size()))),
+             "prose/" + name + ": the text is ASCII up to its index");
+        std::optional<OWAddressFound> found = OWAddress::ReadAt(text, index);
+        if (!address || address->IsNull()) {
+            t.Ok(!found, "prose/" + name + ": found " + (found ? text.substr(index, found->end - index) : std::string()) +
+                             ", the fixture finds no address");
+            const OWJsonValue* reading = expect ? expect->Find("reading") : nullptr;
+            t.Ok(!reading || reading->IsNull(), "prose/" + name + ": no address, no reading");
+        } else {
+            const std::string want_address = address->Text();
+            t.Ok(found.has_value(), "prose/" + name + ": found no address at " + std::to_string(index) +
+                                        ", the fixture finds " + want_address);
+            if (found) {
+                t.Eq(found->end, index + want_address.size(), "prose/" + name + ": the end");
+                t.Eq(text.substr(index, found->end - index), want_address, "prose/" + name + ": the slice at the index");
+                const OWJsonValue* want = expect->Find("reading");
+                OWJsonValue got = AsJson(found->reading);
+                t.Ok(want && SameReading(*want, got), "prose/" + name + ": gave " + Compact(got) +
+                                                          ", the fixture says " + (want ? Compact(*want) : "nothing"));
+            }
         }
-        t.Skip(ProseSkip);
     } else {
         t.Fail("case " + name + ": a case of unknown kind '" + kind + "'");
     }
@@ -170,7 +174,7 @@ OW_TEST(address_fixture_is_the_pinned_one) {
     t.Eq(cases->Size(), size_t(201), "201 cases");
     t.Eq(format, size_t(36), "36 format cases");
     t.Eq(parse, size_t(104), "104 parse cases");
-    t.Eq(prose, size_t(61), "61 prose cases (57 at dist.123), a finder's, each skipped by name (OW Gaming #1527)");
+    t.Eq(prose, size_t(61), "61 prose cases (57 at dist.123, four more at dist.126), each through ReadAt");
     t.Eq(refusals, size_t(75), "20 format refusals and 55 parse refusals");
 }
 
@@ -342,4 +346,61 @@ OW_TEST(address_unknown_key_is_an_error_not_ignored) {
          "ow://" + World, "world_is_slug and canonical ignored");
     OWAddressWritten array = OWAddress::WriteJson(J("[\"text\"]"));
     t.Ok(!array.ok && array.reason.empty() && !array.message.empty(), "not an object: an error");
+}
+
+// -- An address in prose, beside the fixture --------------------------------------------------------------------------
+
+OW_TEST(address_read_at_the_index_defaults_to_0) {
+    const OWJsonValue* cases = Fixture()->Find("cases");
+    if (!cases) return t.Fail("no cases");
+    int n = 0;
+    for (const OWJsonValue& c : cases->Items()) {
+        const OWJsonValue* at = c.Find("index");
+        if (Str(c, "kind") != "prose" || !at || at->Text() != "0") continue;
+        const std::string text = Str(c, "text");
+        std::optional<OWAddressFound> given = OWAddress::ReadAt(text, 0), defaulted = OWAddress::ReadAt(text);
+        t.Eq(defaulted.has_value(), given.has_value(), Str(c, "name"));
+        if (given && defaulted) t.Eq(defaulted->end, given->end, Str(c, "name"));
+        ++n;
+    }
+    t.Ok(n > 40, "cases at index 0: " + std::to_string(n));
+}
+
+OW_TEST(address_read_at_counts_utf8_bytes_so_an_emoji_before_the_address_still_slices_right) {
+    // The TypeScript SDK's case, where the emoji is two UTF-16 units and the index 19: here it is four bytes.
+    const std::string address = "ow://object/" + Element + "@4";
+    const std::string text = "Built \xF0\x9F\x9A\xA2 the gate: " + address + ".";
+    const size_t index = text.find("ow://");
+    t.Eq(index, size_t(21), "the emoji is four UTF-8 bytes: 21 bytes come before the address");
+    std::optional<OWAddressFound> found = OWAddress::ReadAt(text, index);
+    t.Ok(found.has_value(), "found");
+    if (!found) return;
+    t.Eq(found->end, index + address.size(), "the end");
+    t.Eq(text.substr(index, found->end - index), address, "the slice");
+    t.Eq(text.substr(found->end), std::string("."), "the full stop after it");
+    t.Eq(found->reading.id.value_or(""), Element, "the id");
+    t.Eq(found->reading.moment.value_or(0), int32_t(4), "the moment");
+}
+
+OW_TEST(address_read_at_past_the_end_inside_a_character_or_empty_reads_nothing) {
+    t.Ok(!OWAddress::ReadAt("ow://x", 99), "past the end");
+    t.Ok(!OWAddress::ReadAt("", 0), "an empty text");
+    t.Ok(!OWAddress::ReadAt("OW://object/" + Element), "the prefix as written, lowercase");
+    t.Ok(!OWAddress::ReadAt("\xC3\xA9ow://object/" + Element, 1), "an index inside a character's bytes");
+}
+
+OW_TEST(address_read_at_the_sites_form_a_run_cut_inside_a_word_is_no_address) {
+    const std::string h = "https://www.onlyworlds.com/w/";
+    t.Ok(!OWAddress::ReadAt(h + "hyperion\xF0\x9D\x92\x9C."), "a letter above U+FFFF (U+1D49C, four bytes) cuts");
+    t.Ok(!OWAddress::ReadAt(h + "cafe\xCC\x81."), "a combining mark counts with the letters");
+    t.Ok(!OWAddress::ReadAt(h + "hyper_ion."), "an underscore");
+    std::optional<OWAddressFound> found = OWAddress::ReadAt(h + "hyperion\xF0\x9F\x9A\xA2");
+    t.Eq(found ? found->end : size_t(0), (h + "hyperion").size(), "an emoji is no letter: the run ends before it");
+}
+
+OW_TEST(address_letters_and_marks_table) {
+    for (char32_t c : {0x41, 0x7A, 0xE9, 0x301, 0x5D0, 0x938, 0x93F, 0x4E00, 0xAC00, 0x1D49C, 0x20000, 0x2B0, 0x20DD})
+        t.Ok(OWUnicode::IsLetterOrMark(c), "L or M: " + std::to_string(uint32_t(c)));
+    for (char32_t c : {0x30, 0x5F, 0x2D, 0x20, 0x2E, 0xD7, 0x1F6A2, 0x10FFFF, 0x0, 0x3000, 0x660})
+        t.Ok(!OWUnicode::IsLetterOrMark(c), "neither: " + std::to_string(uint32_t(c)));
 }

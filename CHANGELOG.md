@@ -7,6 +7,18 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- An address found in prose (the address page's "An address in prose", schema-dist serial 123), the TypeScript SDK's
+  `readOwLinkAt` and the Python package's `read_ow_link_at`. In the core, `OWAddress::ReadAt(text, index = 0)`
+  answers an `OWAddressFound` (`reading`, `end`): the address that starts exactly at `index` and the index just past
+  it, or nothing when the text there is not an address. Where it ends is the grammar's, never the next space's: after
+  the path only `@` and a moment and then `?lens=` and a lens; any other query key, a fragment and a full stop are
+  prose. In the site's form the run after `/w/` is read whole (exactly an id's form is the id, any other legal slug the
+  slug, else no address), and a run followed by a letter of any script, a combining mark or an underscore is cut
+  inside a word and is no address, the character after it decoded whole from its UTF-8. The core's `index` and `end`
+  are UTF-8 byte offsets. For Blueprints, `UOWAddresses::ReadAddressAt(Text, Index, Address, End)`, whose `Index` and
+  `End` count the FString's UTF-16 units, as the TypeScript SDK's do. `OWUnicode::IsLetterOrMark` reads general
+  category L or M from a table `codegen/generate.py` now emits (725 ranges of the vendored UnicodeData 15.1.0). The
+  address fixture's 61 prose cases, skipped by kind until now, run in the core's runner and in the plugin's automation.
 - `OWReport::ThreadsOf(narratives)` in the core (`OWReport.h`), the report profile's rule 9 (schema-dist serial
   120): the reports among the Narratives, as served and in that order, grouped by `parent_narrative` as written.
   `OWReportThreads` holds `parents` (each report's parent: `none`, `report`, `board`, `missing`, `other` or `self`),

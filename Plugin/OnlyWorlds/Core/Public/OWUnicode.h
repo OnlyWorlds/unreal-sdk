@@ -47,5 +47,9 @@ bool IsWhite(char32_t cp);
 std::u32string CompatDecompose(std::u32string_view cps);
 bool IsNonspacingMark(char32_t cp);
 
+// Whether a code point is a letter of any script or a combining mark (general category L or M): what cuts an address
+// found in prose inside a word.
+bool IsLetterOrMark(char32_t cp);
+
 }  // namespace OWUnicode
 }  // namespace OnlyWorlds

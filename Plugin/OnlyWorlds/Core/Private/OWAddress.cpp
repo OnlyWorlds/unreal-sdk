@@ -1,5 +1,7 @@
 #include "OWAddress.h"
 
+#include "OWUnicode.h"
+
 #include <algorithm>
 #include <charconv>
 #include <cmath>
@@ -366,6 +368,102 @@ OWAddressReading Parse(std::string_view text) {
     r.canonical = !r.world_is_slug && WriteParts({r.form, r.world, r.type, r.id, r.lens, r.moment}, written) == nullptr &&
                   written == text;
     return r;
+}
+
+namespace {
+
+// An id is 36 characters: a lens found in prose ends where its id ends.
+constexpr size_t IdLength = 36;
+
+size_t TypeWordMax() {
+    size_t most = 0;
+    for (const char* t : TypeWords) most = std::max(most, std::string_view(t).size());
+    return most;
+}
+
+// The characters a path segment can hold (an id, a slug, a type word in any case) and the slash between them.
+bool IsPathChar(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '/' || c == '-';
+}
+
+// The run after /w/: the slug's alphabet (lowercase letters, digits, hyphens) and the id's (hex in either case).
+bool IsWorldRunChar(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'F') || c == '-';
+}
+
+// The code point whose UTF-8 starts at byte i, decoded whole (U+FFFD for a byte that begins no sequence).
+char32_t CodePointAt(std::string_view s, size_t i) {
+    const uint8_t c = static_cast<uint8_t>(s[i]);
+    const size_t length = c < 0x80 ? 1 : c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : c >= 0xC0 ? 2 : 1;
+    const std::u32string cps = OWUnicode::Decode(s.substr(i, length));
+    return cps.size() == 1 ? cps[0] : char32_t(0xFFFD);
+}
+
+// Whether the character at byte i glues a run into a word: a letter of any script, a combining mark (Unicode categories
+// L and M) or an underscore.
+bool IsInAWord(std::string_view s, size_t i) {
+    if (i >= s.size()) return false;
+    if (s[i] == '_') return true;
+    return OWUnicode::IsLetterOrMark(CodePointAt(s, i));
+}
+
+bool Parses(std::string_view text, size_t index, size_t end) { return Parse(text.substr(index, end - index)).ok; }
+
+}  // namespace
+
+std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index) {
+    const size_t n = text.size();
+    if (index > n) return std::nullopt;
+    const std::string_view at = text.substr(index);
+    const bool human = StartsWith(at, HumanPrefix);
+    size_t start;
+    if (human) start = index + std::string_view(HumanPrefix).size();
+    else if (StartsWith(at, TextPrefix)) start = index + std::string_view(TextPrefix).size();
+    else return std::nullopt;
+
+    static const size_t type_word_max = TypeWordMax();
+    size_t end = std::string_view::npos, low = start, run = start;
+    if (human) {
+        // The site's form: the run after /w/ is read whole, once, with no order between an id and a slug.
+        size_t w = start;
+        while (w < n && IsWorldRunChar(text[w])) ++w;
+        if (IsInAWord(text, w)) return std::nullopt;
+        const std::string_view world = text.substr(start, w - start);
+        if (!IsUuid(world) && !IsSlug(world)) return std::nullopt;
+        end = low = run = w;
+        const size_t element_path_max = 1 + type_word_max + 1 + IdLength;
+        while (run < n && run - w <= element_path_max && IsPathChar(text[run])) ++run;
+    } else {
+        const size_t path_max = IdLength + 1 + type_word_max + 1 + IdLength;
+        while (run < n && run - start <= path_max && IsPathChar(text[run])) ++run;
+    }
+
+    for (size_t p = run; p > low; --p) {
+        if (Parses(text, index, p)) {
+            end = p;
+            break;
+        }
+    }
+    if (end == std::string_view::npos) return std::nullopt;
+
+    // A moment: its whole run of an optional minus and digits, taken only when it reads as a step.
+    if (end < n && text[end] == '@') {
+        size_t step_end = end + 1;
+        if (step_end < n && text[step_end] == '-') ++step_end;
+        const size_t digits = step_end;
+        while (step_end < n && text[step_end] >= '0' && text[step_end] <= '9') ++step_end;
+        if (step_end > digits && Parses(text, index, step_end)) end = step_end;
+    }
+
+    // A lens: an id, which ends where its 36 characters end.
+    const std::string lens_query = std::string("?") + LensKey + "=";
+    if (StartsWith(text.substr(end), lens_query)) {
+        const size_t lens_end = end + lens_query.size() + IdLength;
+        if (lens_end <= n && IsUuid(text.substr(end + lens_query.size(), IdLength)) && Parses(text, index, lens_end))
+            end = lens_end;
+    }
+
+    return OWAddressFound{Parse(text.substr(index, end - index)), end};
 }
 
 OWAddressWritten Write(const OWAddressParts& parts) {

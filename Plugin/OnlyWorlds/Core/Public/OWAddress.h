@@ -15,10 +15,11 @@
 // (profiles/address.fixture.json).
 //
 // An address in a field is public text: never resolve, fetch or unfurl it on a server. It is not a foreign key, not an
-// identity key and not a promise that its target exists. One string is read whole: a link inside other text is the
-// caller's to find first.
+// identity key and not a promise that its target exists. Parse reads one string whole; ReadAt reads an address found
+// inside other text (a sentence, a line of a report) from the index where its prefix starts, and says where it ends.
 //
-// Strings are UTF-8. Nothing is percent-decoded; every part the grammar reads is ASCII.
+// Strings are UTF-8, and an index into one is a byte offset. Nothing is percent-decoded; every part the grammar reads
+// is ASCII.
 
 #include "OWJson.h"
 
@@ -56,6 +57,12 @@ struct OWAddressParts {
     std::optional<int32_t> moment;
 };
 
+// What ReadAt finds: the address read, and the index just past it in the text (a UTF-8 byte offset).
+struct OWAddressFound {
+    OWAddressReading reading;  // what Parse reads from text.substr(index, end - index)
+    size_t end = 0;            // the text's first byte that is not part of the address, or its size
+};
+
 // What Write gives: the address, or a refusal (reason, one of OWAddress::Refusals). WriteJson also fails, with reason
 // empty and message saying why, for input that is not an address's shape (not an object, or a key it does not hold).
 struct OWAddressWritten {
@@ -81,6 +88,26 @@ extern const char* const TypeWords[22];
 
 // Read one string: trim Unicode White_Space at both ends, then the profile's nine checks in order.
 OWAddressReading Parse(std::string_view text);
+
+// The address that starts exactly at `index` in a text, found in prose, and where it ends; nothing when the text there
+// is not an address (the address page's "An address in prose", serial 123; the TypeScript SDK's readOwLinkAt and the
+// Python package's read_ow_link_at).
+//
+// Both forms, the prefix as written (lowercase). In the site's form the run after /w/ is read whole, once: it ends at
+// the first character outside the slug's alphabet (lowercase letters, digits, hyphens) or the id's (hex in either
+// case); exactly an id's form is the id, any other run Parse reads as a slug is the slug, else there is no address. A
+// run followed by a letter of any script, a combining mark or an underscore is cut inside a word and is no address
+// (/w/mopPetopia., /w/hyper_ion.); the character after it is decoded whole from its UTF-8.
+//
+// After the world, or in the text form from the prefix, the path is the longest one Parse reads. After it the address
+// continues only with @ and a moment (its whole run of an optional minus and digits, taken only when it reads as a
+// step) and then ?lens= and a lens (an id, which ends where its 36 characters end). Any other query key or a fragment
+// is not part of an address found in prose: the address ends before its ?, & or #. What follows is prose, a full stop
+// included. Parse itself still reads a string whole: "ow://object/<id>." handed to it is refused.
+//
+// `index` and `end` are byte offsets into the UTF-8 text (not UTF-16 units as in JavaScript, nor code points as in
+// Python); an index past the end, or inside a character's bytes, reads nothing.
+std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index = 0);
 
 // The address a writer writes: lowercase throughout, the world's id (never its slug), the moment before the lens, and
 // nothing else. A world's own address has no type and no id.
