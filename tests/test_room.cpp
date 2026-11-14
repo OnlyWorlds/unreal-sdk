@@ -1,4 +1,4 @@
-// OWLens::IsRoomElement on the room profile's conformance fixture (schema-dist profiles/room.fixture.json, dist.113's
+// OWLens::IsRoomElement on the room profile's conformance fixture (schema-dist profiles/room.fixture.json, dist.126's
 // copy, its sha256 held to MANIFEST.json): each case's element is a room element exactly when in_room says, the pair
 // AND the mark. Every case runs, counted, so a dropped case fails.
 
@@ -18,8 +18,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.118's MANIFEST.json records it.
-const char* const DistSha256 = "3b804a78d4df907abed0778782bd0acf335570a1670cae125b97d5bce66dcd72";
+// The fixture's sha256 as dist.126's MANIFEST.json records it.
+const char* const DistSha256 = "e03ac168cbd38c976ee4f2e7ca5c8f41864ca874313dfd2c91939bc6f40da23f";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/room.fixture.json"; }
 
@@ -43,7 +43,7 @@ std::string Str(const OWJsonValue& v, const char* key) {
 OW_TEST(room_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the room fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.118's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.126's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -76,8 +76,8 @@ OW_TEST(room_cases_answer_in_room) {
         ++run;
         if (want->AsBool()) ++in;
     }
-    t.Eq(cases->Size(), size_t(35), "35 cases");
-    t.Eq(names.size(), size_t(35), "each name its own");
-    t.Eq(run, size_t(35), "every case runs here");
-    t.Eq(in, size_t(17), "17 of them in the room");
+    t.Eq(cases->Size(), size_t(38), "38 cases");
+    t.Eq(names.size(), size_t(38), "each name its own");
+    t.Eq(run, size_t(38), "every case runs here");
+    t.Eq(in, size_t(18), "18 of them in the room");
 }

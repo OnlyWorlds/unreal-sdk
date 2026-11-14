@@ -1,4 +1,4 @@
-// OWMapSpace on the map-space profile's conformance fixture (schema-dist profiles/map-space.fixture.json, dist.119's
+// OWMapSpace on the map-space profile's conformance fixture (schema-dist profiles/map-space.fixture.json, dist.126's
 // copy, its sha256 held to MANIFEST.json): every case by name, its elements read as served and the whole answer
 // compared as bytes (key order, list order and each number's spelling as JSON.stringify writes it); then the profile's
 // invariants over every case (four keys in order, read twice the same bytes, the rows held one per id read forwards and
@@ -24,8 +24,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.119's MANIFEST.json records it.
-const char* const DistSha256 = "60a779cd0f5977843c8c5c668a16d0b283d5db74a02032c39ebd3e9a9229a7e1";
+// The fixture's sha256 as dist.126's MANIFEST.json records it.
+const char* const DistSha256 = "0d8ba49115c94980261d27ae2ab622fbb52c8f633864e1c315b2819159245d49";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/map-space.fixture.json"; }
 
@@ -113,7 +113,7 @@ OWJsonValue Served(const OWJsonValue& elements) {
 OW_TEST(map_space_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the map-space fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.119's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.126's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -127,8 +127,8 @@ OW_TEST(map_space_fixture_is_the_pinned_one) {
         names.insert(Str(*c, "name"));
         if (const OWJsonValue* ch = c->Find("choice")) choices.insert(Str(ch));
     }
-    t.Eq(Cases().size(), size_t(35), "35 cases (34 at dist.106)");
-    t.Eq(names.size(), size_t(35), "each name its own");
+    t.Eq(Cases().size(), size_t(39), "39 cases (34 at dist.106, 35 at dist.119)");
+    t.Eq(names.size(), size_t(39), "each name its own");
     t.Ok(names.count("layout-map-read-as-before") == 1, "dist.119's case: a layout map read as any Map (rule 11)");
     t.Ok(choices == std::set<std::string>{"A", "B", "C", "D", "E", "G", "H", "I", "J", "K"},
          "the cases that carry a ruled reading: A to E, G to K");
@@ -387,16 +387,16 @@ const std::string NoLayout = R"({"layout": null,"ground": null,"hand": []})";
 
 }  // namespace
 
-OW_TEST(map_space_fixture_holds_twenty_three_layout_cases_beside_its_cases) {
+OW_TEST(map_space_fixture_holds_twenty_six_layout_cases_beside_its_cases) {
     const OWJsonValue* cases = Fixture()->Find("layout_cases");
     t.Ok(cases && cases->IsArray(), "layout_cases beside cases");
     std::set<std::string> names;
     for (const OWJsonValue* c : LayoutCases()) names.insert(Str(*c, "name"));
-    t.Eq(LayoutCases().size(), size_t(23), "23 layout cases (17 at dist.110, 21 at dist.111)");
-    t.Eq(names.size(), size_t(23), "each name its own");
+    t.Eq(LayoutCases().size(), size_t(26), "26 layout cases (17 at dist.110, 21 at dist.111, 23 at dist.119)");
+    t.Eq(names.size(), size_t(26), "each name its own");
     t.Ok(names.count("parentless-layout-beside-ground") == 1 && names.count("ground-beside-parentless-layout") == 1,
          "dist.119's two cases: a layout Map and its ground, neither with a parent_map, each read in turn");
-    t.Eq(Cases().size(), size_t(35), "the map-space reading's 35 cases beside them");
+    t.Eq(Cases().size(), size_t(39), "the map-space reading's 39 cases beside them");
 }
 
 // The replay reads every row a case names: one per `map` case, each of a `map_index` case's positions (dist.111's
@@ -411,10 +411,13 @@ OW_TEST(map_space_layout_the_replay_reads_every_row_a_case_names) {
         rows += ReadLayouts(*c, &problem).size();
         if (!problem.empty()) problems += Str(*c, "name") + ": " + problem + "; ";
     }
-    t.Ok(by_index == std::vector<std::string>{"map-without-a-string-id"}, "dist.111 names one case's Maps by map_index");
-    for (const OWJsonValue* c : LayoutCases())
+    t.Ok(by_index == std::vector<std::string>{"map-without-a-string-id", "layout-map-empty-id-is-no-map"},
+         "dist.111 names one case's Maps by map_index, dist.126 a second (a Map whose id is an empty string)");
+    for (const OWJsonValue* c : LayoutCases()) {
         if (Str(*c, "name") == "map-without-a-string-id") t.Eq(ReadLayouts(*c).size(), size_t(2), "its two rows, each read");
-    t.Eq(rows, size_t(23 - 1 + 2), "every row a case names, read once (23 cases, one of them naming two rows)");
+        if (Str(*c, "name") == "layout-map-empty-id-is-no-map") t.Eq(ReadLayouts(*c).size(), size_t(1), "its one row, read");
+    }
+    t.Eq(rows, size_t(26 - 2 + 2 + 1), "every row a case names, read once (26 cases, one of them naming two rows)");
     t.Eq(problems, std::string(), "every case names its Map rows");
 }
 

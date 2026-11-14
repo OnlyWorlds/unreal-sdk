@@ -1,5 +1,5 @@
 // OWAddress on the address profile's conformance fixture (schema-dist profiles/address.fixture.json, the pinned copy,
-// dist.123's, its fifty-seven prose cases added): every format case through WriteJson, every parse case through Parse,
+// dist.126's, its sixty-one prose cases added at dist.123 and dist.126): every format case through WriteJson, every parse case through Parse,
 // each refusal by the reason the fixture names. The prose cases are a finder's (an address found inside a line), and
 // this core has none: each checks the half Parse owns (the line holds the address at the index, and Parse reads it
 // whole as the case's reading), then is a named, counted skip (the port is OW Gaming #1527). Then the readings the
@@ -21,8 +21,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.123's MANIFEST.json records it.
-const char* const DistSha256 = "4c4e4ebbdf08d8a1c29d14d888182e9639f4ac51a1ff8e6f3c0d6878cf3d8eaf";
+// The fixture's sha256 as dist.126's MANIFEST.json records it.
+const char* const DistSha256 = "383c02312829a71110ef770cbc1e539515a2193a80e70e4d824158f1f8846598";
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "019a1f3c-2b4e-7d10-8c3a-6f2e9b0d4a71";
@@ -154,7 +154,7 @@ std::string Written(const std::string& json) { return OWAddress::WriteJson(J(jso
 OW_TEST(address_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the address fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.123's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.126's");
     auto doc = Fixture();
     t.Eq(Str(*doc, "profile"), std::string("address"), "the address profile's fixture");
     const OWJsonValue* cases = doc->Find("cases");
@@ -167,10 +167,10 @@ OW_TEST(address_fixture_is_the_pinned_one) {
         prose += Str(c, "kind") == "prose";
         refusals += c.Has("refuse");
     }
-    t.Eq(cases->Size(), size_t(197), "197 cases");
+    t.Eq(cases->Size(), size_t(201), "201 cases");
     t.Eq(format, size_t(36), "36 format cases");
     t.Eq(parse, size_t(104), "104 parse cases");
-    t.Eq(prose, size_t(57), "57 prose cases, a finder's, each skipped by name (OW Gaming #1527)");
+    t.Eq(prose, size_t(61), "61 prose cases (57 at dist.123), a finder's, each skipped by name (OW Gaming #1527)");
     t.Eq(refusals, size_t(75), "20 format refusals and 55 parse refusals");
 }
 

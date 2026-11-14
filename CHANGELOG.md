@@ -223,6 +223,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.126` (`86e2ff4`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
+  `views.json` moved, and the generated files moved in their stamp only (the four generators' `--check` hold). The
+  room, charter, review and checks pages read a mark by one presence: null, a blank string, an empty list and an empty
+  object are absent (the entry below builds it here). The map-space page reads a link whose value is an empty string
+  as no link, as an empty id is no id: this core already read every link and id so, and the fixture's seven new cases
+  pass unchanged. The address page gains four prose cases, skipped by name as serial 123's are (no finder of an address
+  in prose). The core tests' fixture pins and counts follow: address 201 (61 prose), charter 41, map-space 39 cases and
+  26 layout cases (a second case names its Map by `map_index`), room 38 (18 in the room).
 - Schema pin to `v0.34.1-dist.124` (`094107b`): canonical `00.34.00` moves to `00.34.01`, the first canonical move
   since serial 103 (this SDK spells the canonical version nowhere outside the vendored dist, so no constant moves).
   One description moved and no field: Map's `hierarchy` orders the maps that stand side by side (floors, decks,
