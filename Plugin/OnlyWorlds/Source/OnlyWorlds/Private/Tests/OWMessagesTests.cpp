@@ -681,7 +681,7 @@ bool FOWMessagesFixtureTest::RunTest(const FString& Parameters)
 	if (!TestTrue(TEXT("the fixture holds cases"), Cases && Cases->IsArray())) return false;
 	FTally Tally;
 	for (const OWJsonValue& Case : Cases->Items()) RunCase(*this, Case, Fixture, Tally);
-	TestEqual(TEXT("every one of the 100 cases carried"), Tally.Carried, 100);
+	TestEqual(TEXT("every one of the 102 cases carried"), Tally.Carried, 102);
 	TestEqual(TEXT("none left out"), Tally.NotCarried.Num(), 0);
 	TestEqual(TEXT("cases failed"), Tally.Failed, 0);
 	AddInfo(FString::Printf(TEXT("message fixture: %d cases through the Blueprint path, %d failed"), Tally.Carried, Tally.Failed));

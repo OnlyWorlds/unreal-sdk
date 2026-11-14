@@ -280,7 +280,7 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	TestEqual(TEXT("216 cases"), static_cast<int32>(Cases->Items().size()), 216);
+	TestEqual(TEXT("218 cases"), static_cast<int32>(Cases->Items().size()), 218);
 	TestEqual(TEXT("every parse case through ParseAddress"), Parsed, 104);
 	TestEqual(TEXT("every prose case through ReadAddressAt"), Prose, 76);
 	TestEqual(TEXT("the format cases through WriteAddress"), Written, 33);

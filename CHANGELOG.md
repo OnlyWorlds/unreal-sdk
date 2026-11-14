@@ -244,6 +244,15 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.128` (`7ffb61c`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
+  `views.json` moved, and the generated files moved in their stamp only (the four generators' `--check` hold). A
+  multi-link names each element once: a reader served a list that names one element twice reads it once, in its first
+  place, on the lens, landing and message pages (the entries below build it here). The address page adds a find-all
+  with a new kind of case, `prose-all`. The folder spec is at 0.3.24 (the vendored folder check's `FORMAT_VERSION`);
+  this SDK stamps no `format_version`. The spine fixture's new case has no reader here. The core tests' fixture pins
+  and counts follow: address 218 (two `prose-all`), landing 33 (its doubled-target case now one edge), lens 235
+  (resolve 134, graph 56), message 102 (two `recipients`, twelve kinds); the plugin's automation tests carry the same
+  counts (address 218, lens 174 carried and 61 left to the graph, graph 56, message 102).
 - Schema pin to `v0.34.1-dist.127` (`f50c526`): canonical `00.34.01` unchanged; no schema file or `schema.json`
   moved, and the generated files moved in their stamp only (the four generators' `--check` hold). The address page
   adds a start rule for an address found in prose (the entry below builds it here); its prose note now says a reader

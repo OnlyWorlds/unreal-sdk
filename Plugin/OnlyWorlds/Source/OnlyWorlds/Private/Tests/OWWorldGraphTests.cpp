@@ -681,7 +681,7 @@ bool FOWWorldGraphFixtureTest::RunTest(const FString& Parameters)
 		}
 		if (!bHeld) ++Failed;
 	}
-	TestEqual(TEXT("the 55 graph cases carried"), Graphs, 55);
+	TestEqual(TEXT("the 56 graph cases carried"), Graphs, 56);
 	TestEqual(TEXT("the 5 degree cases carried"), Degrees, 5);
 	TestTrue(TEXT("none left out: ") + FString::Join(Left, TEXT("; ")), Left.Num() == 0);
 	TestEqual(TEXT("cases failed"), Failed, 0);

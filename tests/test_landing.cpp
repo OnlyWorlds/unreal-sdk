@@ -1,4 +1,4 @@
-// OWLanding on the landing profile's conformance fixture (schema-dist profiles/landing.fixture.json, dist.104's copy,
+// OWLanding on the landing profile's conformance fixture (schema-dist profiles/landing.fixture.json, dist.128's copy,
 // its sha256 held to MANIFEST.json): every case by name, its graph built as OWGraph::WorldGraph answers it, the
 // options passed as the packages take them (JSON), each key the want holds compared in order and a case marked whole
 // compared whole; then readings the fixture leaves open (the typed options beside the JSON ones, a whole float, a
@@ -24,8 +24,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.104's MANIFEST.json records it.
-const char* const DistSha256 = "0a5377fb5f5032951eb513d6ce71d236ff6f8290615eba3ed64c1753474d9696";
+// The fixture's sha256 as dist.128's MANIFEST.json records it.
+const char* const DistSha256 = "6a754b8f143f3ea1f0d9e50ab80bb80f859cf9b26538c4759d2bb3cfebf5be7a";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/landing.fixture.json"; }
 
@@ -134,7 +134,7 @@ OWWorldGraph Graph(const char* json) { return GraphOf(Parse(json)); }
 OW_TEST(landing_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the landing fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.104's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.128's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);

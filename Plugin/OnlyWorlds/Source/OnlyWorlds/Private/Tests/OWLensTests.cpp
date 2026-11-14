@@ -857,10 +857,10 @@ bool FOWLensFixtureTest::RunTest(const FString& Parameters)
 		++Carried;
 		if (!bHeld) ++Failed;
 	}
-	// The fixture as vendored at dist.123: 6 shape, 25 keys, 5 uses, 133 resolve, 4 invariant, every case of these
-	// kinds; the 55 graph and 5 degree cases are the graph's.
-	TestEqual(TEXT("the 173 shape, keys, uses, resolve and invariant cases carried"), Carried, 173);
-	TestEqual(TEXT("the graph's 60 left to OWWorldGraphTests.cpp"), Others, 60);
+	// The fixture as vendored at dist.128: 6 shape, 25 keys, 5 uses, 134 resolve, 4 invariant, every case of these
+	// kinds; the 56 graph and 5 degree cases are the graph's.
+	TestEqual(TEXT("the 174 shape, keys, uses, resolve and invariant cases carried"), Carried, 174);
+	TestEqual(TEXT("the graph's 61 left to OWWorldGraphTests.cpp"), Others, 61);
 	TestTrue(TEXT("none left out: ") + FString::Join(Left, TEXT("; ")), Left.Num() == 0);
 	TestEqual(TEXT("cases failed"), Failed, 0);
 	AddInfo(FString::Printf(TEXT("lens fixture: %d cases through UOWLens, %d failed"), Carried, Failed));
