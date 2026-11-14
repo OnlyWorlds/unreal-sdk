@@ -255,9 +255,9 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	TestEqual(TEXT("197 cases"), static_cast<int32>(Cases->Items().size()), 197);
+	TestEqual(TEXT("201 cases"), static_cast<int32>(Cases->Items().size()), 201);
 	TestEqual(TEXT("every parse case through ParseAddress"), Parsed, 104);
-	TestEqual(TEXT("the 57 prose cases, a finder's, each skipped by name"), ProseSkipped.Num(), 57);
+	TestEqual(TEXT("the 61 prose cases, a finder's, each skipped by name"), ProseSkipped.Num(), 61);
 	for (const FString& Skipped : ProseSkipped)
 		AddInfo(Skipped + TEXT(": skipped by kind 'prose': no finder of an address in prose in this SDK yet (OW Gaming #1527)"));
 	TestEqual(TEXT("the format cases through WriteAddress"), Written, 33);
