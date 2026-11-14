@@ -125,12 +125,13 @@ bool FOWGraphPinsTest::RunTest(const FString& Parameters)
 		if (It->GetOutermost()->GetName() == TEXT("/Script/OnlyWorlds")) Structs.Add(*It);
 	}
 	Structs.Sort([](const UScriptStruct& A, const UScriptStruct& B) { return A.GetName() < B.GetName(); });
-	// The 22 generated, and FOWArchiveVerdict, FOWWorldCalendar, FOWStepBreakdown, FOWAddress, FOWOpenerSurface, FOWOpener,
-	// FOWSender, FOWEdited, and the client's FOWClientConfig, FOWApiError, FOWListOptions, FOWChange, FOWChangesPage,
-	// FOWBulkItem, FOWBulkSlot, FOWBulkResult; the lens's FOWLensReader, FOWLensOptions, FOWLensCut, FOWLensMail,
-	// FOWLensReading; the graph's FOWGraphOptions, FOWGraphNode, FOWGraphEdge, FOWWorldGraph, FOWGraphDegree; the
-	// charter's FOWCharterLaw, FOWCharterGuide, FOWCharterHub, FOWCharterDomain, FOWReadingAids.
-	TestEqual(TEXT("the plugin's structs"), Structs.Num(), 22 + 16 + 15);
+	// The 22 generated, and FOWArchiveVerdict, FOWWorldCalendar, FOWStepBreakdown, FOWAddress, FOWAddressFound (serial
+	// 128), FOWOpenerSurface, FOWOpener, FOWSender, FOWEdited, and the client's FOWClientConfig, FOWApiError,
+	// FOWListOptions, FOWChange, FOWChangesPage, FOWBulkItem, FOWBulkSlot, FOWBulkResult; the lens's FOWLensReader,
+	// FOWLensOptions, FOWLensCut, FOWLensMail, FOWLensReading; the graph's FOWGraphOptions, FOWGraphNode, FOWGraphEdge,
+	// FOWWorldGraph, FOWGraphDegree; the charter's FOWCharterLaw, FOWCharterGuide, FOWCharterHub, FOWCharterDomain,
+	// FOWReadingAids.
+	TestEqual(TEXT("the plugin's structs"), Structs.Num(), 22 + 17 + 15);
 
 	int32 Optionals = 0, OptionalBreakPins = 0, OptionalMakePins = 0, Members = 0, Pairs = 0, PairsWithPins = 0;
 	TArray<FString> OptionalMembers;
