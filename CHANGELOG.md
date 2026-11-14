@@ -235,6 +235,16 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.127` (`f50c526`): canonical `00.34.01` unchanged; no schema file or `schema.json`
+  moved, and the generated files moved in their stamp only (the four generators' `--check` hold). The address page
+  adds a start rule for an address found in prose (the entry below builds it here); its prose note now says a reader
+  that indexes by UTF-8 bytes converts the code point `index` to its own, which the core's fixture loop does (the entry
+  below). `views.json`'s banners sentence and its fixture's ten new cases have no reader here (no views reader in this
+  SDK). The map-space page says what the layout mark means (a Map that is a drawing of its elements) and who writes it
+  (rule 12): this SDK writes no `x_layout`, and the three new layout cases pass unchanged. The checks fixture's three
+  presence cases and the spine fixture's one have no reader here. The core tests' fixture pins and counts follow:
+  address 216 (76 prose), map-space 29 layout cases; the plugin's address automation test carries the same counts (216
+  and 76 prose).
 - Schema pin to `v0.34.1-dist.126` (`86e2ff4`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
   `views.json` moved, and the generated files moved in their stamp only (the four generators' `--check` hold). The
   room, charter, review and checks pages read a mark by one presence: null, a blank string, an empty list and an empty

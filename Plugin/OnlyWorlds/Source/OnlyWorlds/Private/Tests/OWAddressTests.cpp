@@ -278,9 +278,9 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 		}
 		if (ExecutionInfo.GetErrorTotal() > ErrorsBefore) ++Failed;
 	}
-	TestEqual(TEXT("201 cases"), static_cast<int32>(Cases->Items().size()), 201);
+	TestEqual(TEXT("216 cases"), static_cast<int32>(Cases->Items().size()), 216);
 	TestEqual(TEXT("every parse case through ParseAddress"), Parsed, 104);
-	TestEqual(TEXT("every prose case through ReadAddressAt"), Prose, 61);
+	TestEqual(TEXT("every prose case through ReadAddressAt"), Prose, 76);
 	TestEqual(TEXT("the format cases through WriteAddress"), Written, 33);
 	// The three moments no Integer64 pin holds; the core's own runner reads them through WriteJson.
 	TestEqual(TEXT("not carried: a moment that is not a whole number"), NotCarried.Num(), 3);
