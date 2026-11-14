@@ -19,6 +19,15 @@ Nothing is released yet; the history before this file is in the git log.
   `End` count the FString's UTF-16 units, as the TypeScript SDK's do. `OWUnicode::IsLetterOrMark` reads general
   category L or M from a table `codegen/generate.py` now emits (725 ranges of the vendored UnicodeData 15.1.0). The
   address fixture's 61 prose cases, skipped by kind until now, run in the core's runner and in the plugin's automation.
+- `OWAddress::ReadAt` and `UOWAddresses::ReadAddressAt` answer nothing when the address would begin inside a word
+  (schema-dist serial 127): after a letter of any script, a combining mark or an underscore (`elbow://object/<id>` and
+  `_ow://…` are prose), the same set that cuts a run after it; a hyphen, a digit, white space, punctuation or the start
+  of the text before the prefix does not glue. The character before the index is decoded whole from its UTF-8, so a
+  letter past ASCII (two to four bytes) glues as any letter does; bytes that are not UTF-8 do not glue. Two addresses
+  written back to back read as two after an id that ends in a digit and as one after an id that ends in a hex letter.
+  The address fixture's fifteen new prose cases run in the core's runner and the plugin's automation: the core's
+  fixture loop walks each case's code point `index` into its UTF-8 byte offset (it held every case ASCII before its
+  index until now), and the plugin's reads `index_utf16` where a case gives it, the FString's UTF-16 units.
 - `OWReport::ThreadsOf(narratives)` in the core (`OWReport.h`), the report profile's rule 9 (schema-dist serial
   120): the reports among the Narratives, as served and in that order, grouped by `parent_narrative` as written.
   `OWReportThreads` holds `parents` (each report's parent: `none`, `report`, `board`, `missing`, `other` or `self`),

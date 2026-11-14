@@ -246,12 +246,14 @@ bool FOWAddressFixtureTest::RunTest(const FString& Parameters)
 		else if (Kind == TEXT("prose"))
 		{
 			// ReadAddressAt finds the address that starts at the case's index: the slice it covers and its reading; or
-			// nothing, where the fixture finds nothing. Index and End are the FString's UTF-16 units, as the fixture's.
+			// nothing, where the fixture finds nothing. Index and End are the FString's UTF-16 units: the fixture's
+			// index counts code points, and where a letter above U+FFFF stands before it the case gives index_utf16
+			// beside it (serial 127), which this reads.
 			++Prose;
 			const OWJsonValue* Expect = Case.Find("expect");
 			const OWJsonValue* Found = Expect ? Expect->Find("address") : nullptr;
 			const FString Text = TextOf(Case.Find("text"));
-			const OWJsonValue* At = Case.Find("index");
+			const OWJsonValue* At = Case.Find("index_utf16") ? Case.Find("index_utf16") : Case.Find("index");
 			const int32 Index = At && At->IsNumber() ? static_cast<int32>(std::stoll(At->Text())) : -1;
 			const FFound R = CallReadAt(*this, Text, Index);
 			if (!Found || !Found->IsString())
@@ -477,6 +479,14 @@ bool FOWAddressProseTest::RunTest(const FString& Parameters)
 		TestTrue(FString::Printf(TEXT("index %d: nothing"), Bad), !None.bOk && None.End == 0 && IsEmptyAddress(None.Address));
 	}
 	TestFalse(TEXT("OW:// is no address in prose"), CallReadAt(*this, TEXT("OW://object/") + Element, 0).bOk);
+
+	// Where it begins (schema-dist serial 127): a letter above U+FFFF before the
+	// prefix is two UTF-16 units here and four bytes in the core, and glues as any letter does; a hyphen does not.
+	const FString Astral = Str(std::string("\xF0\x9D\x92\x9C")) + TEXT("ow://object/") + Element;
+	TestEqual(TEXT("U+1D49C is two UTF-16 units"), Astral.Find(TEXT("ow://")), 2);
+	TestFalse(TEXT("glued to a letter above U+FFFF: prose"), CallReadAt(*this, Astral, 2).bOk);
+	const FFound Hyphen = CallReadAt(*this, TEXT("x-ow://object/") + Element, 2);
+	TestTrue(TEXT("after a hyphen: the address"), Hyphen.bOk && Hyphen.End == 2 + 12 + 36);
 	return true;
 }
 

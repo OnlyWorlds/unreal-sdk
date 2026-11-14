@@ -47,6 +47,19 @@ std::string Str(const OWJsonValue& v, const char* key) {
 
 OWJsonValue Opt(const std::optional<std::string>& s) { return s ? OWJsonValue::String(*s) : OWJsonValue::Null(); }
 
+// A prose case's index counts code points (the fixture's note; index_utf16 is for UTF-16 readers, serial 127); the
+// core's ReadAt takes a byte offset into the UTF-8 text. Walks that many characters from the text's start, each as
+// long as its lead byte says; npos when the walk leaves the text.
+size_t ByteOffsetOfCodePoint(std::string_view text, size_t code_points) {
+    size_t at = 0;
+    for (size_t n = 0; n < code_points; ++n) {
+        if (at >= text.size()) return std::string::npos;
+        const uint8_t lead = static_cast<uint8_t>(text[at]);
+        at += lead < 0x80 ? 1 : lead >= 0xF0 ? 4 : lead >= 0xE0 ? 3 : lead >= 0xC0 ? 2 : 1;
+    }
+    return at <= text.size() ? at : std::string::npos;
+}
+
 // A reading as the fixture writes one: every key, absent as JSON null.
 OWJsonValue AsJson(const OWAddressReading& r) {
     OWJsonValue o = OWJsonValue::Object();
@@ -111,15 +124,15 @@ void Case(owtest::T& t, const OWJsonValue& c) {
         }
     } else if (kind == "prose") {
         // ReadAt finds the address that starts at the case's index: the slice it covers, and Parse's reading of that
-        // slice; or nothing, where the fixture finds nothing. Every prose case is ASCII up to its index, so the
-        // fixture's index (UTF-16 units) is the same byte offset here.
+        // slice; or nothing, where the fixture finds nothing. The fixture's index counts code points; since serial
+        // 127 four cases hold a letter or a mark before it, so it is walked into a byte offset here.
         const OWJsonValue* expect = c.Find("expect");
         const OWJsonValue* address = expect ? expect->Find("address") : nullptr;
         const std::string text = Str(c, "text");
         const OWJsonValue* at = c.Find("index");
-        const size_t index = at && at->IsNumber() ? size_t(std::stoll(at->Text())) : std::string::npos;
-        t.Ok(index != std::string::npos && OWUnicode::IsAscii(std::string_view(text).substr(0, std::min(index, text.size()))),
-             "prose/" + name + ": the text is ASCII up to its index");
+        const size_t index =
+            at && at->IsNumber() ? ByteOffsetOfCodePoint(text, size_t(std::stoll(at->Text()))) : std::string::npos;
+        t.Ok(index != std::string::npos, "prose/" + name + ": its code point index is inside the text");
         std::optional<OWAddressFound> found = OWAddress::ReadAt(text, index);
         if (!address || address->IsNull()) {
             t.Ok(!found, "prose/" + name + ": found " + (found ? text.substr(index, found->end - index) : std::string()) +
@@ -176,6 +189,32 @@ OW_TEST(address_fixture_is_the_pinned_one) {
     t.Eq(parse, size_t(104), "104 parse cases");
     t.Eq(prose, size_t(76), "76 prose cases (57 at dist.123, four more at dist.126, fifteen at dist.127), each through ReadAt");
     t.Eq(refusals, size_t(75), "20 format refusals and 55 parse refusals");
+}
+
+// The prose loop walks each case's code point index into a byte offset. Where the text before the index is ASCII the
+// two agree; serial 127's four cases with a letter or a mark before it are where they differ, each byte offset counted
+// from its text by hand (é is two bytes, U+0301 two, U+1D49C four).
+OW_TEST(address_fixture_prose_index_walks_to_its_byte_offset) {
+    const OWJsonValue* cases = Fixture()->Find("cases");
+    t.Ok(cases && cases->IsArray(), "the fixture's cases");
+    if (!cases) return;
+    const std::vector<std::pair<std::string, size_t>> want = {
+        {"prose-start-glued-non-ascii-letter", 5},  // "café": index 4
+        {"prose-start-glued-combining-mark", 6},    // "cafe" + U+0301: index 5
+        {"prose-start-glued-astral-letter", 4},     // U+1D49C: index 1
+        {"prose-start-astral-letter-then-space", 5},  // U+1D49C and a space: index 2
+    };
+    std::vector<std::pair<std::string, size_t>> differ;
+    for (const OWJsonValue& c : cases->Items()) {
+        if (Str(c, "kind") != "prose") continue;
+        const std::string text = Str(c, "text");
+        const size_t index = size_t(std::stoll(c.Find("index")->Text()));
+        const size_t bytes = ByteOffsetOfCodePoint(text, index);
+        t.Ok(bytes != std::string::npos, Str(c, "name") + ": inside the text");
+        if (bytes != index) differ.emplace_back(Str(c, "name"), bytes);
+        else t.Ok(OWUnicode::IsAscii(std::string_view(text).substr(0, index)), Str(c, "name") + ": ASCII up to its index");
+    }
+    t.Ok(differ == want, "the four cases whose byte offset is not their code point index, at their bytes");
 }
 
 OW_TEST(address_type_words_and_refusals_are_the_fixtures) {
@@ -396,6 +435,63 @@ OW_TEST(address_read_at_the_sites_form_a_run_cut_inside_a_word_is_no_address) {
     t.Ok(!OWAddress::ReadAt(h + "hyper_ion."), "an underscore");
     std::optional<OWAddressFound> found = OWAddress::ReadAt(h + "hyperion\xF0\x9F\x9A\xA2");
     t.Eq(found ? found->end : size_t(0), (h + "hyperion").size(), "an emoji is no letter: the run ends before it");
+}
+
+// -- Where an address in prose begins (schema-dist serial 127) ----------------------------------------------------------
+// The mirror of the cut after a run: a letter of any script, a combining mark or an underscore before the prefix glues
+// it into a word, and the text there is prose; anything else, or the start of the text, does not. The character
+// before is decoded whole: in UTF-8 a letter past ASCII is two to four bytes, and one byte back is only its last.
+// Written ahead of the fixture and red first on the finder before the rule; the fixture's prose cases now carry the
+// rule, and these stay as this SDK's own vectors (each found at the prefix's byte by find, its end checked).
+
+OW_CASES(address_start_cases) {
+    const std::string id = "01a1d4ef-0000-7000-8000-000000000084";
+    struct Start {
+        const char* name;
+        std::string text, prefix;
+        bool found;
+    };
+    const std::vector<Start> starts = {
+        {"glued-letter", "Built the gate: elbow://object/" + id + ".", "ow://", false},
+        {"glued-underscore", "tag_ow://object/" + id + " here", "ow://", false},
+        {"glued-non-ascii-letter", "caf\xC3\xA9ow://object/" + id, "ow://", false},
+        {"glued-combining-mark", "e\xCC\x81ow://object/" + id, "ow://", false},
+        {"glued-astral-letter", "\xF0\x9D\x92\x9Cow://object/" + id, "ow://", false},
+        {"after-hyphen", "x-ow://object/" + id, "ow://", true},
+        {"after-digit", "3ow://object/" + id, "ow://", true},
+        {"after-space", "Built the gate: ow://object/" + id + ".", "ow://", true},
+        {"after-opening-bracket", "Built the gate (ow://object/" + id + ").", "ow://", true},
+        {"after-quote", "Built the gate \"ow://object/" + id + "\".", "ow://", true},
+        {"start-of-text", "ow://object/" + id + " was built.", "ow://", true},
+        {"glued-letter-site-form", "seehttps://www.onlyworlds.com/w/hyperion/object/" + id, "https://", false},
+    };
+    owtest::Cases out;
+    for (const Start& s : starts) {
+        out.emplace_back(std::string("address_start:") + s.name, [s, id](owtest::T& t) {
+            const size_t index = s.text.find(s.prefix);
+            std::optional<OWAddressFound> found = OWAddress::ReadAt(s.text, index);
+            if (!s.found) {
+                t.Ok(!found, "the start is glued to a word: found " +
+                                 (found ? s.text.substr(index, found->end - index) : std::string()) + " at " +
+                                 std::to_string(index));
+                return;
+            }
+            t.Ok(found.has_value(), "found an address at " + std::to_string(index));
+            if (!found) return;
+            t.Eq(found->reading.id.value_or(""), id, "the id");
+            t.Eq(found->end, index + ("ow://object/" + id).size(), "the address ends where its id ends");
+        });
+    }
+    return out;
+}
+
+OW_TEST(address_start_after_bytes_that_are_not_utf8_does_not_glue) {
+    // A stray continuation byte, or a lead whose sequence is cut short, is no letter: the address is found.
+    const std::string address = "ow://object/" + Element;
+    for (const std::string& before : {std::string("\x80"), std::string("\xE2\x80"), std::string("a\xBF\xBF\xBF")}) {
+        std::optional<OWAddressFound> found = OWAddress::ReadAt(before + address, before.size());
+        t.Ok(found && found->end == before.size() + address.size(), "found after " + std::to_string(before.size()) + " bytes");
+    }
 }
 
 OW_TEST(address_letters_and_marks_table) {
