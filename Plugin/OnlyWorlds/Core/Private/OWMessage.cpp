@@ -211,11 +211,13 @@ bool IsNote(const OWJsonValue& element) { return MatchesPair(element, Type, Note
 
 std::vector<std::string> RecipientsOf(const OWJsonValue& message) {
     std::vector<std::string> out;
-    if (!IsBody(message) || IsNote(message)) return out;
+    // Only a message has recipients, and each once, in its first place (serial 128).
+    if (!IsBody(message) || !IsMessage(message)) return out;
     const OWJsonValue* list = message.Find("characters");
+    std::set<std::string> met;
     if (list && list->IsArray())
         for (const OWJsonValue& c : list->Items())
-            if (c.IsString() && !c.Text().empty()) out.push_back(c.Text());
+            if (c.IsString() && !c.Text().empty() && met.insert(c.Text()).second) out.push_back(c.Text());
     return out;
 }
 

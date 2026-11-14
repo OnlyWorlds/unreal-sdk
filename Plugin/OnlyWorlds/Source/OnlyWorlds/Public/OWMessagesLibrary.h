@@ -114,8 +114,9 @@ public:
 	static bool IsNote(const UOWWorld* World, const FString& ElementId);
 
 	/**
-	 * The message's recipients: the Character ids in its characters, in the field's order, entries that are not ids left
-	 * out; none for a Note. An empty list is addressed to every member unless the server trimmed it (IsToEveryone).
+	 * The message's recipients: the Character ids in its characters, each once in the order of its first place, entries
+	 * that are not ids left out; only a message has any, none for a Note, a Story or any other element (serial 128). An
+	 * empty list is addressed to every member unless the server trimmed it (IsToEveryone).
 	 * Mirrors the TypeScript SDK's `recipientsOf`.
 	 */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Messages")

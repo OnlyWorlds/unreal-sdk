@@ -69,7 +69,8 @@ bool IsMessage(const OWJsonValue& element);
 // A Note: narrative + Note. Addressed to nobody, never unread, in no thread.
 bool IsNote(const OWJsonValue& element);
 
-// The recipients: the non-empty string ids in `characters`, as written; none for a Note.
+// The recipients: the non-empty string ids in `characters`, as written, each once in the order of its first place;
+// only a message has any (IsMessage): none for a Note, a Story or any other body (serial 128).
 std::vector<std::string> RecipientsOf(const OWJsonValue& message);
 // Addressed to the Character: its id in `characters`, or `characters` empty (absent, null or []) without the trimmed
 // mark naming `characters`. Never to "" and never a Note.

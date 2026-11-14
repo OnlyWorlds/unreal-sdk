@@ -106,6 +106,10 @@ void Case(owtest::T& t, const OWJsonValue& c, const OWJsonValue& world) {
         bool keyless = k && k->IsBool() && k->AsBool();
         Same(t, OWJsonValue::Bool(OWMessage::IsToEveryone(m, keyless)), c.Find("to_everyone"), name + " to everyone");
         Same(t, OptBool(OWMessage::HasUnseenRecipients(m, keyless)), c.Find("unseen_recipients"), name + " unseen");
+    } else if (kind == "recipients") {
+        OWJsonValue got = OWJsonValue::Array();
+        for (const std::string& id : OWMessage::RecipientsOf(at("message"))) got.Push(OWJsonValue::String(id));
+        Same(t, got, c.Find("recipients"), name);
     } else if (kind == "sent_by") {
         Same(t, OWJsonValue::Bool(OWMessage::IsSentBy(at("message"), Str(c, "character"))), c.Find("sent_by"), name);
     } else if (kind == "sender") {
@@ -224,7 +228,7 @@ OW_TEST(message_beside_the_fixture_is_npms) {
         for (const OWJsonValue& c : f->Items()) fixture_names.insert(Str(c, "name"));
     t.Eq(names.size(), size_t(79), "each name its own");
     for (const std::string& n : names) t.Ok(!fixture_names.count(n), "not a fixture case's name: " + n);
-    // recipientsOf: the non-empty string ids, as written (a repeat kept); none for a Note.
+    // recipientsOf: the non-empty string ids, as written, a repeat once in its first place (serial 128); none for a Note.
     const OWJsonValue* r = doc->Find("recipients");
     if (!r) return t.Fail("no recipients");
     OWJsonValue got = OWJsonValue::Array();
@@ -420,6 +424,24 @@ OW_TEST(message_empty_id_and_wrong_kinds_read_as_no) {
     t.Ok(OWMessage::ThreadOf({}, "").empty() && OWMessage::UnreadFor({}, "", nullptr, nullptr).empty(), "nothing");
     t.Ok(!OWMessage::NoteOf({}, "x", nullptr), "no Note");
     t.Ok(OWMessage::List(OWJsonValue::String("x")).empty(), "List of a string is empty");
+}
+
+// Serial 128: each recipient once, in its first place, ids compared as written; only a message has any.
+OW_TEST(message_recipients_each_once_and_only_a_message_has_any) {
+    auto of = [](const std::string& json) {
+        OWJsonParseResult r = OWJson::Parse(json);
+        return r.ok ? OWMessage::RecipientsOf(r.value) : std::vector<std::string>{"(unparsed)"};
+    };
+    using V = std::vector<std::string>;
+    t.Ok(of(R"({"type": "narrative", "supertype": "Message", "characters": ["a2", "a1", "a2", "a1"]})") == V{"a2", "a1"},
+         "each once, in its first place");
+    t.Ok(of(R"({"type": "narrative", "supertype": "Message", "characters": ["a1", "A1", "a1"]})") == V{"a1", "A1"},
+         "another spelling is another entry");
+    t.Ok(of(R"({"type": " Narrative ", "supertype": " MESSAGE ", "characters": ["a1"]})") == V{"a1"},
+         "the pair trimmed and folded");
+    t.Ok(of(R"({"characters": ["a1"]})").empty(), "no pair: not a message");
+    t.Ok(of(R"({"type": "narrative", "supertype": "Story", "characters": ["a1"]})").empty(), "a Story has none");
+    t.Ok(of(R"({"type": "narrative", "characters": ["a1"]})").empty(), "no supertype: not a message");
 }
 
 namespace {

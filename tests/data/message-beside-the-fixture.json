@@ -1,5 +1,5 @@
 {
- "about": "Message cases the profile's fixture does not hold, in the fixture's case shapes, each answer as npm @onlyworlds/sdk 4.102.4 gave it (its built dist, run 2026-10-29). A case without members reads the fixture's world. recipients: recipientsOf of one message and of a Note.",
+ "about": "Message cases the profile's fixture does not hold, in the fixture's case shapes, each answer as npm @onlyworlds/sdk 4.102.4 gave it (its built dist, run 2026-10-29). A case without members reads the fixture's world. recipients: recipientsOf of one message and of a Note; since serial 128 the message's repeat is answered once, in its first place (npm 4.102.4 kept it).",
  "cases": [
   {
    "kind": "pair",
@@ -1807,8 +1807,7 @@
   },
   "of": [
    "019a3b10-0000-7000-8000-0000000000a1",
-   "019a3b10-0000-7000-8000-0000000000a2",
-   "019a3b10-0000-7000-8000-0000000000a1"
+   "019a3b10-0000-7000-8000-0000000000a2"
   ],
   "note": {
    "id": "019a3b10-0000-7000-8000-00000000e121",

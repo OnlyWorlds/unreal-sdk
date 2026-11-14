@@ -359,7 +359,8 @@ namespace
 
 		const OWJsonValue* Single = Case.Find(Kind == TEXT("pair") ? "element" : "message");
 		const bool bSingle = Kind == TEXT("pair") || Kind == TEXT("addressed") || Kind == TEXT("unseen")
-			|| Kind == TEXT("everyone") || Kind == TEXT("sent_by") || Kind == TEXT("sender") || Kind == TEXT("edited");
+			|| Kind == TEXT("everyone") || Kind == TEXT("sent_by") || Kind == TEXT("sender") || Kind == TEXT("edited")
+			|| Kind == TEXT("recipients");
 		if (bSingle)
 		{
 			if (!Single || !Single->IsObject()) return NotCarried(TEXT("its body is not an object, so no element holds it"));
@@ -399,6 +400,14 @@ namespace
 				Check(S.Status == Want, TEXT("status"));
 				Check(S.Claimed == TextOf(Case.Find("claimed")), TEXT("claimed, got ") + S.Claimed);
 				Check(S.WrittenBy == TextOf(Case.Find("written_by")), TEXT("written_by, got ") + S.WrittenBy);
+			}
+			else if (Kind == TEXT("recipients"))
+			{
+				// Each once, in its first place; only a message has any (serial 128).
+				TArray<FString> Want;
+				Check(IdsOf(Case.Find("recipients"), Want), TEXT("the recipients the case gives"));
+				const TArray<FString> Got = CallRecipientsOf(Test, World, Id);
+				Check(Got == Want, TEXT("recipients ") + Show(Want) + TEXT(", got ") + Show(Got));
 			}
 			else
 			{
@@ -708,7 +717,7 @@ bool FOWMessagesBesideTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the three left out: ") + FString::Join(Tally.NotCarried, TEXT("; ")), Tally.NotCarried == Left);
 	TestEqual(TEXT("cases failed"), Tally.Failed, 0);
 
-	// recipientsOf: the non-empty string ids as written (a repeat kept); none for a Note.
+	// recipientsOf: the non-empty string ids as written, a repeat once in its first place (serial 128); none for a Note.
 	const OWJsonValue* R = Beside.Find("recipients");
 	if (!TestTrue(TEXT("the recipients block"), R && R->IsObject())) return false;
 	const OWJsonValue* Message = R->Find("message");

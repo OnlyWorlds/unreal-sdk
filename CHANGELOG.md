@@ -258,6 +258,12 @@ Nothing is released yet; the history before this file is in the git log.
   edge, in its first place, and a repeat to a target that is not a node is counted once in `edges_cut`. An edge's
   `index` is still its place in the list as served. Ids are compared as written. `OWLanding` reads the graph it is
   given, so a doubled target is one edge there too. The lens fixture's case 143 and the new graph case pass.
+- `OWMessage::RecipientsOf` (and the plugin's `UOWMessages::RecipientsOf`, which passes its list through) answers each
+  recipient once, and only for a message (serial 128): a `characters` list that names one Character twice gives that
+  Character once, in its first place, ids compared as written; a body that is not a message (`IsMessage`: a Story, a
+  Narrative with no supertype, a body with no pair) now has none, where before any body but a Note gave its list. The
+  message fixture's two `recipients` cases run in the core and the plugin. The suite's own recipients vector
+  (`tests/data/message-beside-the-fixture.json`, npm 4.102.4's answer, a repeat kept) now wants the repeat once.
 - Schema pin to `v0.34.1-dist.127` (`f50c526`): canonical `00.34.01` unchanged; no schema file or `schema.json`
   moved, and the generated files moved in their stamp only (the four generators' `--check` hold). The address page
   adds a start rule for an address found in prose (the entry below builds it here); its prose note now says a reader
