@@ -287,6 +287,15 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.131` (`0dc4ab7`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
+  `views.json` moved, and the generated files moved in their stamp only (the generators' `--check` hold). The room
+  page defines its fold exactly (simple case folding by the C and S rows of CaseFolding.txt 15.1, never lower-casing or
+  full folding), which the core's one fold already is, and the room and message pages say a value that is not an
+  object is no element: every reader answers for it as for a body that is not a message, and none fails, which
+  `OWLens::IsRoomElement` and every `OWMessage` reader already did. The fixtures gain cases: room 10 (48, 21 in the
+  room), message 17 (120), lens 7 (242, resolve 141), calendar 1 (78, 35 calendars, 229 steps); the core's tests
+  follow. The plugin's literals (`OnlyWorlds.Messages.Fixture`'s 103 carried, `OnlyWorlds.Lens.Fixture`'s 174 carried) are not
+  moved here: they wait for its build. The import-map page reads the room page's fold instead of copying it.
 - Schema pin to `v0.34.1-dist.130` (`f8c5ce8`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
   `views.json` moved, and the generated files moved in their stamp only (the generators' `--check` hold). The message
   page says the order a reader asks in: whether a body is a message first, then whether it was served without a

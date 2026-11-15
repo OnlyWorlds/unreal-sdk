@@ -1,4 +1,4 @@
-// OWMessage on the message profile's conformance fixture (schema-dist profiles/message.fixture.json, dist.130's copy):
+// OWMessage on the message profile's conformance fixture (schema-dist profiles/message.fixture.json, dist.131's copy):
 // every case by name, dispatched on its kind, each answer as the fixture gives it. Then tests/data/
 // message-beside-the-fixture.json: 79 cases in the fixture's own shapes that it does not hold (the pair's trim and fold,
 // addressing and sender edges, the read mark's ties and times, created_at readings, threads through a Note, the Note's
@@ -26,8 +26,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.130's MANIFEST.json records it.
-const char* const DistSha256 = "04a2ebf2c5efa66365a93b389e41f58c190aa0af250cbe87c86173872667a307";
+// The fixture's sha256 as dist.131's MANIFEST.json records it.
+const char* const DistSha256 = "418964e564db054c8e969a157f6e29e82499c04180d10bea8c55ac9f5bf5e279";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/message.fixture.json"; }
 std::string BesidePath() { return P().root + "/tests/data/message-beside-the-fixture.json"; }
@@ -162,7 +162,7 @@ owtest::Cases CasesOf(const std::shared_ptr<OWJsonValue>& doc, const std::string
 OW_TEST(message_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the message fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.130's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.131's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -180,17 +180,17 @@ OW_TEST(message_fixture_is_the_pinned_one) {
         ++kinds[Str(c, "kind")];
         names.insert(Str(c, "name"));
     }
-    t.Eq(cases->Size(), size_t(103), "103 cases");
-    t.Eq(names.size(), size_t(103), "each name its own");
-    const std::pair<const char*, size_t> want[] = {{"pair", 10},  {"addressed", 11}, {"sent_by", 3}, {"sender", 14},
-                                                   {"unread", 22}, {"mark", 18},     {"thread", 4},  {"unseen", 3},
-                                                   {"everyone", 4}, {"edited", 4},   {"note", 8},    {"recipients", 2}};
+    t.Eq(cases->Size(), size_t(120), "120 cases");
+    t.Eq(names.size(), size_t(120), "each name its own");
+    const std::pair<const char*, size_t> want[] = {{"pair", 15},  {"addressed", 12}, {"sent_by", 4}, {"sender", 15},
+                                                   {"unread", 24}, {"mark", 19},     {"thread", 5},  {"unseen", 4},
+                                                   {"everyone", 5}, {"edited", 5},   {"note", 9},    {"recipients", 3}};
     size_t sum = 0;
     for (const auto& [kind, n] : want) {
         t.Eq(kinds[kind], n, std::string("kind ") + kind);
         sum += n;
     }
-    t.Eq(sum, size_t(103), "the twelve kinds are every case");
+    t.Eq(sum, size_t(120), "the twelve kinds are every case");
     t.Eq(kinds.size(), size_t(12), "and no other kind");
 }
 
