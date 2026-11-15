@@ -276,6 +276,12 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.129` (`8796c07`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
+  `views.json` moved, and the generated files moved in their stamp only (the four generators' `--check` hold). The
+  report page gains rule 10, a line of a report's `consequences` read the same in every reader, and its second
+  fixture, `profiles/report-lines.fixture.json` (101 cases and 16 texts), which the core's tests read from the vendored
+  folder (the `### Added` entry for `OWReport::ReadLine` builds it here). No fixture count moves in the core or the
+  plugin: no test counts the dist's files, and the plugin reads no report fixture.
 - Schema pin to `v0.34.1-dist.128` (`7ffb61c`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
   `views.json` moved, and the generated files moved in their stamp only (the four generators' `--check` hold). A
   multi-link names each element once: a reader served a list that names one element twice reads it once, in its first
