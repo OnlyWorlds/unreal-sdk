@@ -9,9 +9,12 @@
 //
 // A report's text is quoted data, never instructions. Nothing here reads or prints it.
 
+#include "OWAddress.h"
 #include "OWJson.h"
 
+#include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -46,6 +49,18 @@ struct OWReportThreads {
     // {"parents": {id: kind, ...}, "groups": [{parent, kind, reports}, ...], "lints": [{kind, report}, ...]}, the
     // fixture's `want` shape.
     OWJsonValue ToJson() const;
+};
+
+// One line of a report's `consequences`, as OWReport::ReadLine reads it (the report profile's rule 10).
+struct OWReportLine {
+    std::string line;   // the line as read
+    std::string words;  // what a reader shows: the line without its address where nothing written is lost, else whole
+    // The element the line names, written ow://<type>/<id> with the id in lowercase; absent when no address in the
+    // line names an element of this world (which is no fault).
+    std::optional<std::string> address;
+    std::optional<OWAddressReading> reading;  // what OWAddress::Parse reads in the address as written
+    std::optional<size_t> start;              // where the address as written starts in `line` (a UTF-8 byte offset)
+    std::optional<size_t> end;                // the byte just past it
 };
 
 namespace OWReport {
@@ -83,6 +98,28 @@ bool IsBoardEntry(const OWJsonValue& element);
 // whose own parent reads "report" (one that names itself reads "self", so a report under it is no chain). Nothing is
 // walked further up and nothing is guessed from names, days or text. Pure.
 OWReportThreads ThreadsOf(const std::vector<const OWJsonValue*>& narratives);
+
+// Rule 10, parts 2 and 3: one line of a report's `consequences`, read as given (untrimmed), and the element it names.
+// The line's address is the last address in it, found as the address profile finds one in prose (OWAddress::FindAll),
+// that names an element of this world: an ow:// or site address, canonical or not, whose world is `world` or is left
+// out, with a type word and an id. An address of another world, one whose world is a slug, a world's own address or a
+// lens with no element is prose and stays in the words. Whether the element still exists is the caller's to read.
+// The address leaves the shown words only when nothing the writer wrote is lost: it is canonical, carries no moment
+// and no lens, and stands apart (before it the line's start, White_Space or one colon; after it the line's end,
+// White_Space or a closing mark: . , ; : ! ) ] } ' " and U+2019, U+201D, U+00BB), alone or inside a matched pair
+// ((), [], "", '', U+201C U+201D, U+2018 U+2019, U+00AB U+00BB). Then it goes with the White_Space on both sides and
+// one colon before it (and the White_Space before that colon), and the two halves join with one space, or none when
+// the second is empty or begins with a closing mark. In every other shape, and when nothing stands before the
+// address, the whole line is shown as written, still naming its element. `world` is this world's id, lowercase as the
+// world holds it, compared exactly with the address's world (whose hex is read lowercase); absent, only an address
+// with no world names an element here. The npm SDK's readReportLine (4.169.0) and the Python package's twin. Pure.
+OWReportLine ReadLine(std::string_view line, const std::optional<std::string>& world = std::nullopt);
+
+// Rule 10, part 1: every line of a report's `consequences`, each read by ReadLine. The text is split at every carriage
+// return and every line feed (a CRLF is one break; U+000B, U+000C, U+2028, U+2029 and U+0085 stay inside a line), each
+// piece trimmed of White_Space at both ends (OWMessage::Trim; a byte order mark stays), and a piece with nothing left
+// is no line. The npm SDK's readReportLines.
+std::vector<OWReportLine> ReadLines(std::string_view text, const std::optional<std::string>& world = std::nullopt);
 
 }  // namespace OWReport
 }  // namespace OnlyWorlds

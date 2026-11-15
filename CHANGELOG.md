@@ -7,6 +7,17 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- A line of a report's `consequences`, read as every reader reads it (the report profile's rule 10, schema-dist serial
+  129), in the core: `OWReport::ReadLine(line, world)` and `OWReport::ReadLines(text, world)`, the TypeScript SDK's
+  `readReportLine` and `readReportLines` (4.169.0) and the Python package's twins. `ReadLines` splits a text at every
+  carriage return and line feed, trims each piece of White_Space (`OWMessage::Trim`) and drops the empty ones.
+  `ReadLine` answers an `OWReportLine`: `line`, `address` (the element it names, `ow://<type>/<id>` with the id in
+  lowercase, or absent), `reading`, `start` and `end` (the address as written, UTF-8 byte offsets) and `words` (what a
+  reader shows). The line's address is the last one `OWAddress::FindAll` finds that names an element of this world; an
+  address of another world, a slug, a world alone or a lens with no element stays prose. The address leaves the words
+  only when it is canonical, has no moment and no lens, and stands apart, alone or in a matched pair, and a colon
+  before it goes too; otherwise the whole line is shown, still naming its element. The page's lines fixture (101 cases
+  and 16 texts) runs whole in `tests/test_report_lines.cpp`, read from the vendored folder. Not yet for Blueprints.
 - The default layout method, in the core: `OWLayout::LayoutByKind(graph)` and `OWLayout::LayoutAround(graph, focus,
   steps = 1)`, a world's default picture and one element's, the TypeScript SDK's `layoutByKind` and `layoutAround`
   (4.167.0) and the Python package's `layout_by_kind` and `layout_around` (0.127.0). By kind: each kind of element gets
