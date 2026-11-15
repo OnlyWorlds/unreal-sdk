@@ -287,6 +287,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.130` (`f8c5ce8`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
+  `views.json` moved, and the generated files moved in their stamp only (the generators' `--check` hold). The message
+  page says the order a reader asks in: whether a body is a message first, then whether it was served without a
+  credential, so a body that is not a message answers false from `OWMessage::HasUnseenRecipients` (and
+  `UOWMessages::HasUnseenRecipients`, `No`) whatever the key. Its fixture gains that case,
+  `keyless-non-message-is-not-unseen` (103 in all), which both already answered; no reader changes. The message
+  fixture's count moves in the core's test (103, `everyone` 4) and the plugin's (`OnlyWorlds.Messages.Fixture`, 103
+  carried). The report page names its readers of lines.
 - Schema pin to `v0.34.1-dist.129` (`8796c07`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
   `views.json` moved, and the generated files moved in their stamp only (the four generators' `--check` hold). The
   report page gains rule 10, a line of a report's `consequences` read the same in every reader, and its second
