@@ -39,7 +39,7 @@
   },
   {
    "kind": "pair",
-   "name": "pair-long-s-folds",
+   "name": "pair-long-s-in-mixed-case-folds",
    "element": {
     "type": "narrative",
     "supertype": "Me\u017f\u017fage"
