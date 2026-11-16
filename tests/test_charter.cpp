@@ -194,6 +194,19 @@ OW_TEST(charter_each_entry_is_written_in_the_pages_order) {
             t.Ok(d.Keys() == Keys{"id", "type", "name", "sentence", "hubs"}, "a Domain");
 }
 
+// The packet says the pair's own word (serial 134, amendment 1): a Charter stored as " Law " and a Domain stored as
+// "CONSTRUCT" are aids, written law and construct. Kills: the stored spelling.
+OW_TEST(charter_a_type_stored_in_another_spelling_is_written_as_the_pairs_word) {
+    OWReadingAids got = OWCharter::CharterOf(WorldWith(R"([
+        {"id": "019a7f00-0000-7000-8000-0000000002c0", "type": " Law ", "name": "Rules", "supertype": "Charter",
+         "x_charter_of": "w"},
+        {"id": "019a7f00-0000-7000-8000-0000000002c1", "type": "CONSTRUCT", "name": "Docks", "supertype": "Domain",
+         "x_charter_of": "w"}])"), Parse(R"({"rung": "owner"})"));
+    t.Eq(got.charter ? got.charter->type : std::string(), std::string("law"), "the Charter");
+    t.Eq(got.domains.size(), size_t(1), "the Domain is an aid");
+    t.Eq(got.domains.size() == 1 ? got.domains[0].type : std::string(), std::string("construct"), "the Domain");
+}
+
 OW_TEST(charter_tables_are_the_fixtures) {
     auto doc = Fixture();
     const OWJsonValue* pairs = doc->Find("pairs");

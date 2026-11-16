@@ -27,6 +27,14 @@ const OWJsonValue* Get(const OWJsonValue& body, std::string_view key) {
 
 std::string Text(const OWJsonValue* v) { return v && v->IsString() ? v->Text() : std::string(); }
 
+// The packet's type for an aid: its pair's own word as the page's table writes it (law, construct), whatever spelling
+// the element's type is stored in (serial 134).
+std::string PairType(std::string_view aid) {
+    for (const OWCharter::OWCharterPair& p : OWCharter::Pairs())
+        if (aid == p.aid) return p.type;
+    return std::string();
+}
+
 // A served entry's type: as served when it is a string, else the aid's fixed type (a server from before serial 134).
 std::string TypeOr(const OWJsonValue& entry, const char* fixed) {
     const OWJsonValue* t = Get(entry, "type");
@@ -242,7 +250,7 @@ OWReadingAids CharterOf(const OWJsonValue& world, const OWJsonValue& reader) {
         const OWJsonValue& el = *s.els[*law];
         OWCharterLaw c;
         c.id = s.ids[*law];
-        c.type = s.types[*law];
+        c.type = PairType("charter");
         c.name = Text(Get(el, "name"));
         const OWJsonValue* rules = Get(el, RulesField);
         if (rules && !rules->IsNull()) c.rules = *rules;
@@ -252,7 +260,7 @@ OWReadingAids CharterOf(const OWJsonValue& world, const OWJsonValue& reader) {
     std::vector<size_t> domains = Marked(s, "domain");
     std::vector<size_t> order;
     if (std::optional<size_t> g = Newest(s, Marked(s, "guide"))) {
-        out.guide = OWCharterGuide{s.ids[*g], s.types[*g], Text(Get(*s.els[*g], "name"))};
+        out.guide = OWCharterGuide{s.ids[*g], PairType("guide"), Text(Get(*s.els[*g], "name"))};
         // The Guide's constructs as this reader is served them: a stub's are none.
         if (const OWJsonValue* named = Get(s.served(*g), "constructs"); named && named->IsArray())
             for (const OWJsonValue& entry : named->Items()) {
@@ -273,8 +281,8 @@ OWReadingAids CharterOf(const OWJsonValue& world, const OWJsonValue& reader) {
     order.insert(order.end(), rest.begin(), rest.end());
     for (size_t d : order) {
         const OWJsonValue& body = s.served(d);
-        out.domains.push_back({s.ids[d], s.types[d], Text(Get(body, "name")), FirstLine(Text(Get(body, "description"))),
-            Hubs(s, s.ids[d], body)});
+        out.domains.push_back({s.ids[d], PairType("domain"), Text(Get(body, "name")),
+            FirstLine(Text(Get(body, "description"))), Hubs(s, s.ids[d], body)});
     }
     return out;
 }

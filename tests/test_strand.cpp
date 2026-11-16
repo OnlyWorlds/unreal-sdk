@@ -269,6 +269,19 @@ OW_TEST(strand_a_slot_without_a_name_reads_an_empty_string) {
     }
 }
 
+// A type is matched to a slot trimmed and folded, and the slot says its kind word (serial 134, amendment 1): the story
+// stored as " Narrative " fills the slot as narrative. Kills: the stored spelling written.
+OW_TEST(strand_a_story_stored_in_another_spelling_fills_its_slot_as_narrative) {
+    OWJsonValue world = World("harbour");
+    if (OWJsonValue* elements = world.Find("elements"))
+        for (OWJsonValue& el : elements->Items())
+            if (Str(el, "id") == Story) el.Set("type", OWJsonValue::String(" Narrative "));
+    OWWorldStrand got = OWStrand::StrandOf(world, Owner());
+    t.Eq(got.narrative ? got.narrative->type : std::string(), std::string("narrative"), "the slot's kind word");
+    const OWJsonValue want = OWStrand::StrandOf(World("harbour"), Owner()).ToJson();
+    Same(t, got.ToJson(), &want, "the strand as for narrative");
+}
+
 // Each filled slot is written {id, type, name}, the page's order (serial 134), its type the slot's kind and now a
 // location: the fixture's key order carries no meaning, so the replay cannot see the written order.
 OW_TEST(strand_a_filled_slot_is_id_type_name) {

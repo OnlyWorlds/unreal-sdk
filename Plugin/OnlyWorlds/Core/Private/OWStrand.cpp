@@ -74,9 +74,10 @@ OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader) {
         std::optional<size_t> i = s.Find(kind, id->Text());
         return i && s.view[*i] ? i : std::nullopt;
     };
-    auto slot = [&](size_t i) {
+    // The slot's type is its kind word, never the stored spelling (serial 134): seen matched the type folded.
+    auto slot = [&](size_t i, const char* kind) {
         const OWJsonValue* name = Get(s.served(i), "name");
-        return OWStrandSlot{s.ids[i], s.types[i], name && name->IsString() ? name->Text() : std::string()};
+        return OWStrandSlot{s.ids[i], kind, name && name->IsString() ? name->Text() : std::string()};
     };
     // Membership in the list the holder is served, never its position.
     auto listed = [&](size_t holder, const char* field, const std::string& id) {
@@ -89,17 +90,18 @@ OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader) {
 
     std::optional<size_t> story = seen(named[0], "narrative");
     if (!story) return out;  // a strand hangs off its story
-    out.narrative = slot(*story);
+    out.narrative = slot(*story, "narrative");
     if (std::optional<size_t> happening = seen(named[1], "event");
         happening && listed(*story, "events", named[1]->Text())) {
-        out.event = slot(*happening);
+        out.event = slot(*happening, "event");
         if (std::optional<size_t> then = seen(named[2], "location");
             then && listed(*happening, "locations", named[2]->Text()))
-            out.location = slot(*then);
+            out.location = slot(*then, "location");
     }
     if (std::optional<size_t> hero = seen(Get(s.served(*story), "protagonist"), "character")) {
-        out.character = slot(*hero);
-        if (std::optional<size_t> where = seen(Get(s.served(*hero), "location"), "location")) out.now = slot(*where);
+        out.character = slot(*hero, "character");
+        if (std::optional<size_t> where = seen(Get(s.served(*hero), "location"), "location"))
+            out.now = slot(*where, "location");
     }
     if (out.now && out.location) out.same = out.now->id == out.location->id;
     return out;
