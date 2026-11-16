@@ -1,5 +1,5 @@
-// OWCharter on the charter profile's conformance fixture (schema-dist profiles/charter.fixture.json, dist.126's copy, its
-// sha256 held to MANIFEST.json): the pair-and-mark test, and the packet over the fixture's nine worlds, their readers
+// OWCharter on the charter profile's conformance fixture (schema-dist profiles/charter.fixture.json, serial 134's staged
+// copy, its sha256 held to the staged one): the pair-and-mark test, and the packet over the fixture's nine worlds, their readers
 // and the cases that bring a world of their own. The profile's tables are held equal to the fixture's, the hub fields
 // to the Construct's link fields; then readings the fixture leaves open.
 
@@ -21,10 +21,12 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.126's MANIFEST.json records it.
-const char* const DistSha256 = "459991acf33e1b829d5fa3ff4d262485a632f1f7cbc67d847e8bbdb6d78122a7";
+// Serial 134 (each packet entry carries its type) is staged, not published: its fixture is held apart in
+// tests/data/serial-134/ with the staged sha256, so the vendored dist and its MANIFEST.json stay the pin's. When the
+// pin reaches 134, read the dist's copy again, hold it to MANIFEST.json again, and drop the staged copy.
+const char* const DistSha256 = "b87b5e88e81d60e971b0620a1d9fb0367d8b5d03bcd5671777208dfb078f8f01";
 
-std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/charter.fixture.json"; }
+std::string FixturePath() { return P().root + "/tests/data/serial-134/charter.fixture.json"; }
 
 std::shared_ptr<OWJsonValue> Fixture() {
     static std::shared_ptr<OWJsonValue> doc = [] {
@@ -149,13 +151,7 @@ OWJsonValue WorldWith(std::string_view elements, std::string_view extra = "") {
 OW_TEST(charter_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the charter fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.126's");
-    OWBytes manifest;
-    OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
-    OWJsonParseResult m = OWJson::Parse(manifest);
-    const OWJsonValue* files = m.ok ? m.value.Find("files") : nullptr;
-    const OWJsonValue* sha = files ? files->Find("profiles/charter.fixture.json") : nullptr;
-    t.Ok(sha && sha->IsString() && sha->Text() == DistSha256, "MANIFEST.json records the same sha256");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are serial 134's staged copy");
     auto doc = Fixture();
     t.Eq(Str(*doc, "profile"), std::string("charter"), "the charter profile's fixture");
     const OWJsonValue* cases = doc->Find("cases");
@@ -177,6 +173,25 @@ OW_TEST(charter_fixture_is_the_pinned_one) {
     t.Eq(run, size_t(41), "every case runs here");
     const OWJsonValue* worlds = doc->Find("worlds");
     t.Eq(worlds ? worlds->Size() : size_t(0), size_t(9), "nine worlds");
+}
+
+// Each entry is written in the page's order, type beside id (serial 134): the fixture's key order carries no meaning,
+// so the replay's whole compare cannot see the written order.
+OW_TEST(charter_each_entry_is_written_in_the_pages_order) {
+    const OWJsonValue* worlds = Fixture()->Find("worlds");
+    const OWJsonValue* harbour = worlds ? worlds->Find("harbour") : nullptr;
+    if (!harbour) return t.Fail("no harbour world");
+    OWJsonValue got = OWCharter::CharterOf(*harbour, Parse(R"({"rung": "owner"})")).ToJson();
+    using Keys = std::vector<std::string>;
+    const OWJsonValue* charter = got.Find("charter");
+    const OWJsonValue* guide = got.Find("guide");
+    const OWJsonValue* domains = got.Find("domains");
+    t.Ok(charter && charter->IsObject() && charter->Keys() == Keys{"id", "type", "name", "rules", "skill"}, "the Charter");
+    t.Ok(guide && guide->IsObject() && guide->Keys() == Keys{"id", "type", "name"}, "the Guide");
+    t.Ok(domains && domains->IsArray() && !domains->Items().empty(), "harbour has Domains");
+    if (domains && domains->IsArray())
+        for (const OWJsonValue& d : domains->Items())
+            t.Ok(d.Keys() == Keys{"id", "type", "name", "sentence", "hubs"}, "a Domain");
 }
 
 OW_TEST(charter_tables_are_the_fixtures) {

@@ -1,5 +1,5 @@
-// OWStrand on the strand profile's conformance fixture (schema-dist profiles/strand.fixture.json, dist.123's copy, its
-// sha256 held to MANIFEST.json): the six slots over the fixture's 24 worlds and their readers, every case by name,
+// OWStrand on the strand profile's conformance fixture (schema-dist profiles/strand.fixture.json, serial 134's staged
+// copy, its sha256 held to the staged one): the six slots over the fixture's 24 worlds and their readers, every case by name,
 // and the mark held equal to the fixture's; then readings the fixture leaves open (the public rung on a closed and an
 // open world, the mark shapes that are no mark with an empty-string member among them, a story alone, a non-list
 // multi-link, a nameless slot, a caller's mistake, a reading that never moves the world).
@@ -20,12 +20,14 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.123's MANIFEST.json records it.
-const char* const DistSha256 = "d0f9bb23e9f538c99165b3e590d4da33dc329fa9ee565e0875d2fa4a09e2979d";
+// Serial 134 (each filled slot carries its type) is staged, not published: its fixture is held apart in
+// tests/data/serial-134/ with the staged sha256, so the vendored dist and its MANIFEST.json stay the pin's. When the
+// pin reaches 134, read the dist's copy again, hold it to MANIFEST.json again, and drop the staged copy.
+const char* const DistSha256 = "c8586c1745c9d8ec6532c2283a64886fcb7910ad825c281eb7d5181d6e5f16ee";
 
 const char* const Story = "019a7f00-0000-7000-8000-000000000301";
 
-std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/strand.fixture.json"; }
+std::string FixturePath() { return P().root + "/tests/data/serial-134/strand.fixture.json"; }
 
 std::shared_ptr<OWJsonValue> Fixture() {
     static std::shared_ptr<OWJsonValue> doc = [] {
@@ -124,13 +126,7 @@ OWJsonValue Owner() { return Parse(R"({"rung": "owner"})"); }
 OW_TEST(strand_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the strand fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.123's");
-    OWBytes manifest;
-    OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
-    OWJsonParseResult m = OWJson::Parse(manifest);
-    const OWJsonValue* files = m.ok ? m.value.Find("files") : nullptr;
-    const OWJsonValue* sha = files ? files->Find("profiles/strand.fixture.json") : nullptr;
-    t.Ok(sha && sha->IsString() && sha->Text() == DistSha256, "MANIFEST.json records the same sha256");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are serial 134's staged copy");
     auto doc = Fixture();
     t.Eq(Str(*doc, "profile"), std::string("strand"), "the strand profile's fixture");
     const OWJsonValue* cases = doc->Find("cases");
@@ -231,10 +227,10 @@ OW_TEST(strand_a_story_alone_is_a_strand_begun) {
         "{\"narrative\": " + n + ", \"event\": null, \"location\": " + l + "}",
         "{\"narrative\": " + n + ", \"location\": " + l + "}",
     };
-    const OWJsonValue want = Parse(R"({"narrative": {"id": "019a7f00-0000-7000-8000-000000000301",
+    const OWJsonValue want = Parse(R"({"narrative": {"id": "019a7f00-0000-7000-8000-000000000301", "type": "narrative",
         "name": "The Night the Lighthouse Went Dark"}, "event": null, "location": null,
-        "character": {"id": "019a7f00-0000-7000-8000-000000000331", "name": "Ilse the Keeper"},
-        "now": {"id": "019a7f00-0000-7000-8000-000000000322", "name": "The Docks"}, "same": null})");
+        "character": {"id": "019a7f00-0000-7000-8000-000000000331", "type": "character", "name": "Ilse the Keeper"},
+        "now": {"id": "019a7f00-0000-7000-8000-000000000322", "type": "location", "name": "The Docks"}, "same": null})");
     for (const std::string& mark : begun) {
         OWJsonValue world = World("harbour");
         world.Set(OWStrand::Mark, Parse(mark));
@@ -258,7 +254,7 @@ OW_TEST(strand_a_multi_link_that_is_not_a_list_is_empty) {
 
 // A slot whose element has no name, a null one or one that is not text reads an empty string, never null (serial 99).
 OW_TEST(strand_a_slot_without_a_name_reads_an_empty_string) {
-    const OWJsonValue want = Parse(R"({"id": "019a7f00-0000-7000-8000-000000000322", "name": ""})");
+    const OWJsonValue want = Parse(R"({"id": "019a7f00-0000-7000-8000-000000000322", "type": "location", "name": ""})");
     for (int shape = 0; shape < 3; ++shape) {
         OWJsonValue world = World("harbour");
         if (OWJsonValue* elements = world.Find("elements"))
@@ -271,6 +267,18 @@ OW_TEST(strand_a_slot_without_a_name_reads_an_empty_string) {
         const OWJsonValue* now = got.Find("now");
         t.Ok(now && Equal(*now, want), "name shape " + std::to_string(shape) + ": " + (now ? Compact(*now) : "none"));
     }
+}
+
+// Each filled slot is written {id, type, name}, the page's order (serial 134), its type the slot's kind and now a
+// location: the fixture's key order carries no meaning, so the replay cannot see the written order.
+OW_TEST(strand_a_filled_slot_is_id_type_name) {
+    OWJsonValue got = OWStrand::StrandOf(World("harbour"), Owner()).ToJson();
+    for (const char* slot : {"narrative", "event", "location", "character", "now"}) {
+        const OWJsonValue* v = got.Find(slot);
+        t.Ok(v && v->IsObject() && v->Keys() == std::vector<std::string>{"id", "type", "name"}, std::string(slot));
+    }
+    const OWJsonValue* now = got.Find("now");
+    t.Eq(now && now->IsObject() ? Str(*now, "type") : std::string(), std::string("location"), "now a location");
 }
 
 // A caller's mistake is no reading: the message names it, and the strand is empty.

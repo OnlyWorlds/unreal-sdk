@@ -28,6 +28,7 @@ OWJsonValue SlotJson(const std::optional<OWStrandSlot>& slot) {
     if (!slot) return OWJsonValue::Null();
     OWJsonValue out = OWJsonValue::Object();
     out.Set("id", OWJsonValue::String(slot->id));
+    out.Set("type", OWJsonValue::String(slot->type));
     out.Set("name", OWJsonValue::String(slot->name));
     return out;
 }
@@ -75,7 +76,7 @@ OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader) {
     };
     auto slot = [&](size_t i) {
         const OWJsonValue* name = Get(s.served(i), "name");
-        return OWStrandSlot{s.ids[i], name && name->IsString() ? name->Text() : std::string()};
+        return OWStrandSlot{s.ids[i], s.types[i], name && name->IsString() ? name->Text() : std::string()};
     };
     // Membership in the list the holder is served, never its position.
     auto listed = [&](size_t holder, const char* field, const std::string& id) {
@@ -106,19 +107,22 @@ OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader) {
 
 std::optional<OWWorldStrand> Served(const OWJsonValue* slots) {
     if (!slots || !slots->IsObject()) return std::nullopt;
-    auto slot = [&](const char* key) -> std::optional<OWStrandSlot> {
+    // A slot served with no string type (a server from before serial 134) reads the kind the slot holds.
+    auto slot = [&](const char* key, const char* kind) -> std::optional<OWStrandSlot> {
         const OWJsonValue* body = Get(*slots, key);
         const OWJsonValue* id = body ? Get(*body, "id") : nullptr;
         if (!id || !id->IsString()) return std::nullopt;
+        const OWJsonValue* type = Get(*body, "type");
         const OWJsonValue* name = Get(*body, "name");
-        return OWStrandSlot{id->Text(), name && name->IsString() ? name->Text() : std::string()};
+        return OWStrandSlot{id->Text(), type && type->IsString() ? type->Text() : std::string(kind),
+            name && name->IsString() ? name->Text() : std::string()};
     };
     OWWorldStrand out;
-    out.narrative = slot("narrative");
-    out.event = slot("event");
-    out.location = slot("location");
-    out.character = slot("character");
-    out.now = slot("now");
+    out.narrative = slot("narrative", "narrative");
+    out.event = slot("event", "event");
+    out.location = slot("location", "location");
+    out.character = slot("character", "character");
+    out.now = slot("now", "location");
     if (const OWJsonValue* same = Get(*slots, "same"); same && same->IsBool()) out.same = same->AsBool();
     return out;
 }

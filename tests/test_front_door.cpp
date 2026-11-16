@@ -22,11 +22,11 @@ OWJsonValue Parse(std::string_view text) {
     return r.ok ? std::move(r.value) : OWJsonValue();
 }
 
-const char* const Full = R"({"narrative": {"id": "019a7f00-0000-7000-8000-000000000301", "name": "The Night the Lighthouse Went Dark"},
-    "event": {"id": "019a7f00-0000-7000-8000-000000000311", "name": "The lamp fails"},
-    "location": {"id": "019a7f00-0000-7000-8000-000000000321", "name": "The Lighthouse"},
-    "character": {"id": "019a7f00-0000-7000-8000-000000000331", "name": "Ilse the Keeper"},
-    "now": {"id": "019a7f00-0000-7000-8000-000000000322", "name": "The Docks"},
+const char* const Full = R"({"narrative": {"id": "019a7f00-0000-7000-8000-000000000301", "type": "narrative", "name": "The Night the Lighthouse Went Dark"},
+    "event": {"id": "019a7f00-0000-7000-8000-000000000311", "type": "event", "name": "The lamp fails"},
+    "location": {"id": "019a7f00-0000-7000-8000-000000000321", "type": "location", "name": "The Lighthouse"},
+    "character": {"id": "019a7f00-0000-7000-8000-000000000331", "type": "character", "name": "Ilse the Keeper"},
+    "now": {"id": "019a7f00-0000-7000-8000-000000000322", "type": "location", "name": "The Docks"},
     "same": false})";
 
 const char* const NoStrand =
@@ -34,9 +34,9 @@ const char* const NoStrand =
 
 // A GET /me answer whose packet carries `strand` (nullptr: a packet from before serial 100, with no key).
 OWJsonValue Me(const char* strand) {
-    std::string aids = R"({"charter": {"id": "law-1", "name": "House rules", "rules": [{"rule": "no-orphans"}], "skill": ["obj-1"]},
-        "guide": {"id": "con-g", "name": "Start here"},
-        "domains": [{"id": "con-d1", "name": "The Harbour", "sentence": "Where the ships come in.",
+    std::string aids = R"({"charter": {"id": "law-1", "type": "law", "name": "House rules", "rules": [{"rule": "no-orphans"}], "skill": ["obj-1"]},
+        "guide": {"id": "con-g", "type": "construct", "name": "Start here"},
+        "domains": [{"id": "con-d1", "type": "construct", "name": "The Harbour", "sentence": "Where the ships come in.",
                      "hubs": [{"type": "location", "id": "loc-1"}]}])";
     if (strand) aids += std::string(R"(, "strand": )") + strand;
     aids += "}";
@@ -130,14 +130,39 @@ OW_TEST(front_door_a_served_slot_is_read_as_served) {
 
 OW_TEST(front_door_an_agents_join_answer_carries_the_strand) {
     // keel's test: the hero hidden from the new seat, so the hero's two slots and same are null.
-    const char* const partial = R"({"narrative": {"id": "n-1", "name": "The Gang"}, "event": {"id": "e-1", "name": "The Crossing"},
-        "location": {"id": "loc-1", "name": "The River"}, "character": null, "now": null, "same": null})";
+    const char* const partial = R"({"narrative": {"id": "n-1", "type": "narrative", "name": "The Gang"},
+        "event": {"id": "e-1", "type": "event", "name": "The Crossing"},
+        "location": {"id": "loc-1", "type": "location", "name": "The River"}, "character": null, "now": null, "same": null})";
     OWJsonValue joined = Parse(std::string(R"({"kind": "agent", "key": "ow_w_seat", "front_door": {"charter": null},
         "reading_aids": {"charter": null, "guide": null, "domains": [], "strand": )") + partial + "}}");
     std::optional<OWReadingAids> aids = OWCharter::Served(joined);
     if (!aids || !aids->strand) return t.Fail("no strand");
     t.Ok(!aids->charter, "no Charter");
     t.Ok(aids->strand->ToJson() == Parse(partial), "the strand as the seat reads it");
+}
+
+OW_TEST(front_door_entries_served_without_a_type_read_their_fixed_type) {
+    // A keel from before serial 134 serves {id, name}: each aid's type is fixed by its pair, each slot's by its slot.
+    std::optional<OWReadingAids> aids = OWCharter::Served(Parse(R"({"reading_aids": {
+        "charter": {"id": "law-1", "name": "House rules", "rules": [], "skill": []},
+        "guide": {"id": "con-g", "name": "Start here"},
+        "domains": [{"id": "con-d1", "name": "The Harbour", "sentence": "", "hubs": []}],
+        "strand": {"narrative": {"id": "n-1", "name": "N"}, "event": {"id": "e-1", "name": "E"},
+            "location": {"id": "loc-1", "name": "L"}, "character": {"id": "c-1", "name": "C"},
+            "now": {"id": "loc-2", "name": "M"}, "same": false}}})"));
+    if (!aids || !aids->charter || !aids->guide || aids->domains.size() != 1 || !aids->strand) return t.Fail("no packet");
+    t.Eq(aids->charter->type, std::string("law"), "the Charter");
+    t.Eq(aids->guide->type, std::string("construct"), "the Guide");
+    t.Eq(aids->domains[0].type, std::string("construct"), "a Domain");
+    const OWWorldStrand& s = *aids->strand;
+    t.Ok(s.narrative && s.narrative->type == "narrative" && s.event && s.event->type == "event" && s.location &&
+             s.location->type == "location" && s.character && s.character->type == "character" && s.now &&
+             s.now->type == "location",
+         "each slot's kind, now a location");
+    const OWJsonValue packet = aids->ToJson();
+    t.Eq(Keys(*packet.Find("charter")), std::string("id,type,name,rules,skill"), "the page's order");
+    t.Eq(Keys(packet.Find("domains")->Items()[0]), std::string("id,type,name,sentence,hubs"), "the page's order");
+    t.Eq(Keys(*packet.Find("strand")->Find("now")), std::string("id,type,name"), "the page's order");
 }
 
 OW_TEST(front_door_an_answer_without_the_packet_reads_none) {

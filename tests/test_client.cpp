@@ -735,9 +735,10 @@ OW_TEST(client_an_answer_that_is_not_the_body) {
 OW_TEST(client_me_and_its_reading_aids) {
     auto fake = Fake(
         "{\"world\":{\"id\":\"w1\",\"name\":\"W\"},\"scope\":\"write\",\"kind\":\"owner\",\"role\":\"owner\","
-        "\"membership\":null,\"character\":null,\"lenses\":[],\"reading_aids\":{\"charter\":{\"id\":\"l1\",\"name\":"
-        "\"House\",\"rules\":[],\"skill\":[]},\"guide\":null,\"domains\":[{\"id\":\"d1\",\"name\":\"Port\",\"sentence\":"
-        "\"S\",\"hubs\":[]}],\"strand\":{\"narrative\":{\"id\":\"n1\",\"name\":\"Tale\"},\"event\":null,\"location\":"
+        "\"membership\":null,\"character\":null,\"lenses\":[],\"reading_aids\":{\"charter\":{\"id\":\"l1\",\"type\":"
+        "\"law\",\"name\":\"House\",\"rules\":[],\"skill\":[]},\"guide\":null,\"domains\":[{\"id\":\"d1\",\"type\":"
+        "\"construct\",\"name\":\"Port\",\"sentence\":\"S\",\"hubs\":[]}],\"strand\":{\"narrative\":{\"id\":\"n1\","
+        "\"type\":\"narrative\",\"name\":\"Tale\"},\"event\":null,\"location\":"
         "null,\"character\":null,\"now\":null,\"same\":null}}}");
     Got<OWJsonValue> g;
     Make(fake, "ow_w_k", "4821").Me(g.H());

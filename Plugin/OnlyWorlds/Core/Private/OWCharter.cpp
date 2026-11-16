@@ -27,6 +27,12 @@ const OWJsonValue* Get(const OWJsonValue& body, std::string_view key) {
 
 std::string Text(const OWJsonValue* v) { return v && v->IsString() ? v->Text() : std::string(); }
 
+// A served entry's type: as served when it is a string, else the aid's fixed type (a server from before serial 134).
+std::string TypeOr(const OWJsonValue& entry, const char* fixed) {
+    const OWJsonValue* t = Get(entry, "type");
+    return t && t->IsString() ? t->Text() : std::string(fixed);
+}
+
 // The aid's word for element i ("" for none): the pair and the mark, read from the body as the owner is served it,
 // since a stub serves no mark.
 std::string AidOf(const OWLensView::Sight& s, size_t i) {
@@ -142,6 +148,7 @@ OWJsonValue OWReadingAids::ToJson() const {
     if (charter) {
         OWJsonValue c = OWJsonValue::Object();
         c.Set("id", OWJsonValue::String(charter->id));
+        c.Set("type", OWJsonValue::String(charter->type));
         c.Set("name", OWJsonValue::String(charter->name));
         c.Set("rules", charter->rules);
         OWJsonValue skill = OWJsonValue::Array();
@@ -154,6 +161,7 @@ OWJsonValue OWReadingAids::ToJson() const {
     if (guide) {
         OWJsonValue g = OWJsonValue::Object();
         g.Set("id", OWJsonValue::String(guide->id));
+        g.Set("type", OWJsonValue::String(guide->type));
         g.Set("name", OWJsonValue::String(guide->name));
         out.Set("guide", std::move(g));
     } else {
@@ -163,6 +171,7 @@ OWJsonValue OWReadingAids::ToJson() const {
     for (const OWCharterDomain& d : domains) {
         OWJsonValue row = OWJsonValue::Object();
         row.Set("id", OWJsonValue::String(d.id));
+        row.Set("type", OWJsonValue::String(d.type));
         row.Set("name", OWJsonValue::String(d.name));
         row.Set("sentence", OWJsonValue::String(d.sentence));
         OWJsonValue hubs = OWJsonValue::Array();
@@ -233,6 +242,7 @@ OWReadingAids CharterOf(const OWJsonValue& world, const OWJsonValue& reader) {
         const OWJsonValue& el = *s.els[*law];
         OWCharterLaw c;
         c.id = s.ids[*law];
+        c.type = s.types[*law];
         c.name = Text(Get(el, "name"));
         const OWJsonValue* rules = Get(el, RulesField);
         if (rules && !rules->IsNull()) c.rules = *rules;
@@ -242,7 +252,7 @@ OWReadingAids CharterOf(const OWJsonValue& world, const OWJsonValue& reader) {
     std::vector<size_t> domains = Marked(s, "domain");
     std::vector<size_t> order;
     if (std::optional<size_t> g = Newest(s, Marked(s, "guide"))) {
-        out.guide = OWCharterGuide{s.ids[*g], Text(Get(*s.els[*g], "name"))};
+        out.guide = OWCharterGuide{s.ids[*g], s.types[*g], Text(Get(*s.els[*g], "name"))};
         // The Guide's constructs as this reader is served them: a stub's are none.
         if (const OWJsonValue* named = Get(s.served(*g), "constructs"); named && named->IsArray())
             for (const OWJsonValue& entry : named->Items()) {
@@ -263,8 +273,8 @@ OWReadingAids CharterOf(const OWJsonValue& world, const OWJsonValue& reader) {
     order.insert(order.end(), rest.begin(), rest.end());
     for (size_t d : order) {
         const OWJsonValue& body = s.served(d);
-        out.domains.push_back(
-            {s.ids[d], Text(Get(body, "name")), FirstLine(Text(Get(body, "description"))), Hubs(s, s.ids[d], body)});
+        out.domains.push_back({s.ids[d], s.types[d], Text(Get(body, "name")), FirstLine(Text(Get(body, "description"))),
+            Hubs(s, s.ids[d], body)});
     }
     return out;
 }
@@ -278,7 +288,7 @@ std::optional<OWReadingAids> Served(const OWJsonValue& answer) {
     if (!aids || !aids->IsObject()) return std::nullopt;
     OWReadingAids out;
     if (const OWJsonValue* c = Get(*aids, "charter"); c && c->IsObject()) {
-        OWCharterLaw law{Text(Get(*c, "id")), Text(Get(*c, "name"))};
+        OWCharterLaw law{Text(Get(*c, "id")), TypeOr(*c, "law"), Text(Get(*c, "name"))};
         if (const OWJsonValue* rules = Get(*c, "rules"); rules && !rules->IsNull()) law.rules = *rules;
         if (const OWJsonValue* skill = Get(*c, "skill"); skill && skill->IsArray())
             for (const OWJsonValue& id : skill->Items())
@@ -286,11 +296,12 @@ std::optional<OWReadingAids> Served(const OWJsonValue& answer) {
         out.charter = std::move(law);
     }
     if (const OWJsonValue* g = Get(*aids, "guide"); g && g->IsObject())
-        out.guide = OWCharterGuide{Text(Get(*g, "id")), Text(Get(*g, "name"))};
+        out.guide = OWCharterGuide{Text(Get(*g, "id")), TypeOr(*g, "construct"), Text(Get(*g, "name"))};
     if (const OWJsonValue* list = Get(*aids, "domains"); list && list->IsArray())
         for (const OWJsonValue& d : list->Items()) {
             if (!d.IsObject()) continue;
-            OWCharterDomain domain{Text(Get(d, "id")), Text(Get(d, "name")), Text(Get(d, "sentence")), {}};
+            OWCharterDomain domain{
+                Text(Get(d, "id")), TypeOr(d, "construct"), Text(Get(d, "name")), Text(Get(d, "sentence")), {}};
             if (const OWJsonValue* hubs = Get(d, "hubs"); hubs && hubs->IsArray())
                 for (const OWJsonValue& h : hubs->Items())
                     if (h.IsObject()) domain.hubs.push_back({Text(Get(h, "type")), Text(Get(h, "id"))});

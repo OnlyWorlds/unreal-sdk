@@ -16,9 +16,12 @@
 
 namespace OnlyWorlds {
 
-// A filled strand slot: the element's id and its name as the reader is served it ("" when it has none).
+// A filled strand slot: the element's id, its type, and its name as the reader is served it ("" when it has none).
 struct OWStrandSlot {
     std::string id;
+    // The kind the slot holds, in the standard's lowercase word (serial 134): narrative, event, location, character,
+    // and location for now. A reader handed the strand alone fetches the id by its type.
+    std::string type;
     std::string name;
 };
 
@@ -37,8 +40,8 @@ struct OWWorldStrand {
     // mistake and nothing is read.
     std::string error;
 
-    // The strand in the profile's shape: {narrative, event, location, character, now, same}, each slot {id, name} and
-    // an empty one null.
+    // The strand in the profile's shape: {narrative, event, location, character, now, same}, each slot {id, type, name}
+    // and an empty one null.
     OWJsonValue ToJson() const;
 };
 
@@ -74,8 +77,9 @@ const std::vector<std::string>& Members();  // narrative, event, location
 OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader);
 
 // The six slots as a server serves them (reading_aids.strand on GET /me and an agent's join reply, read by
-// OWCharter::Served): read as served, never recomputed. A slot is {id, name} or empty (one that is not an object with a
-// string id reads empty, a name that is not a string ""), and same a bool or empty. Absent when `slots` is null or not
+// OWCharter::Served): read as served, never recomputed. A slot is {id, type, name} or empty (one that is not an object
+// with a string id reads empty, a name that is not a string "", a type that is not a string, as a server from before
+// serial 134 serves it, the kind the slot holds), and same a bool or empty. Absent when `slots` is null or not
 // an object (the key absent).
 std::optional<OWWorldStrand> Served(const OWJsonValue* slots);
 

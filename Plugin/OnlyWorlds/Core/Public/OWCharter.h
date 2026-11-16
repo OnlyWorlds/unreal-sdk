@@ -26,6 +26,9 @@ namespace OnlyWorlds {
 // The Charter as one reader sees it: the rules a person or an AI follows here.
 struct OWCharterLaw {
     std::string id;
+    // The element's type in the standard's lowercase word, "law" (serial 134): a reader handed the packet alone
+    // fetches the id by its type.
+    std::string type;
     std::string name;  // as stored; "" when it has none
     // x_checks_rules (the checks profile's machine-checked rules) as stored; an empty list when absent or null.
     OWJsonValue rules = OWJsonValue::Array();
@@ -38,6 +41,7 @@ struct OWCharterLaw {
 // The Guide as one reader sees it: where a stranger starts.
 struct OWCharterGuide {
     std::string id;
+    std::string type;  // "construct" (serial 134)
     std::string name;
 };
 
@@ -50,6 +54,7 @@ struct OWCharterHub {
 // One Domain as one reader sees it: a place in the world, its sentence and its hubs.
 struct OWCharterDomain {
     std::string id;
+    std::string type;      // "construct" (serial 134), as a hub writes one
     std::string name;      // as served, untrimmed; "" when it has none
     std::string sentence;  // FirstLine of its description as served
     // The distinct {type, id} its served link fields name, in HubFields' order and each list's own, never itself; a
@@ -70,7 +75,9 @@ struct OWReadingAids {
     // mistake and nothing is read.
     std::string error;
 
-    // The packet in the profile's shape: {charter, guide, domains}, an absent aid null, then strand when it was read.
+    // The packet in the profile's shape: {charter, guide, domains}, an absent aid null, then strand when it was read;
+    // the Charter {id, type, name, rules, skill}, the Guide {id, type, name}, each Domain {id, type, name, sentence,
+    // hubs}.
     OWJsonValue ToJson() const;
 };
 
@@ -124,9 +131,10 @@ std::vector<OWCharterDomain> DomainsOf(const OWJsonValue& world, const OWJsonVal
 
 // A front door's packet as the server serves it: reading_aids in a GET /me answer or an agent's join answer (`answer`,
 // the parsed body), read as served and never recomputed (who sees what is the server's reading for the key). The
-// Charter {id, name, rules, skill} (rules null or absent an empty list), the Guide {id, name} and the Domains {id,
-// name, sentence, hubs} as served, a text that is not a string "", an aid that is not an object absent; strand read by
-// OWStrand::Served. Absent when the answer carries no packet (a player's join answer, an older server).
+// Charter {id, type, name, rules, skill} (rules null or absent an empty list), the Guide {id, type, name} and the
+// Domains {id, type, name, sentence, hubs} as served, a text that is not a string "", an aid that is not an object
+// absent, and a type that is not a string (a server from before serial 134 serves none) the aid's fixed type ("law",
+// "construct"); strand read by OWStrand::Served. Absent when the answer carries no packet (a player's join answer, an older server).
 std::optional<OWReadingAids> Served(const OWJsonValue& answer);
 
 }  // namespace OWCharter
