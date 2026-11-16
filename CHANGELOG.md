@@ -36,13 +36,12 @@ Nothing is released yet; the history before this file is in the git log.
 ### Changed
 
 - The reading aids and the strand say what type each of their elements is (the charter and strand profiles, serial
-  134), in the plain C++ core: `OWCharterLaw::type` (`law`), `OWCharterGuide::type` and `OWCharterDomain::type`
+  133), in the plain C++ core: `OWCharterLaw::type` (`law`), `OWCharterGuide::type` and `OWCharterDomain::type`
   (`construct`), and `OWStrandSlot::type` (the kind the slot holds, `location` for `now`), each the element's own type
   as the lens folds it, written beside `id` by `ToJson` (`{id, type, name, rules, skill}`, `{id, type, name}`,
   `{id, type, name, sentence, hubs}`, each filled slot `{id, type, name}`). A reader handed the packet alone fetches an
   id by its type. `OWCharter::Served` and `OWStrand::Served` keep a served `type`, and an entry served without one (a
-  keel from before serial 134) reads its fixed type. Serial 134's two fixtures are held in `tests/data/serial-134/`
-  until the pin reaches it; every case passes. The Blueprint layer (`FOWCharterLaw`, `FOWCharterGuide`,
+  keel from before serial 133) reads its fixed type. Every case of serial 133's two fixtures passes. The Blueprint layer (`FOWCharterLaw`, `FOWCharterGuide`,
   `FOWCharterDomain`) does not carry `type` yet.
 - The plugin's module compiles with precise floating point on every target (`FPSemantics = FPSemanticsMode.Precise`
   in `OnlyWorlds.Build.cs`). A game, client or server target defaulted to MSVC's `/fp:fast`, so a packaged game
@@ -296,6 +295,13 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.133` (`6c28fc1`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
+  `views.json` moved, and the generated files moved in their stamp only (the generators' `--check` hold). The charter
+  and strand pages say what type each element of their packets is, a hub is an element of the kind its link field links
+  to (an id of another kind, or of no element, names no hub), and every type compared to a kind is trimmed and folded
+  as the room profile defines it. The charter fixture holds 47 cases (six more), the strand fixture 29 on 26 worlds
+  (two more); `tests/test_charter.cpp` and `tests/test_strand.cpp` read them from the vendored folder, each held to
+  MANIFEST.json, and every case passes. The plugin's charter automation test still counts 35 charter cases.
 - Schema pin to `v0.34.1-dist.132` (`c2a4652`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
   `views.json` moved, and the generated files moved in their stamp only (the generators' `--check` hold). The
   distribution now carries the default layouts page, `profiles/layout.md`, and its fixture, `layout.fixture.json`: the
