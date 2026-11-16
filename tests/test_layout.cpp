@@ -1,11 +1,10 @@
-// OWLayout::LayoutByKind and LayoutAround on the shared fixture: the npm SDK's test/fixtures/layout/by-kind.json at
-// commit 556bd93 (release 4.167.0's cases, edges numbered within each source's field list), the same bytes the Python
-// package (onlyworlds 0.127.0) holds, vendored byte for byte in tests/data/by-kind.json and read through OWJson, whose
-// from_chars reads every double exactly. by-kind compares exactly, every x and y bit for bit: the method is chaotic, so
-// two runtimes agree bit for bit or not at all. around compares within 1e-12: each of its points is one cosine and one
-// sine, and runtimes' cosines may differ in the last place. Then the npm SDK's other vectors (test/layout-by-kind.test.mjs).
-// When the fixture moves: re-vendor it (tools/layout-pin/vendor.py in the maintainer's tree), run
-// codegen/generate_layout.py, and update the hash.
+// OWLayout::LayoutByKind and LayoutAround on the shared fixture: the pinned dist's profiles/layout.fixture.json (the
+// default layouts page, profiles/layout.md, serial 132), read from the vendored folder through OWJson, whose from_chars
+// reads every double exactly. by-kind compares exactly, every x and y bit for bit: the method is chaotic, so two runtimes
+// agree bit for bit or not at all. around compares within 1e-12: each of its points is one cosine and one sine, and
+// runtimes' cosines may differ in the last place. The fixture's third suite, unplaced, is not read: the core has no
+// unplaced reader. Then the npm SDK's other vectors (test/layout-by-kind.test.mjs). When the pin moves the fixture: run
+// codegen/generate_layout.py and update the hash.
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -29,10 +28,10 @@ using owtest::P;
 
 namespace {
 
-const char* const FixtureSha256 = "06a023eace0f906e50737932d6f1bd83178e64acc72c6668d75c56540b36ff57";
+const char* const FixtureSha256 = "6860a7654f1a92e31269cbbdd2a08049035bd19caebc2f9083b320be4872000e";
 const double AroundTolerance = 1e-12;
 
-std::string FixturePath() { return P().root + "/tests/data/by-kind.json"; }
+std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/layout.fixture.json"; }
 
 std::shared_ptr<OWJsonValue> Fixture() {
     static std::shared_ptr<OWJsonValue> doc = [] {
@@ -157,14 +156,21 @@ std::vector<std::string> RingByAngle(const OWLayoutAround& around, const std::ma
 
 }  // namespace
 
-OW_TEST(layout_fixture_is_the_npm_sdks_bytes_with_twelve_exact_cases_and_seven_rings) {
+OW_TEST(layout_fixture_is_the_pinned_dists_bytes_with_seventeen_exact_cases_and_ten_rings) {
+    // The fixture also holds unplaced (15 cases), which no test here reads: the core has no unplaced reader.
     OWBytes bytes;
     t.Ok(OWFiles::Read(FixturePath(), bytes), "the fixture is vendored");
-    t.Eq(owtest::Sha256Hex(bytes), std::string(FixtureSha256), "the fixture's bytes are the npm SDK's");
+    t.Eq(owtest::Sha256Hex(bytes), std::string(FixtureSha256), "the fixture's bytes are the ones this test pins");
+    OWBytes manifest;
+    OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
+    OWJsonParseResult m = OWJson::Parse(manifest);
+    const OWJsonValue* files = m.ok ? m.value.Find("files") : nullptr;
+    const OWJsonValue* sha = files ? files->Find("profiles/layout.fixture.json") : nullptr;
+    t.Ok(sha && sha->IsString() && sha->Text() == FixtureSha256, "MANIFEST.json records the same sha256");
     const OWJsonValue* compare = Fixture()->Find("compare");
-    t.Ok(compare && compare->Keys() == std::vector<std::string>{"cases", "around"}, "the compare block");
-    t.Eq(Names("cases").size(), static_cast<size_t>(12), "twelve exact cases");
-    t.Eq(Names("around").size(), static_cast<size_t>(7), "seven rings");
+    t.Ok(compare && compare->Keys() == std::vector<std::string>{"cases", "around", "unplaced"}, "the compare block");
+    t.Eq(Names("cases").size(), static_cast<size_t>(17), "seventeen exact cases");
+    t.Eq(Names("around").size(), static_cast<size_t>(10), "ten rings");
 }
 
 OW_TEST(layout_the_anchor_table_is_the_fixtures_anchors_bit_for_bit) {
@@ -361,7 +367,8 @@ OW_TEST(layout_around_names_order_by_code_point_never_by_locale) {
 }
 
 // U+FF5A (one UTF-16 code unit, 0xFF5A) sorts before U+1D400 (a surrogate pair, 0xD835 0xDC00) by code point, after it by
-// UTF-16 code unit. The fixture's names never set the two orders apart; this pair does.
+// UTF-16 code unit. The fixture's names-by-code-point-not-utf-16 case sets the two orders apart as well (serial 132);
+// this pair is the smallest that does.
 OW_TEST(layout_around_names_order_by_code_point_not_by_utf16_code_unit) {
     const std::string astral = "\xF0\x9D\x90\x80", wide = "\xEF\xBD\x9A";
     OWJsonValue g = Parse("{\"nodes\": [{\"id\": \"f\", \"type\": \"character\"}, {\"id\": \"p\", \"type\": \"character\", \"name\": \"" + astral +
