@@ -24,7 +24,7 @@ namespace {
 // Serial 134 (each packet entry carries its type) is staged, not published: its fixture is held apart in
 // tests/data/serial-134/ with the staged sha256, so the vendored dist and its MANIFEST.json stay the pin's. When the
 // pin reaches 134, read the dist's copy again, hold it to MANIFEST.json again, and drop the staged copy.
-const char* const DistSha256 = "86806c9812b33b9e0fcf2c826879341995004bf91ba4248ac8c14ede6ae66c0e";
+const char* const DistSha256 = "ba80d4e276ed81a7c185dcd66c3d6ea7af9c9e49fb947bacde2d52136acb2cd5";
 
 std::string FixturePath() { return P().root + "/tests/data/serial-134/charter.fixture.json"; }
 
@@ -165,12 +165,12 @@ OW_TEST(charter_fixture_is_the_pinned_one) {
         names.insert(Str(c, "name"));
         if (Runs(Str(c, "kind"))) ++run;
     }
-    t.Eq(cases->Size(), size_t(46), "46 cases");
-    t.Eq(names.size(), size_t(46), "each name its own");
-    t.Eq(kinds["charter"], size_t(40), "kind charter");
+    t.Eq(cases->Size(), size_t(47), "47 cases");
+    t.Eq(names.size(), size_t(47), "each name its own");
+    t.Eq(kinds["charter"], size_t(41), "kind charter");
     t.Eq(kinds["element"], size_t(6), "kind element");
     t.Eq(kinds.size(), size_t(2), "and no other kind");
-    t.Eq(run, size_t(46), "every case runs here");
+    t.Eq(run, size_t(47), "every case runs here");
     const OWJsonValue* worlds = doc->Find("worlds");
     t.Eq(worlds ? worlds->Size() : size_t(0), size_t(9), "nine worlds");
 }
