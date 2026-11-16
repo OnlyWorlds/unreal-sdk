@@ -23,7 +23,7 @@ namespace {
 // Serial 134 (each filled slot carries its type) is staged, not published: its fixture is held apart in
 // tests/data/serial-134/ with the staged sha256, so the vendored dist and its MANIFEST.json stay the pin's. When the
 // pin reaches 134, read the dist's copy again, hold it to MANIFEST.json again, and drop the staged copy.
-const char* const DistSha256 = "16e5685403053cb9142dc1dd1aa84c3366421e90b08146f2b7049cf89fb619e2";
+const char* const DistSha256 = "97dd478b14338177be747e0c02b8e6740227bfd0a2f72161a4d45375c7c18082";
 
 const char* const Story = "019a7f00-0000-7000-8000-000000000301";
 
