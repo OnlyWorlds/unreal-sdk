@@ -142,7 +142,7 @@ OW_TEST(front_door_an_agents_join_answer_carries_the_strand) {
 }
 
 OW_TEST(front_door_entries_served_without_a_type_read_their_fixed_type) {
-    // A keel from before serial 134 serves {id, name}: each aid's type is fixed by its pair, each slot's by its slot.
+    // A keel from before serial 133 serves {id, name}: each aid's type is fixed by its pair, each slot's by its slot.
     std::optional<OWReadingAids> aids = OWCharter::Served(Parse(R"({"reading_aids": {
         "charter": {"id": "law-1", "name": "House rules", "rules": [], "skill": []},
         "guide": {"id": "con-g", "name": "Start here"},

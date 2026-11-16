@@ -1,5 +1,5 @@
-// OWCharter on the charter profile's conformance fixture (schema-dist profiles/charter.fixture.json, serial 134's staged
-// copy, its sha256 held to the staged one): the pair-and-mark test, and the packet over the fixture's nine worlds, their readers
+// OWCharter on the charter profile's conformance fixture (schema-dist profiles/charter.fixture.json, dist.133's copy, its
+// sha256 held to MANIFEST.json): the pair-and-mark test, and the packet over the fixture's nine worlds, their readers
 // and the cases that bring a world of their own. The profile's tables are held equal to the fixture's, the hub fields
 // to the Construct's link fields; then readings the fixture leaves open.
 
@@ -21,12 +21,10 @@ using owtest::P;
 
 namespace {
 
-// Serial 134 (each packet entry carries its type) is staged, not published: its fixture is held apart in
-// tests/data/serial-134/ with the staged sha256, so the vendored dist and its MANIFEST.json stay the pin's. When the
-// pin reaches 134, read the dist's copy again, hold it to MANIFEST.json again, and drop the staged copy.
+// The fixture's sha256 as dist.133's MANIFEST.json records it.
 const char* const DistSha256 = "ba80d4e276ed81a7c185dcd66c3d6ea7af9c9e49fb947bacde2d52136acb2cd5";
 
-std::string FixturePath() { return P().root + "/tests/data/serial-134/charter.fixture.json"; }
+std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/charter.fixture.json"; }
 
 std::shared_ptr<OWJsonValue> Fixture() {
     static std::shared_ptr<OWJsonValue> doc = [] {
@@ -151,7 +149,13 @@ OWJsonValue WorldWith(std::string_view elements, std::string_view extra = "") {
 OW_TEST(charter_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the charter fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are serial 134's staged copy");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.133's");
+    OWBytes manifest;
+    OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
+    OWJsonParseResult m = OWJson::Parse(manifest);
+    const OWJsonValue* files = m.ok ? m.value.Find("files") : nullptr;
+    const OWJsonValue* sha = files ? files->Find("profiles/charter.fixture.json") : nullptr;
+    t.Ok(sha && sha->IsString() && sha->Text() == DistSha256, "MANIFEST.json records the same sha256");
     auto doc = Fixture();
     t.Eq(Str(*doc, "profile"), std::string("charter"), "the charter profile's fixture");
     const OWJsonValue* cases = doc->Find("cases");
@@ -175,7 +179,7 @@ OW_TEST(charter_fixture_is_the_pinned_one) {
     t.Eq(worlds ? worlds->Size() : size_t(0), size_t(9), "nine worlds");
 }
 
-// Each entry is written in the page's order, type beside id (serial 134): the fixture's key order carries no meaning,
+// Each entry is written in the page's order, type beside id (serial 133): the fixture's key order carries no meaning,
 // so the replay's whole compare cannot see the written order.
 OW_TEST(charter_each_entry_is_written_in_the_pages_order) {
     const OWJsonValue* worlds = Fixture()->Find("worlds");
@@ -194,7 +198,7 @@ OW_TEST(charter_each_entry_is_written_in_the_pages_order) {
             t.Ok(d.Keys() == Keys{"id", "type", "name", "sentence", "hubs"}, "a Domain");
 }
 
-// The packet says the pair's own word (serial 134, amendment 1): a Charter stored as " Law " and a Domain stored as
+// The packet says the pair's own word (serial 133, amendment 1): a Charter stored as " Law " and a Domain stored as
 // "CONSTRUCT" are aids, written law and construct. Kills: the stored spelling.
 OW_TEST(charter_a_type_stored_in_another_spelling_is_written_as_the_pairs_word) {
     OWReadingAids got = OWCharter::CharterOf(WorldWith(R"([

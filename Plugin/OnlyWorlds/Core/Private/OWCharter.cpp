@@ -28,14 +28,14 @@ const OWJsonValue* Get(const OWJsonValue& body, std::string_view key) {
 std::string Text(const OWJsonValue* v) { return v && v->IsString() ? v->Text() : std::string(); }
 
 // The packet's type for an aid: its pair's own word as the page's table writes it (law, construct), whatever spelling
-// the element's type is stored in (serial 134).
+// the element's type is stored in (serial 133).
 std::string PairType(std::string_view aid) {
     for (const OWCharter::OWCharterPair& p : OWCharter::Pairs())
         if (aid == p.aid) return p.type;
     return std::string();
 }
 
-// A served entry's type: as served when it is a string, else the aid's fixed type (a server from before serial 134).
+// A served entry's type: as served when it is a string, else the aid's fixed type (a server from before serial 133).
 std::string TypeOr(const OWJsonValue& entry, const char* fixed) {
     const OWJsonValue* t = Get(entry, "type");
     return t && t->IsString() ? t->Text() : std::string(fixed);

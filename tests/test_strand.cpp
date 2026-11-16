@@ -1,5 +1,5 @@
-// OWStrand on the strand profile's conformance fixture (schema-dist profiles/strand.fixture.json, serial 134's staged
-// copy, its sha256 held to the staged one): the six slots over the fixture's 26 worlds and their readers, every case by name,
+// OWStrand on the strand profile's conformance fixture (schema-dist profiles/strand.fixture.json, dist.133's copy, its
+// sha256 held to MANIFEST.json): the six slots over the fixture's 26 worlds and their readers, every case by name,
 // and the mark held equal to the fixture's; then readings the fixture leaves open (the public rung on a closed and an
 // open world, the mark shapes that are no mark with an empty-string member among them, a story alone, a non-list
 // multi-link, a nameless slot, a caller's mistake, a reading that never moves the world).
@@ -20,14 +20,12 @@ using owtest::P;
 
 namespace {
 
-// Serial 134 (each filled slot carries its type) is staged, not published: its fixture is held apart in
-// tests/data/serial-134/ with the staged sha256, so the vendored dist and its MANIFEST.json stay the pin's. When the
-// pin reaches 134, read the dist's copy again, hold it to MANIFEST.json again, and drop the staged copy.
+// The fixture's sha256 as dist.133's MANIFEST.json records it.
 const char* const DistSha256 = "2b1221f1c611e94ac5851669330ab75ba62332c51764786105bcdba23b5be7e6";
 
 const char* const Story = "019a7f00-0000-7000-8000-000000000301";
 
-std::string FixturePath() { return P().root + "/tests/data/serial-134/strand.fixture.json"; }
+std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/strand.fixture.json"; }
 
 std::shared_ptr<OWJsonValue> Fixture() {
     static std::shared_ptr<OWJsonValue> doc = [] {
@@ -126,7 +124,13 @@ OWJsonValue Owner() { return Parse(R"({"rung": "owner"})"); }
 OW_TEST(strand_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the strand fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are serial 134's staged copy");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.133's");
+    OWBytes manifest;
+    OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
+    OWJsonParseResult m = OWJson::Parse(manifest);
+    const OWJsonValue* files = m.ok ? m.value.Find("files") : nullptr;
+    const OWJsonValue* sha = files ? files->Find("profiles/strand.fixture.json") : nullptr;
+    t.Ok(sha && sha->IsString() && sha->Text() == DistSha256, "MANIFEST.json records the same sha256");
     auto doc = Fixture();
     t.Eq(Str(*doc, "profile"), std::string("strand"), "the strand profile's fixture");
     const OWJsonValue* cases = doc->Find("cases");
@@ -269,7 +273,7 @@ OW_TEST(strand_a_slot_without_a_name_reads_an_empty_string) {
     }
 }
 
-// A type is matched to a slot trimmed and folded, and the slot says its kind word (serial 134, amendment 1): the story
+// A type is matched to a slot trimmed and folded, and the slot says its kind word (serial 133, amendment 1): the story
 // stored as " Narrative " fills the slot as narrative. Kills: the stored spelling written.
 OW_TEST(strand_a_story_stored_in_another_spelling_fills_its_slot_as_narrative) {
     OWJsonValue world = World("harbour");
@@ -282,7 +286,7 @@ OW_TEST(strand_a_story_stored_in_another_spelling_fills_its_slot_as_narrative) {
     Same(t, got.ToJson(), &want, "the strand as for narrative");
 }
 
-// Each filled slot is written {id, type, name}, the page's order (serial 134), its type the slot's kind and now a
+// Each filled slot is written {id, type, name}, the page's order (serial 133), its type the slot's kind and now a
 // location: the fixture's key order carries no meaning, so the replay cannot see the written order.
 OW_TEST(strand_a_filled_slot_is_id_type_name) {
     OWJsonValue got = OWStrand::StrandOf(World("harbour"), Owner()).ToJson();

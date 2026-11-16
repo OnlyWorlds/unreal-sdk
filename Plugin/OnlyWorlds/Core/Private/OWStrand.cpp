@@ -74,7 +74,7 @@ OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader) {
         std::optional<size_t> i = s.Find(kind, id->Text());
         return i && s.view[*i] ? i : std::nullopt;
     };
-    // The slot's type is its kind word, never the stored spelling (serial 134): seen matched the type folded.
+    // The slot's type is its kind word, never the stored spelling (serial 133): seen matched the type folded.
     auto slot = [&](size_t i, const char* kind) {
         const OWJsonValue* name = Get(s.served(i), "name");
         return OWStrandSlot{s.ids[i], kind, name && name->IsString() ? name->Text() : std::string()};
@@ -109,7 +109,7 @@ OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader) {
 
 std::optional<OWWorldStrand> Served(const OWJsonValue* slots) {
     if (!slots || !slots->IsObject()) return std::nullopt;
-    // A slot served with no string type (a server from before serial 134) reads the kind the slot holds.
+    // A slot served with no string type (a server from before serial 133) reads the kind the slot holds.
     auto slot = [&](const char* key, const char* kind) -> std::optional<OWStrandSlot> {
         const OWJsonValue* body = Get(*slots, key);
         const OWJsonValue* id = body ? Get(*body, "id") : nullptr;

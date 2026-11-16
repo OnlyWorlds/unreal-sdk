@@ -26,7 +26,7 @@ namespace OnlyWorlds {
 // The Charter as one reader sees it: the rules a person or an AI follows here.
 struct OWCharterLaw {
     std::string id;
-    // The element's type in the standard's lowercase word, "law" (serial 134): a reader handed the packet alone
+    // The element's type in the standard's lowercase word, "law" (serial 133): a reader handed the packet alone
     // fetches the id by its type.
     std::string type;
     std::string name;  // as stored; "" when it has none
@@ -41,7 +41,7 @@ struct OWCharterLaw {
 // The Guide as one reader sees it: where a stranger starts.
 struct OWCharterGuide {
     std::string id;
-    std::string type;  // "construct" (serial 134)
+    std::string type;  // "construct" (serial 133)
     std::string name;
 };
 
@@ -54,7 +54,7 @@ struct OWCharterHub {
 // One Domain as one reader sees it: a place in the world, its sentence and its hubs.
 struct OWCharterDomain {
     std::string id;
-    std::string type;      // "construct" (serial 134), as a hub writes one
+    std::string type;      // "construct" (serial 133), as a hub writes one
     std::string name;      // as served, untrimmed; "" when it has none
     std::string sentence;  // FirstLine of its description as served
     // The distinct {type, id} its served link fields name, in HubFields' order and each list's own, never itself; a
@@ -133,7 +133,7 @@ std::vector<OWCharterDomain> DomainsOf(const OWJsonValue& world, const OWJsonVal
 // the parsed body), read as served and never recomputed (who sees what is the server's reading for the key). The
 // Charter {id, type, name, rules, skill} (rules null or absent an empty list), the Guide {id, type, name} and the
 // Domains {id, type, name, sentence, hubs} as served, a text that is not a string "", an aid that is not an object
-// absent, and a type that is not a string (a server from before serial 134 serves none) the aid's fixed type ("law",
+// absent, and a type that is not a string (a server from before serial 133 serves none) the aid's fixed type ("law",
 // "construct"); strand read by OWStrand::Served. Absent when the answer carries no packet (a player's join answer, an older server).
 std::optional<OWReadingAids> Served(const OWJsonValue& answer);
 
