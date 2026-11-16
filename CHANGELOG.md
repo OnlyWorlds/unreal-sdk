@@ -686,10 +686,10 @@ Nothing is released yet; the history before this file is in the git log.
   sends it since 4.122.1: a string like `abc/hidden` never asks a different route. Requests go
   through `OWTransport` (`OWTransport.h`), one call answered once through a callback, so Unreal's asynchronous HTTP and
   a synchronous test fake both fit; a client may be destroyed with a request in flight. Held to keel's OpenAPI
-  document, vendored from the Unity SDK (`tests/data/keel-wire.json`), which follows keel's (at `591762dc2b30`: the Pin
+  document, vendored from the Unity SDK (`tests/data/keel-wire.json`), which follows keel's (at `595ebe0d4db1`: the Pin
   list takes `element`, the Pins that place that element of any type, `""` for the Pins placing nothing; a read-only
-  sign-in's token answers carry `scope`; the AI lens answer carries `charged`; the member rows carry `follows_sponsor`,
-  and two 422 codes, `seat_above_sponsor` and `seat_follows_sponsor`, are listed); `List` already sends any
+  sign-in's token answers carry `scope`; the AI lens answer carries `charged`; the member rows carry `follows_sponsor`
+  and `may_change_character_note`, and two 422 codes, `seat_above_sponsor` and `seat_follows_sponsor`, are listed); `List` already sends any
   field-named filter as given, so `filter["element"] = id` needs no change here, and no path, method, parameter or
   request key moved.
 - `FOWHttpTransport` in the plugin (`OWHttpTransport.h`): the client's transport on Unreal's `FHttpModule`. It
