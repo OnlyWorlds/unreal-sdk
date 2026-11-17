@@ -295,6 +295,15 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.134` (`700f04b`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
+  `views.json` moved, and the generated files moved in their stamp only (the generators' `--check` hold). The strand
+  page says no reader trims a member: one of white space alone is a string that names no element, so its slot is
+  empty, and the empty string in any of the three members, `narrative` too, is no mark. The strand fixture holds 42
+  cases on 39 worlds (thirteen more); `tests/test_strand.cpp` reads it from the vendored folder, held to
+  MANIFEST.json, and every case passes with no change to `OWStrand`. The checks page's specimen is one world's own
+  house rules, a specimen of the form and not a set to adopt (no rule or case moved), and the lens page says a lens is
+  read for its reader, never for the Character whose draught it is read beside. No plugin test reads the strand
+  fixture.
 - Schema pin to `v0.34.1-dist.133` (`6c28fc1`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
   `views.json` moved, and the generated files moved in their stamp only (the generators' `--check` hold). The charter
   and strand pages say what type each element of their packets is, a hub is an element of the kind its link field links

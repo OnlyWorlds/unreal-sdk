@@ -1,4 +1,4 @@
-// OWCharter on the charter profile's conformance fixture (schema-dist profiles/charter.fixture.json, dist.133's copy, its
+// OWCharter on the charter profile's conformance fixture (schema-dist profiles/charter.fixture.json, dist.134's copy, its
 // sha256 held to MANIFEST.json): the pair-and-mark test, and the packet over the fixture's nine worlds, their readers
 // and the cases that bring a world of their own. The profile's tables are held equal to the fixture's, the hub fields
 // to the Construct's link fields; then readings the fixture leaves open.
@@ -21,7 +21,7 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.133's MANIFEST.json records it.
+// The fixture's sha256 as dist.134's MANIFEST.json records it (the bytes have not moved since dist.133).
 const char* const DistSha256 = "ba80d4e276ed81a7c185dcd66c3d6ea7af9c9e49fb947bacde2d52136acb2cd5";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/charter.fixture.json"; }
@@ -149,7 +149,7 @@ OWJsonValue WorldWith(std::string_view elements, std::string_view extra = "") {
 OW_TEST(charter_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the charter fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.133's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.134's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);

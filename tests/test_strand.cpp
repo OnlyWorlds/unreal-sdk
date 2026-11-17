@@ -1,5 +1,5 @@
-// OWStrand on the strand profile's conformance fixture (schema-dist profiles/strand.fixture.json, dist.133's copy, its
-// sha256 held to MANIFEST.json): the six slots over the fixture's 26 worlds and their readers, every case by name,
+// OWStrand on the strand profile's conformance fixture (schema-dist profiles/strand.fixture.json, dist.134's copy, its
+// sha256 held to MANIFEST.json): the six slots over the fixture's 39 worlds and their readers, every case by name,
 // and the mark held equal to the fixture's; then readings the fixture leaves open (the public rung on a closed and an
 // open world, the mark shapes that are no mark with an empty-string member among them, a story alone, a non-list
 // multi-link, a nameless slot, a caller's mistake, a reading that never moves the world).
@@ -20,8 +20,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.133's MANIFEST.json records it.
-const char* const DistSha256 = "2b1221f1c611e94ac5851669330ab75ba62332c51764786105bcdba23b5be7e6";
+// The fixture's sha256 as dist.134's MANIFEST.json records it.
+const char* const DistSha256 = "7bc2d2dae11c0722b1db987c070b249ddcbc55b81683c4bfa26900c7ffe0fc53";
 
 const char* const Story = "019a7f00-0000-7000-8000-000000000301";
 
@@ -124,7 +124,7 @@ OWJsonValue Owner() { return Parse(R"({"rung": "owner"})"); }
 OW_TEST(strand_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the strand fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.133's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.134's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -142,11 +142,11 @@ OW_TEST(strand_fixture_is_the_pinned_one) {
         names.insert(Str(c, "name"));
         if (Str(c, "kind") == "strand") ++strands;
     }
-    t.Eq(cases->Size(), size_t(29), "29 cases");
-    t.Eq(names.size(), size_t(29), "each name its own");
-    t.Eq(strands, size_t(29), "every case a strand case");
+    t.Eq(cases->Size(), size_t(42), "42 cases");
+    t.Eq(names.size(), size_t(42), "each name its own");
+    t.Eq(strands, size_t(42), "every case a strand case");
     const OWJsonValue* worlds = doc->Find("worlds");
-    t.Eq(worlds ? worlds->Size() : size_t(0), size_t(26), "26 worlds");
+    t.Eq(worlds ? worlds->Size() : size_t(0), size_t(39), "39 worlds");
     const OWJsonValue* mark = doc->Find("mark");
     t.Eq(mark ? Str(*mark, "field") : std::string(), std::string(OWStrand::Mark), "the mark's field");
     std::vector<std::string> members;
@@ -310,7 +310,7 @@ OW_TEST(strand_a_callers_mistake_is_named) {
 // Pure: no reading moves the world.
 OW_TEST(strand_a_reading_never_moves_the_world) {
     const OWJsonValue* worlds = Fixture()->Find("worlds");
-    t.Ok(worlds && worlds->Size() == 26, "the 26 worlds");
+    t.Ok(worlds && worlds->Size() == 39, "the 39 worlds");
     if (!worlds) return;
     for (size_t w = 0; w < worlds->Size(); ++w) {
         const OWJsonValue& world = worlds->Items()[w];
