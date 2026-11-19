@@ -27,8 +27,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.136's MANIFEST.json records it.
-const char* const DistSha256 = "0d83ce1ee76f93c79b786bb10e1e97bfb94c6983a8b3b00d1867e65f03722e94";
+// The fixture's sha256 as dist.139's MANIFEST.json records it (serial 138 added three talk cases).
+const char* const DistSha256 = "06d550f9e9e83de62aaccd2400859507350a514d3c3513a41a1fbed54b857934";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/report.fixture.json"; }
 
@@ -135,7 +135,7 @@ std::string B(const std::string& id) {
 OW_TEST(report_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the report fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.136's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.139's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -194,11 +194,11 @@ std::vector<const OWJsonValue*> TalkCases() {
 }  // namespace
 
 // The talk list is read whole: a case added later must not pass unseen.
-OW_TEST(report_fixture_holds_six_talk_cases) {
+OW_TEST(report_fixture_holds_nine_talk_cases) {
     std::set<std::string> names;
     for (const OWJsonValue* c : TalkCases()) names.insert(Str(*c, "name"));
-    t.Eq(TalkCases().size(), size_t(6), "6 talk cases (serial 135)");
-    t.Eq(names.size(), size_t(6), "each name its own");
+    t.Eq(TalkCases().size(), size_t(9), "9 talk cases (6 at serial 135, 9 at serial 138)");
+    t.Eq(names.size(), size_t(9), "each name its own");
 }
 
 OW_CASES(report_talk_cases) {

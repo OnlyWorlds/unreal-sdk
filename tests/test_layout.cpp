@@ -28,7 +28,7 @@ using owtest::P;
 
 namespace {
 
-const char* const FixtureSha256 = "6860a7654f1a92e31269cbbdd2a08049035bd19caebc2f9083b320be4872000e";
+const char* const FixtureSha256 = "392b5b19b21d5beb1994692f51a8d8df3ef431f93bc279a7fc42ab0b0db508a5";
 const double AroundTolerance = 1e-12;
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/layout.fixture.json"; }

@@ -22,8 +22,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.136's MANIFEST.json records it (serial 135 added design_cases).
-const char* const DistSha256 = "972eda71e3538310df7ccd4166a2e7f2807eb55b6f512a03ced28c9220ea668a";
+// The fixture's sha256 as dist.139's MANIFEST.json records it (serial 135 added design_cases, serial 138 three more).
+const char* const DistSha256 = "429a110c6e02ca981574dec042f141f54c0d652c4b4fa1eda2d2a55ef03150b2";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/charter.fixture.json"; }
 
@@ -150,7 +150,7 @@ OWJsonValue WorldWith(std::string_view elements, std::string_view extra = "") {
 OW_TEST(charter_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the charter fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.136's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.139's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -270,8 +270,8 @@ OW_TEST(charter_design_cases_are_serial_135s) {
     if (!cases) return;
     std::set<std::string> names;
     for (const OWJsonValue& c : cases->Items()) names.insert(Str(c, "name"));
-    t.Eq(cases->Size(), size_t(13), "13 design cases");
-    t.Eq(names.size(), size_t(13), "each name its own");
+    t.Eq(cases->Size(), size_t(16), "16 design cases (13 at serial 135, 16 at serial 138)");
+    t.Eq(names.size(), size_t(16), "each name its own");
     t.Ok(OWCharter::DesignStates() == std::vector<std::string>{"in design", "locked"}, "the two design states");
 }
 

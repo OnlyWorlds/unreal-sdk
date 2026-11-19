@@ -308,6 +308,16 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.139` (`fc46657`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
+  `views.json` moved, and the generated files moved in their stamp only, the layout anchor table in the fixture
+  sha256 it names (no anchor moved; the generators' `--check` hold). Serial 137: a third default layout,
+  `by-links-3d`, with its own fixture, which this SDK does not lay out yet; a member of a layout map's `placed` that is
+  no non-empty string names no element (two `unplaced` cases, not read here); map-space reads a whole-number width,
+  height or depth as written (four new `cases`, three new `layout_cases`). Serial 138: the hidden mark keeps an
+  element from every reader but a keeper (the owner or a co-builder) and the one who made it; the lens fixture gains
+  four cases, the report fixture three talk cases and the charter fixture three design cases. Serial 139: where a
+  child Map lies on its parent, `x_parent_frame`, with the map-space fixture's `frame_cases`, which this SDK does not
+  read yet. No answer on an existing case moved; the tests' sha and count pins move with the fixtures.
 - Schema pin to `v0.34.1-dist.136` (`56f5c02`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
   `views.json` moved, and the generated files moved in their stamp only (the generators' `--check` hold). Serial 135:
   the room page names a talk on an Object or a Construct (a line in the room that names one in its `objects` or
