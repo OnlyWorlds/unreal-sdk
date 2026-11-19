@@ -1,4 +1,4 @@
-// OWLens::IsRoomElement on the room profile's conformance fixture (schema-dist profiles/room.fixture.json, dist.131's
+// OWLens::IsRoomElement on the room profile's conformance fixture (schema-dist profiles/room.fixture.json, dist.136's
 // copy, its sha256 held to MANIFEST.json): each case's element is a room element exactly when in_room says, the pair
 // AND the mark. Every case runs, counted, so a dropped case fails.
 
@@ -18,8 +18,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.131's MANIFEST.json records it.
-const char* const DistSha256 = "a1700126b8025d3b5f31c5542c3e6a50e623e915086ef6834fe7905086bc41b3";
+// The fixture's sha256 as dist.136's MANIFEST.json records it.
+const char* const DistSha256 = "43d84e0012537a9899f67bd1950b7223b0c2b4ff87e57cfab395a232e44a85c7";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/room.fixture.json"; }
 
@@ -43,7 +43,7 @@ std::string Str(const OWJsonValue& v, const char* key) {
 OW_TEST(room_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the room fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.131's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.136's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
