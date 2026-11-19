@@ -291,6 +291,31 @@ std::vector<OWCharterDomain> DomainsOf(const OWJsonValue& world, const OWJsonVal
     return CharterOf(world, reader).domains;
 }
 
+const std::vector<std::string>& DesignStates() {
+    static const std::vector<std::string> states = {"in design", "locked"};
+    return states;
+}
+
+std::vector<OWDesignPart> DesignPartsOf(const OWJsonValue& world, const OWJsonValue& reader) {
+    std::vector<OWDesignPart> out;
+    // The gate: a Charter CharterOf finds for this reader (none on a caller's mistake).
+    OWReadingAids aids = CharterOf(world, reader);
+    if (!aids.error.empty() || !aids.charter) return out;
+    OWLensView::Sight s;
+    if (!OWLensView::See(world, reader, nullptr, OWLensOptions(), "design_parts_of", s).empty()) return out;
+    for (size_t i = 0; i < s.els.size(); ++i) {
+        // Served whole: in the view (never proposed) and no known-of stub.
+        if (!s.view[i] || s.stub[i]) continue;
+        if (s.types[i] != "object" && s.types[i] != "construct") continue;
+        const OWJsonValue* subtype = Get(*s.els[i], "subtype");
+        if (!subtype || !subtype->IsString()) continue;
+        std::string state = OWMessage::Fold(subtype->Text());
+        const std::vector<std::string>& states = DesignStates();
+        if (std::find(states.begin(), states.end(), state) != states.end()) out.push_back({s.types[i], s.ids[i], state});
+    }
+    return out;
+}
+
 std::optional<OWReadingAids> Served(const OWJsonValue& answer) {
     const OWJsonValue* aids = Get(answer, "reading_aids");
     if (!aids || !aids->IsObject()) return std::nullopt;

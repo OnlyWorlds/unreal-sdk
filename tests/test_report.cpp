@@ -1,6 +1,7 @@
 // OWReport::ThreadsOf on the report profile's conformance fixture (schema-dist profiles/report.fixture.json, dist.136's
 // copy, its sha256 held to MANIFEST.json): every thread case by name, its own test row, the want's three parts compared
-// as the fixture says (`parents` per report, `groups` and `lints` each as a set, a group's reports in order). Then the
+// as the fixture says (`parents` per report, `groups` and `lints` each as a set, a group's reports in order), and every
+// talk case (serial 135), the talks a reader shows a report with (OWReport::TalksOf), as a set. Then the
 // corners dist.120's fixture held no case for, each answered as the npm SDK 4.159.0's reportThreadsOf and the Python
 // package 0.120.0's report_threads_of answer it (their own tests' vectors, read, not run here); dist.121's fixture holds
 // a case for the first four, named on each.
@@ -178,6 +179,48 @@ OW_CASES(report_fixture_cases) {
     }
     for (const OWJsonValue* c : Cases())
         out.emplace_back("report_fixture:" + Str(*c, "name"), [doc, c](owtest::T& t) { Case(t, *c); });
+    return out;
+}
+
+// -- the talk cases (serial 135): the talks on an element a reader shows a report with ------------------------------
+
+namespace {
+
+std::vector<const OWJsonValue*> TalkCases() {
+    const OWJsonValue* cases = Fixture()->Find("talk_cases");
+    return cases ? OWMessage::List(*cases) : std::vector<const OWJsonValue*>();
+}
+
+}  // namespace
+
+// The talk list is read whole: a case added later must not pass unseen.
+OW_TEST(report_fixture_holds_six_talk_cases) {
+    std::set<std::string> names;
+    for (const OWJsonValue* c : TalkCases()) names.insert(Str(*c, "name"));
+    t.Eq(TalkCases().size(), size_t(6), "6 talk cases (serial 135)");
+    t.Eq(names.size(), size_t(6), "each name its own");
+}
+
+OW_CASES(report_talk_cases) {
+    owtest::Cases out;
+    auto doc = Fixture();
+    if (TalkCases().empty()) {
+        out.emplace_back("report_talk:not-found", [](owtest::T& t) { t.Fail("the talk cases did not load"); });
+        return out;
+    }
+    for (const OWJsonValue* c : TalkCases())
+        out.emplace_back("report_talk:" + Str(*c, "name"), [doc, c](owtest::T& t) {
+            const OWJsonValue* report = c->Find("report");
+            if (!report) return t.Fail("no report");
+            std::set<std::string> got, want;
+            bool twice = false;
+            for (const OWLens::OWTalk& k : OWReport::TalksOf(*report))
+                if (!got.insert(k.type + " " + k.id).second) twice = true;
+            if (const OWJsonValue* talks = c->Find("talks"); talks && talks->IsArray())
+                for (const OWJsonValue& k : talks->Items()) want.insert(Str(k, "type") + " " + Str(k, "id"));
+            t.Ok(!twice, "each talk once");
+            t.Ok(got == want, "the talks, as a set");
+        });
     return out;
 }
 

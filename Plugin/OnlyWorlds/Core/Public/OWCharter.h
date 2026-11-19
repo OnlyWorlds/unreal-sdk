@@ -62,6 +62,14 @@ struct OWCharterDomain {
     std::vector<OWCharterHub> hubs;
 };
 
+// A design part as one reader reads it (the charter profile's design state, serial 135): an Object or a Construct
+// whose subtype is a design state, in a world where CharterOf finds a Charter for that reader.
+struct OWDesignPart {
+    std::string type;   // "object" or "construct", the packet's word, whatever spelling the type is stored in
+    std::string id;
+    std::string state;  // the page's word, "in design" or "locked", whatever spelling the subtype is stored in
+};
+
 // What CharterOf answers, and what Served reads from a front door.
 struct OWReadingAids {
     std::optional<OWCharterLaw> charter;  // absent when the reader sees no marked Charter
@@ -120,7 +128,8 @@ std::string FirstLine(std::string_view text);
 //
 // The Charter is the newest marked Charter the reader sees (by created_at as an instant, none or an unreadable one the
 // oldest, then the higher id by code point), read whole as stored: the Charter is every member rung's to read whole
-// (D152), as keel reads its row. The Guide the same among marked Guides. The Domains are every marked Domain the reader
+// (D152), as keel reads its row, but the hidden mark wins over that (serial 135): a Charter the hidden mark keeps from
+// a reader is not that reader's, whole or as a stub. The Guide the same among marked Guides. The Domains are every marked Domain the reader
 // sees: first in the order of the Guide's `constructs` as the reader is served the Guide (an id named twice keeps its
 // first place; an entry that is no marked Domain, or one the reader cannot see, is skipped), then the rest by folded
 // name and then id. Whether an element is an aid is read from the element as the owner is served it, since a stub
@@ -128,6 +137,23 @@ std::string FirstLine(std::string_view text);
 OWReadingAids CharterOf(const OWJsonValue& world, const OWJsonValue& reader);
 // The Domains alone, as CharterOf lists them for `reader` (the profile's domainsOf); empty on a caller's mistake.
 std::vector<OWCharterDomain> DomainsOf(const OWJsonValue& world, const OWJsonValue& reader);
+
+// The two design states (serial 135), the page's words: a subtype that, trimmed and folded, is one of them.
+const std::vector<std::string>& DesignStates();
+
+// Every design part `reader` reads in `world` (the charter profile's design state, serial 135): each Object or
+// Construct the reader is served whole whose subtype, trimmed and folded as the room profile defines it, is one of
+// DesignStates, in a world where CharterOf finds a Charter for this reader; in the world's order, and the profile
+// compares the answer as a set. `world` and `reader` as for CharterOf; empty on a caller's mistake.
+//
+// The Charter alone opens the gate, read for each reader: where CharterOf finds none for this reader (no marked
+// Charter, only a proposed one, or one the hidden mark keeps from it) no element has a design state and locked is an
+// ordinary subtype, even where another reader of the same world reads design parts. A world that keeps a marked
+// Charter has design states whatever kind of world it is. The state is read only from a body served whole: a known-of
+// stub is served its subtype and has none. The state alone makes a part, whatever the supertype (a workshop's spec
+// included); no other subtype is a design state and no other type has one. A design state takes an element out of no
+// view, and the page orders no parts. Pure.
+std::vector<OWDesignPart> DesignPartsOf(const OWJsonValue& world, const OWJsonValue& reader);
 
 // A front door's packet as the server serves it: reading_aids in a GET /me answer or an agent's join answer (`answer`,
 // the parsed body), read as served and never recomputed (who sees what is the server's reading for the key). The

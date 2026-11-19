@@ -65,6 +65,11 @@ const char* const Chain = "chain";
 bool IsReport(const OWJsonValue& element) { return IsRoomPair(element, Supertype); }
 bool IsBoardEntry(const OWJsonValue& element) { return IsRoomPair(element, BoardSupertype); }
 
+std::vector<OWLens::OWTalk> TalksOf(const OWJsonValue& element) {
+    if (!IsReport(element)) return {};
+    return OWLens::TalkElementsOf(element);
+}
+
 OWReportThreads ThreadsOf(const std::vector<const OWJsonValue*>& narratives) {
     OWReportThreads out;
     // The elements by id, the first of two with one id; the reports among them in the order given.

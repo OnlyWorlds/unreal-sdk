@@ -1,6 +1,7 @@
 // OWLens::IsRoomElement on the room profile's conformance fixture (schema-dist profiles/room.fixture.json, dist.136's
 // copy, its sha256 held to MANIFEST.json): each case's element is a room element exactly when in_room says, the pair
-// AND the mark. Every case runs, counted, so a dropped case fails.
+// AND the mark; and each talk case's element is in the talks it says (OWLens::TalksOf, serial 135), as a set. Every
+// case runs, counted, so a dropped case fails.
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -80,6 +81,60 @@ OW_TEST(room_cases_answer_in_room) {
     t.Eq(names.size(), size_t(48), "each name its own");
     t.Eq(run, size_t(48), "every case runs here");
     t.Eq(in, size_t(21), "21 of them in the room");
+}
+
+namespace {
+
+// A list of {type, id} as a set of "type id" strings, and whether any came twice.
+std::set<std::string> TalkSet(const std::vector<OWLens::OWTalk>& talks, bool& twice) {
+    std::set<std::string> out;
+    twice = false;
+    for (const OWLens::OWTalk& k : talks)
+        if (!out.insert(k.type + " " + k.id).second) twice = true;
+    return out;
+}
+
+std::set<std::string> WantSet(const OWJsonValue* talks) {
+    std::set<std::string> out;
+    if (talks && talks->IsArray())
+        for (const OWJsonValue& k : talks->Items()) out.insert(Str(k, "type") + " " + Str(k, "id"));
+    return out;
+}
+
+}  // namespace
+
+// The talk list is read whole (serial 135): a case added later must not pass unseen.
+OW_TEST(room_talk_cases_are_serial_135s) {
+    auto doc = Fixture();
+    const OWJsonValue* cases = doc->Find("talk_cases");
+    t.Ok(cases && cases->IsArray(), "it parses, with its talk_cases");
+    if (!cases) return;
+    std::set<std::string> names;
+    for (const OWJsonValue& c : cases->Items()) names.insert(Str(c, "name"));
+    t.Eq(cases->Size(), size_t(13), "13 talk cases");
+    t.Eq(names.size(), size_t(13), "each name its own");
+    const std::vector<std::pair<std::string, std::string>> fields = {{"objects", "object"}, {"constructs", "construct"}};
+    t.Ok(OWLens::TalkFields() == fields, "the two talk fields");
+}
+
+OW_CASES(room_talk_cases) {
+    owtest::Cases out;
+    auto doc = Fixture();
+    const OWJsonValue* cases = doc->Find("talk_cases");
+    if (!cases || !cases->IsArray()) {
+        out.emplace_back("room_talk:not-found", [](owtest::T& t) { t.Fail("the talk cases did not load"); });
+        return out;
+    }
+    for (const OWJsonValue& c : cases->Items())
+        out.emplace_back("room_talk:" + Str(c, "name"), [doc, &c](owtest::T& t) {
+            const OWJsonValue* element = c.Find("element");
+            if (!element) return t.Fail("no element");
+            bool twice = false;
+            std::set<std::string> got = TalkSet(OWLens::TalksOf(*element), twice);
+            t.Ok(!twice, "each talk once");
+            t.Ok(got == WantSet(c.Find("talks")), "the talks, as a set");
+        });
+    return out;
 }
 
 // Beside the fixture: one presence for both marks (serial 126). x_room_of and x_charter_of each count by presence, a

@@ -156,6 +156,28 @@ std::optional<int64_t> DateOf(const OWJsonValue& element);
 // counted by presence (any value but null; a string only when something is left after trimming White_Space; a list or
 // an object only when it holds something, since serial 126).
 bool IsRoomElement(const OWJsonValue& element);
+
+// A talk on an element (the room profile, serial 135): the Object or Construct a line names, as {type, id}.
+struct OWTalk {
+    std::string type;  // "object" or "construct"
+    std::string id;    // as written
+};
+// The two fields that put a line in a talk on an element, each with the type its ids are read as: objects (object),
+// constructs (construct). No other field does: a line's characters are its recipients, never what it is about.
+const std::vector<std::pair<std::string, std::string>>& TalkFields();
+// The talks on an element `element` is in as a line (the room profile's "a talk on an Object or a Construct"): each
+// {type, id} its objects and constructs name, read from the line alone. Empty when it is no line: a line is a room
+// element of the pair narrative + Message with the mark, so a Message without the mark, a board entry or a report is
+// in no talk. A field that is not a list names nothing, and in one an entry that is not a string, or is empty once
+// trimmed of White_Space, names nothing; every other entry is an id read as written, a space left on it included and
+// never folded to lowercase (the address profile's "The same id"), so ABC and abc are two talks. Each {type, id} once,
+// objects first, each list in its own order; the profile compares the answer as a set. A line in a talk may also hang
+// on a board entry or a work item, and is then in both: this answers only the talks on an element. Pure.
+std::vector<OWTalk> TalksOf(const OWJsonValue& element);
+// The {type, id} an element's TalkFields name, read as TalksOf reads a line's, whatever the element is (the report
+// profile reads a report's links by it).
+std::vector<OWTalk> TalkElementsOf(const OWJsonValue& element);
+
 // A reading aid (rule 4): the charter (law, Charter), its guide (construct, Guide) or a domain (construct, Domain), by
 // the pair AND the mark x_charter_of, counted by presence as the room mark is; the pair without the mark is lore.
 bool IsReadingAid(const OWJsonValue& element);

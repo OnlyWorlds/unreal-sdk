@@ -11,6 +11,7 @@
 
 #include "OWAddress.h"
 #include "OWJson.h"
+#include "OWLens.h"
 
 #include <optional>
 #include <string>
@@ -83,6 +84,16 @@ extern const char* const Chain;    // "chain"
 bool IsReport(const OWJsonValue& element);
 // A board entry: the pair narrative + Board and the mark.
 bool IsBoardEntry(const OWJsonValue& element);
+
+// The talks on an element a reader shows `element` with (serial 135): each {type, id} its objects (object) and
+// constructs (construct) name, read entry by entry as the room profile reads a line's (OWLens::TalksOf: an entry that
+// is not a string or is empty once trimmed of White_Space names nothing, a field that is not a list names none, every
+// other entry an id read as written). Empty when it is no report (IsReport: the pair and the mark, both), so a line
+// in the room or a Report without the mark is shown with no talk. A report's objects and constructs hold every Object
+// and Construct it touched or changed, so it is shown with the talk on each, whenever it was written and whether or
+// not it names a sitting in events; from the report alone no reader can tell which, if any, was the talk it closed,
+// and this names none. A thread (ThreadsOf) takes nothing from it. Pure.
+std::vector<OWLens::OWTalk> TalksOf(const OWJsonValue& element);
 
 // Rule 9: the reports among the Narratives, given as the reader is served them and in that order, grouped by
 // `parent_narrative`. Only reports are read as children: a message or any other element that names a report is in no

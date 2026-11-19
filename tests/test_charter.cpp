@@ -1,6 +1,7 @@
 // OWCharter on the charter profile's conformance fixture (schema-dist profiles/charter.fixture.json, dist.136's copy, its
 // sha256 held to MANIFEST.json): the pair-and-mark test, and the packet over the fixture's nine worlds, their readers
-// and the cases that bring a world of their own. The profile's tables are held equal to the fixture's, the hub fields
+// and the cases that bring a world of their own, and the design parts each design case's reader reads
+// (OWCharter::DesignPartsOf, serial 135), as a set. The profile's tables are held equal to the fixture's, the hub fields
 // to the Construct's link fields; then readings the fixture leaves open.
 
 #include "ow_test.h"
@@ -257,6 +258,47 @@ OW_CASES(charter_fixture_cases) {
     for (const OWJsonValue& c : cases->Items())
         if (Runs(Str(c, "kind")))
             out.emplace_back("charter_fixture:" + Str(c, "name"), [doc, &c](owtest::T& t) { Case(t, c); });
+    return out;
+}
+
+// -- the design cases (serial 135) -------------------------------------------------------------------------------------
+
+// The design list is read whole: a case added later must not pass unseen.
+OW_TEST(charter_design_cases_are_serial_135s) {
+    const OWJsonValue* cases = Fixture()->Find("design_cases");
+    t.Ok(cases && cases->IsArray(), "it parses, with its design_cases");
+    if (!cases) return;
+    std::set<std::string> names;
+    for (const OWJsonValue& c : cases->Items()) names.insert(Str(c, "name"));
+    t.Eq(cases->Size(), size_t(13), "13 design cases");
+    t.Eq(names.size(), size_t(13), "each name its own");
+    t.Ok(OWCharter::DesignStates() == std::vector<std::string>{"in design", "locked"}, "the two design states");
+}
+
+OW_CASES(charter_design_cases) {
+    owtest::Cases out;
+    auto doc = Fixture();
+    const OWJsonValue* cases = doc->Find("design_cases");
+    if (!cases || !cases->IsArray()) {
+        out.emplace_back("charter_design:not-found", [](owtest::T& t) { t.Fail("the design cases did not load"); });
+        return out;
+    }
+    for (const OWJsonValue& c : cases->Items())
+        out.emplace_back("charter_design:" + Str(c, "name"), [doc, &c](owtest::T& t) {
+            const OWJsonValue& world = WorldOf(c);
+            if (!world.IsObject()) return t.Fail("no world");
+            OWJsonValue reader = ReaderOf(world, Str(c, "reader"));
+            if (reader.IsNull()) return t.Fail("no reader " + Str(c, "reader"));
+            std::set<std::string> got, want;
+            bool twice = false;
+            for (const OWDesignPart& p : OWCharter::DesignPartsOf(world, reader))
+                if (!got.insert(p.type + " " + p.id + " " + p.state).second) twice = true;
+            if (const OWJsonValue* parts = c.Find("want"); parts && parts->IsArray())
+                for (const OWJsonValue& p : parts->Items())
+                    want.insert(Str(p, "type") + " " + Str(p, "id") + " " + Str(p, "state"));
+            t.Ok(!twice, "each part once");
+            t.Ok(got == want, "the design parts, as a set");
+        });
     return out;
 }
 

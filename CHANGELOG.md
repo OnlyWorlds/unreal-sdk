@@ -7,6 +7,19 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- A talk on an Object or a Construct (the room and report profiles, serial 135), in the core:
+  `OWLens::TalksOf(element)` answers each `{type, id}` (`OWLens::OWTalk`) a line in the room (the pair `narrative` +
+  `Message` and the mark) names in its `objects` (`object`) or `constructs` (`construct`), read from the line alone,
+  and `OWReport::TalksOf(element)` the same of a report (the pair `narrative` + `Report` and the mark), the talks a
+  reader shows it with, never which one it closed. An entry that is not a string or is empty once trimmed of
+  White_Space names nothing, a field that is not a list names none, and every other entry is an id read as written;
+  anything that is no line, or no report, answers none. `OWLens::TalkFields` names the two fields. Every case of the
+  room fixture's `talk_cases` (13) and the report fixture's (6) passes, each list's count held. No Blueprint layer.
+- The design state (the charter profile, serial 135), in the core: `OWCharter::DesignPartsOf(world, reader)` answers
+  each Object or Construct the reader is served whole whose subtype, trimmed and folded, is `in design` or `locked`
+  (`OWCharter::DesignStates`), as `OWDesignPart {type, id, state}`, only in a world where `CharterOf` finds a Charter
+  for that reader: a known-of stub has none, and a reader the hidden mark keeps the Charter from reads none. Every
+  case of the charter fixture's `design_cases` (13) passes, the count held. No Blueprint layer.
 - A line of a report's `consequences`, read as every reader reads it (the report profile's rule 10, schema-dist serial
   129), in the core: `OWReport::ReadLine(line, world)` and `OWReport::ReadLines(text, world)`, the TypeScript SDK's
   `readReportLine` and `readReportLines` (4.169.0) and the Python package's twins. `ReadLines` splits a text at every

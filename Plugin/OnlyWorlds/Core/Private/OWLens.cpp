@@ -1226,6 +1226,35 @@ bool IsRoomElement(const OWJsonValue& element) {
     return HasMark(element, RoomMark) && Has(Rooms, PairWord(element));
 }
 
+const std::vector<std::pair<std::string, std::string>>& TalkFields() {
+    static const std::vector<std::pair<std::string, std::string>> fields = {
+        {"objects", "object"}, {"constructs", "construct"}};
+    return fields;
+}
+
+std::vector<OWTalk> TalkElementsOf(const OWJsonValue& element) {
+    std::vector<OWTalk> out;
+    if (!element.IsObject()) return out;
+    std::set<std::pair<std::string, std::string>> seen;
+    for (const auto& [field, type] : TalkFields()) {
+        const OWJsonValue* list = element.Find(field);
+        if (!list || !list->IsArray()) continue;
+        for (const OWJsonValue& entry : list->Items()) {
+            // An entry that is not a string, or holds White_Space alone, names nothing; the rest is read as written.
+            if (!entry.IsString() || OWMessage::Trim(entry.Text()).empty()) continue;
+            if (!seen.insert({type, entry.Text()}).second) continue;
+            out.push_back({type, entry.Text()});
+        }
+    }
+    return out;
+}
+
+std::vector<OWTalk> TalksOf(const OWJsonValue& element) {
+    // A line: a room element whose pair is narrative + Message.
+    if (!IsRoomElement(element) || PairWord(element) != "narrative/message") return {};
+    return TalkElementsOf(element);
+}
+
 bool IsReadingAid(const OWJsonValue& element) {
     return HasMark(element, ReadingAidMark) && Has(Aids, PairWord(element));
 }
