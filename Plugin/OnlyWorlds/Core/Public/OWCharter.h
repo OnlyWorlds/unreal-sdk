@@ -79,7 +79,7 @@ struct OWReadingAids {
     // packet: six empty slots when the world has none or its story is out of the key's view. Absent when the packet
     // carries no strand (a server from before serial 100), and from CharterOf, which reads the three aids alone.
     std::optional<OWWorldStrand> strand;
-    // Empty unless the call was a mistake (a world with no elements list, a rung outside the four): it names the
+    // Empty unless the call was a mistake (a world with no elements list, a rung outside the five): it names the
     // mistake and nothing is read.
     std::string error;
 
@@ -123,13 +123,14 @@ std::string FirstLine(std::string_view text);
 // hidden mark keeps), and `open`: true for a world open to anyone, which is the World's `public_read` (the standard's
 // field on world.yaml; the charter profile, serial 107: world.json's for a folder, the world GET's over the API, and
 // the fixture's `open` is the same thing). `reader` is a lens reader (`rung` owner,
-// contributor, guest with its `whole` and `known_of`, or public; on an owner, `as`). A public reader of a world not
+// co-builder, contributor with its `whole`, guest with its `whole` and `known_of`, or public; on an owner, `as`). A public reader of a world not
 // open to anyone reads nothing.
 //
 // The Charter is the newest marked Charter the reader sees (by created_at as an instant, none or an unreadable one the
 // oldest, then the higher id by code point), read whole as stored: the Charter is every member rung's to read whole
 // (D152), as keel reads its row, but the hidden mark wins over that (serial 135): a Charter the hidden mark keeps from
-// a reader is not that reader's, whole or as a stub. The Guide the same among marked Guides. The Domains are every marked Domain the reader
+// a reader is not that reader's, whole or as a stub; the mark keeps nothing from a keeper (the owner or a co-builder) or
+// from the one who made it, a contributor's own hidden Charter listed in its `whole` (serial 138). The Guide the same among marked Guides. The Domains are every marked Domain the reader
 // sees: first in the order of the Guide's `constructs` as the reader is served the Guide (an id named twice keeps its
 // first place; an entry that is no marked Domain, or one the reader cannot see, is skipped), then the rest by folded
 // name and then id. Whether an element is an aid is read from the element as the owner is served it, since a stub

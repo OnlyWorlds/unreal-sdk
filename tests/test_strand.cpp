@@ -303,7 +303,7 @@ OW_TEST(strand_a_callers_mistake_is_named) {
     t.Ok(OWStrand::StrandOf(Parse(R"({"no": "elements"})"), Owner()).error.find("strand_of") != std::string::npos,
          "a world without elements");
     t.Ok(!OWStrand::StrandOf(Parse(R"({"elements": []})"), Parse(R"({"rung": "king"})")).error.empty(),
-         "a rung outside the four");
+         "a rung outside the five");
     Same(t, OWStrand::StrandOf(OWJsonValue::Number(int64_t(3)), Owner()).ToJson(), &Empty(), "nothing read");
 }
 

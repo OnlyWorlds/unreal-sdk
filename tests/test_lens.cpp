@@ -521,9 +521,9 @@ OW_TEST(lens_a_callers_mistake_is_named) {
     OWJsonValue world = Parse(R"({"elements": []})");
     OWJsonValue lens = Parse(R"({"type": "construct", "supertype": "Lens"})");
     t.Ok(!OWLens::Resolve(Parse(R"({"no": 1})"), lens, Parse(R"({"rung": "owner"})")).error.empty(), "no elements");
-    t.Ok(!OWLens::Resolve(world, lens, Parse(R"({"rung": "king"})")).error.empty(), "a rung outside the four");
+    t.Ok(!OWLens::Resolve(world, lens, Parse(R"({"rung": "king"})")).error.empty(), "a rung outside the five");
     t.Ok(!OWLens::Resolve(world, lens, Parse(R"({"rung": "owner", "as": {"rung": "x"}})")).error.empty(),
-         "an as outside the four");
+         "an as outside the five");
     OWLensOptions bad_clock;
     bad_clock.clock = "yesterday";
     t.Ok(!OWLens::Resolve(world, lens, Parse(R"({"rung": "owner"})"), bad_clock).error.empty(), "a clock");
@@ -966,4 +966,55 @@ OW_TEST(lens_a_hidden_element_in_a_guests_known_of_is_not_in_its_view_no_stub_no
     OWLensReading own = ReadAs(world, OWJsonValue::String("F"), R"({"rung": "guest", "whole": ["F", "e05"]})");
     const OWJsonValue* mark = own.rows.size() == 1 ? own.rows[0].Find("hidden") : nullptr;
     t.Ok(mark && mark->IsBool() && mark->AsBool(), "a hidden id in whole stays its own creation, marked");
+}
+
+OW_TEST(lens_serial_138_a_keeper_and_a_maker_read_the_hidden) {
+    // Serial 138: the hidden mark keeps an element from every reader but a keeper and the one who made it. A co-builder
+    // is served the bodies as stored, the hidden one marked, and none of the owner's counts; a contributor sees its own
+    // hidden creation, listed in its whole, and no other. Kills: a co-builder trimmed like a member, or counted like the
+    // owner; a contributor's whole read as a guest's (only the listed ids).
+    OWJsonValue world = Parse(R"({"elements": [
+        {"id": "F", "type": "construct", "name": "F", "supertype": "Lens", "x_lens": {"types": ["character"]}},
+        {"id": "L", "type": "construct", "name": "L", "supertype": "Lens", "characters": ["a", "ghost"], "x_lens": {"depth": 0}},
+        {"id": "a", "type": "character", "name": "A", "friends": ["p", "h", "k"]},
+        {"id": "p", "type": "character", "name": "P", "x_review_proposed": {"by": null, "at": "2026-10-03T12:00:00Z"}},
+        {"id": "h", "type": "character", "name": "H", "hidden": true},
+        {"id": "k", "type": "character", "name": "K", "hidden": true}]})");
+    auto kept = [](const OWLensReading& r) { return std::set<std::string>(r.kept.begin(), r.kept.end()); };
+    auto row = [](const OWLensReading& r, const std::string& id) -> const OWJsonValue* {
+        for (const OWJsonValue& each : r.rows)
+            if (Str(each, "id") == id) return &each;
+        return nullptr;
+    };
+    auto friends = [&](const OWLensReading& r) {
+        Ids out;
+        const OWJsonValue* a = row(r, "a");
+        if (const OWJsonValue* f = a ? a->Find("friends") : nullptr; f && f->IsArray())
+            for (const OWJsonValue& id : f->Items()) out.push_back(Str(&id));
+        return out;
+    };
+    auto marked = [&](const OWLensReading& r, const std::string& id) {
+        const OWJsonValue* each = row(r, id);
+        const OWJsonValue* mark = each ? each->Find("hidden") : nullptr;
+        return mark && mark->IsBool() && mark->AsBool();
+    };
+
+    OWLensReading keeper = ReadAs(world, OWJsonValue::String("F"), R"({"rung": "co-builder"})");
+    t.Ok(keeper.error.empty(), "a co-builder is a rung: " + keeper.error);
+    t.Ok(kept(keeper) == std::set<std::string>{"a", "h", "k"}, "the whole world but the proposed: " + RowsOf(keeper));
+    t.Ok(friends(keeper) == Ids{"p", "h", "k"}, "a keeper's body as stored, nothing trimmed");
+    t.Ok(row(keeper, "a") && !row(keeper, "a")->Find("x_served_trimmed"), "nothing trimmed, nothing marked");
+    t.Ok(marked(keeper, "h") && marked(keeper, "k"), "the hidden ones marked");
+    t.Ok(ReadAs(world, OWJsonValue::String("L"), R"({"rung": "co-builder"})").cut.empty(), "a co-builder is not the owner");
+    t.Ok(ReadAs(world, OWJsonValue::String("L"), R"({"rung": "owner"})").cut == Counts{{"anchor_not_visible", 1}},
+         "the owner counts the dangling anchor");
+
+    OWLensReading maker = ReadAs(world, OWJsonValue::String("F"), R"({"rung": "contributor", "whole": ["h"]})");
+    t.Ok(kept(maker) == std::set<std::string>{"a", "h"}, "its own hidden creation, and not another's: " + RowsOf(maker));
+    t.Ok(friends(maker) == Ids{"p", "h"}, "a link to its own hidden creation kept, to another's left out");
+    t.Ok(marked(maker, "h"), "its body of its own hidden creation carries the mark");
+    t.Ok(row(maker, "a") && !row(maker, "a")->Find("hidden"), "an unmarked body carries no hidden key");
+
+    OWLensReading other = ReadAs(world, OWJsonValue::String("F"), R"({"rung": "contributor"})");
+    t.Ok(kept(other) == std::set<std::string>{"a"}, "no hidden element for a contributor that made none");
 }

@@ -57,7 +57,7 @@ struct OWWorldGraph {
     std::optional<std::string> unreadable;
     // A flag asked from the wrong rung, named: nothing was read and the graph is empty.
     std::string refused;
-    // Empty unless the call was a mistake (a world with no elements list, a rung outside the four, an as_of or clock
+    // Empty unless the call was a mistake (a world with no elements list, a rung outside the five, an as_of or clock
     // that does not read, a lens neither a body nor an id): it names the mistake and nothing is read.
     std::string error;
 

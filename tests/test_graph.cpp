@@ -212,8 +212,8 @@ OW_TEST(graph_a_reading_aid_carries_its_mark_last_and_is_out_by_its_first_unmet_
 
 OW_TEST(graph_a_callers_mistake_is_named) {
     t.Ok(!Read(R"({"no": 1})", R"({"rung": "owner"})").error.empty(), "no elements");
-    t.Ok(!Read(R"({"elements": []})", R"({"rung": "king"})").error.empty(), "a rung outside the four");
-    t.Ok(!Read(R"({"elements": []})", R"({"rung": "owner", "as": {"rung": "x"}})").error.empty(), "an as outside the four");
+    t.Ok(!Read(R"({"elements": []})", R"({"rung": "king"})").error.empty(), "a rung outside the five");
+    t.Ok(!Read(R"({"elements": []})", R"({"rung": "owner", "as": {"rung": "x"}})").error.empty(), "an as outside the five");
     OWGraphOptions clock;
     clock.lens = OWJsonValue::String("L");
     clock.clock = "yesterday";

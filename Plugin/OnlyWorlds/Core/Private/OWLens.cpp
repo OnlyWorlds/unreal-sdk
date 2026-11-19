@@ -266,7 +266,9 @@ const std::vector<std::string> BaseText = {"description", "supertype", "subtype"
 const std::vector<std::string> Hands = {"created_by", "changed_by", "changed_via", "changed_client"};
 const char* const ServedTrimmed = "x_served_trimmed";
 
-const char* const Rungs[] = {"owner", "contributor", "guest", "public"};
+// The readers' five rungs. A co-builder (serial 138) is a keeper beside the owner: the whole world as the owner reads
+// it, hidden elements included and bodies as stored, and none of the owner's two counts.
+const char* const Rungs[] = {"owner", "co-builder", "contributor", "guest", "public"};
 const std::vector<std::string> UndatedWords = {"include", "exclude"};
 const std::vector<std::string> ShowWords = {"full", "first_line", "name"};
 const std::vector<std::string> MailWords = {"unread_full_read_titles", "all", "none"};
@@ -543,8 +545,10 @@ struct View {
         scoped.assign(n, 0);
         for (size_t i = 0; i < n; ++i) {
             bool sees = false;
-            if (seen_rung == "owner") sees = true;
-            else if (seen_rung == "contributor") sees = !hidden[i];
+            if (seen_rung == "owner" || seen_rung == "co-builder") sees = true;
+            // The hidden mark keeps an element from every reader but a keeper and the one who made it: a
+            // contributor's own hidden creations, listed in its whole, come in whole (serial 138).
+            else if (seen_rung == "contributor") sees = !hidden[i] || whole.count(ids[i]);
             else if (seen_rung == "public") sees = !hidden[i] && !room[i];
             else {
                 // A guest: exactly the ids it holds whole and those it knows of (a stub). Hidden beats known_of: a hidden
@@ -714,12 +718,13 @@ std::set<std::string> AnchorIds(const OWJsonValue& body) {
     return out;
 }
 
-// The body this reader is served (keel's serialize): the owner reading as itself, the body as stored; any other reader,
-// each link it cannot see left out (redact), a lens's notes on what it cannot see dropped, the trimmed mark naming a
-// Message's addressing or a lens's anchors that lost an id (never on the public rung), and a known-of element as its
-// stub. A stored x_served_trimmed is never served. For every reader, `hidden: true` on what the hidden mark keeps (the
-// world's list or the element's own key, one mark), and no `hidden` key on any other body, a stored false included
-// (keel #537): below the owner only a guest's own creation carries it, a body it sees whole.
+// The body this reader is served (keel's serialize): a keeper (the owner reading as itself, or a co-builder), the body
+// as stored; any other reader, each link it cannot see left out (redact), a lens's notes on what it cannot see dropped,
+// the trimmed mark naming a Message's addressing or a lens's anchors that lost an id (never on the public rung), and a
+// known-of element as its stub. A stored x_served_trimmed is never served. For every reader, `hidden: true` on what the
+// hidden mark keeps (the world's list or the element's own key, one mark), and no `hidden` key on any other body, a
+// stored false included (keel #537): below a keeper only a contributor's or a guest's own creation carries it, a body
+// it sees whole.
 const OWJsonValue& View::Served(size_t i) {
     auto hit = served.find(i);
     if (hit != served.end()) return hit->second;
@@ -730,7 +735,7 @@ const OWJsonValue& View::Served(size_t i) {
         else body.Erase("hidden");
         return served.emplace(i, std::move(body)).first->second;
     };
-    if (seen_rung == "owner") return marked(std::move(out));
+    if (seen_rung == "owner" || seen_rung == "co-builder") return marked(std::move(out));
     const std::string& type = types[i];
     if (seen_rung == "public") out.Erase("doors");  // keel's members_only
     // The addressing before the trim: a Message's characters and narrator, a lens's anchor fields (keel's
@@ -1101,7 +1106,7 @@ bool IsRung(const OWJsonValue* rung) {
 
 std::string CheckReader(const OWJsonValue& reader, const std::string& where) {
     if (!reader.IsObject() || !IsRung(reader.Find("rung")))
-        return where + ": a reader is an object whose rung is owner, contributor, guest or public";
+        return where + ": a reader is an object whose rung is owner, co-builder, contributor, guest or public";
     if (const OWJsonValue* as = reader.Find("as"); as && !as->IsNull()) return CheckReader(*as, where + ".as");
     return std::string();
 }

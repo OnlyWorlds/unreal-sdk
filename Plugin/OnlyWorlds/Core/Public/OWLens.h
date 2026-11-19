@@ -56,7 +56,7 @@ struct OWLensReading {
     std::optional<OWLensMail> mail;
     // The first x_lens key outside the profile's table (x_lens itself when it is not an object): nothing resolved.
     std::optional<std::string> unreadable;
-    // Empty unless the call was a mistake (a world with no elements list, a rung outside the four, an as_of or clock
+    // Empty unless the call was a mistake (a world with no elements list, a rung outside the five, an as_of or clock
     // that does not read): it names the mistake and nothing is read.
     std::string error;
 
@@ -195,8 +195,9 @@ bool IsProposed(const OWJsonValue& element);
 // `world` is a JSON object: `elements` (the bodies as the owner is served them), and optionally `hidden` (ids the
 // hidden mark keeps, beside each element's own `hidden`), `members` (the members list, which proves a message's
 // sender) and the world's now. `lens` is a lens body, or the id (a string) of a lens the reader is served whole.
-// `reader` is a JSON object: `rung` (owner, contributor, guest or public), `character` (for the mail rule), a guest's
-// `whole` and `known_of`, and on an owner `as` (another reader as an object: its view, the owner's two counts).
+// `reader` is a JSON object: `rung` (owner, co-builder, contributor, guest or public), `character` (for the mail rule),
+// a guest's `whole` and `known_of`, a contributor's `whole` (the hidden elements it made, which the hidden mark does not
+// keep from it; serial 138), and on an owner `as` (another reader as an object: its view, the owner's two counts).
 OWLensReading Resolve(const OWJsonValue& world, const OWJsonValue& lens, const OWJsonValue& reader,
                       const OWLensOptions& options = {});
 

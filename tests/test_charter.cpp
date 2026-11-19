@@ -339,7 +339,7 @@ OW_TEST(charter_a_callers_mistake_reads_nothing) {
     OWReadingAids a = OWCharter::CharterOf(Parse(R"({"id": "w"})"), owner);
     t.Ok(!a.error.empty(), "a world with no elements list: " + a.error);
     OWReadingAids b = OWCharter::CharterOf(WorldWith("[]"), Parse(R"({"rung": "king"})"));
-    t.Ok(!b.error.empty(), "a rung outside the four: " + b.error);
+    t.Ok(!b.error.empty(), "a rung outside the five: " + b.error);
     t.Ok(!b.charter && !b.guide && b.domains.empty(), "nothing read");
     t.Ok(OWCharter::DomainsOf(Parse("[]"), owner).empty(), "domainsOf: empty");
 }

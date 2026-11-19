@@ -36,7 +36,7 @@ struct OWWorldStrand {
     // True when now and location are both filled with one id, false when with two, absent otherwise. Ids, never names:
     // two places may share a name.
     std::optional<bool> same;
-    // Empty unless the call was a mistake (a world with no elements list, a rung outside the four): it names the
+    // Empty unless the call was a mistake (a world with no elements list, a rung outside the five): it names the
     // mistake and nothing is read.
     std::string error;
 
@@ -55,8 +55,8 @@ const std::vector<std::string>& Members();  // narrative, event, location
 //
 // `world` is what OWLens::Resolve takes, with the World's x_strand beside it: `elements` (the bodies as the owner is
 // served them), `hidden` (the ids the hidden mark keeps), `open`: true for a world open to anyone, and the mark.
-// `reader` is a lens reader (`rung` owner, contributor, guest with its `whole` and `known_of`, or public; on an owner,
-// `as`). A public reader of a world not open to anyone reads nothing.
+// `reader` is a lens reader (`rung` owner, co-builder, contributor with its `whole`, guest with its `whole` and
+// `known_of`, or public; on an owner, `as`). A public reader of a world not open to anyone reads nothing.
 //
 // The story is the element the mark names when it is a Narrative in the reader's view; with none, every slot is empty,
 // since a strand hangs off its story. The happening is the element the mark names when it is an Event in the reader's
