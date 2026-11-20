@@ -30,8 +30,7 @@ Nothing is released yet; the history before this file is in the git log.
   `rung` may be `co-builder`, which reads the whole world as the owner does, hidden elements included and bodies as
   stored, with none of the owner's two counts. A contributor reader's `whole` lists the hidden elements it made: each
   is in its view and its body carries `hidden: true`. `OWLens::Resolve`, `OWGraph::WorldGraph`, `OWCharter::CharterOf`
-  and `DesignPartsOf` and `OWStrand` read both through the view; the graph's `hidden` and `proposed` flags stay the
-  owner's alone, as the page says today. The Blueprint layer's `EOWLensRung` and `FOWLensReader` do not carry either
+  and `DesignPartsOf` and `OWStrand` read both through the view. The Blueprint layer's `EOWLensRung` and `FOWLensReader` do not carry either
   yet.
 - A talk on an Object or a Construct (the room and report profiles, serial 135), in the core:
   `OWLens::TalksOf(element)` answers each `{type, id}` (`OWLens::OWTalk`) a line in the room (the pair `narrative` +
@@ -74,6 +73,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- `OWGraph::WorldGraph`, in the core: a co-builder reads the graph as a keeper (the lens page, serial 140). The flags
+  `hidden` and `proposed`, and the `hidden` and `proposed` counts in `cut` and `edges_cut`, are a keeper's (the owner
+  or a co-builder), where they were the owner's alone, so a co-builder's unlensed graph is answered as the owner's is
+  on the same inputs; `not_visible` and `anchor_not_visible` stay the owner's. `OWGraph::OwnerOnlyEdgeReasons()` now
+  holds those two, the new `OWGraph::KeeperOnlyEdgeReasons()` holds `hidden` and `proposed`, and `OwnerOnlyFlags()`
+  keeps its name (the fixture's key) for the two flags a keeper may ask. Every case of the lens fixture's `graph` kind
+  passes. The Blueprint layer (`UOWGraph`, `OWGraphLibrary.h`) still says the owner's alone in its docs, and its
+  automation tests still count 56 graph cases: a plugin build's.
 - The reading aids and the strand say what type each of their elements is (the charter and strand profiles, serial
   133), in the plain C++ core: `OWCharterLaw::type` (`law`), `OWCharterGuide::type` and `OWCharterDomain::type`
   (`construct`), and `OWStrandSlot::type` (the kind the slot holds, `location` for `now`), each the element's own type

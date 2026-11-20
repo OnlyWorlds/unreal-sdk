@@ -23,7 +23,10 @@ const std::vector<std::string> OwnerFlags = {"hidden", "proposed"};
 const std::vector<std::string> Reasons = {"room",   "hidden", "proposed", "map_space",   "reading_aid",
                                           "not_visible", "outside_lens", "budget", "types", "window",
                                           "stale",  "undated", "after_as_of", "anchor_not_visible", "hops_not_served"};
-const std::vector<std::string> OwnerReasons = {"hidden", "not_visible", "anchor_not_visible"};
+// The owner's two counts (the owner reading as another keeps them), and a keeper's two: the owner's or a co-builder's
+// (serial 140; the owner's alone before).
+const std::vector<std::string> OwnerReasons = {"not_visible", "anchor_not_visible"};
+const std::vector<std::string> KeeperReasons = {"hidden", "proposed"};
 // Map space: out by default for size, not for standing, so a node it brings back carries no mark. A Zone is content
 // that gains spatial presence through its Markers, so it is a node by default (serial 92).
 const std::vector<std::string> MapSpace = {"map", "pin", "marker"};
@@ -38,12 +41,16 @@ OWJsonValue Counts(const std::vector<std::pair<std::string, int64_t>>& cut) {
     return out;
 }
 
-// Counts in the reasons' one order, a reason with no count left out, the owner's reasons kept for the owner only.
-std::vector<std::pair<std::string, int64_t>> Tally(const std::map<std::string, int64_t>& counts, bool owner) {
+// Counts in the reasons' one order, a reason with no count left out, the owner's reasons kept for the owner only and
+// the hidden and proposed counts for a keeper.
+std::vector<std::pair<std::string, int64_t>> Tally(const std::map<std::string, int64_t>& counts, bool owner, bool keeper) {
     std::vector<std::pair<std::string, int64_t>> out;
     for (const std::string& why : Reasons) {
         auto it = counts.find(why);
-        if (it != counts.end() && it->second > 0 && (owner || !Has(OwnerReasons, why))) out.emplace_back(why, it->second);
+        if (it == counts.end() || it->second <= 0) continue;
+        if (!owner && Has(OwnerReasons, why)) continue;
+        if (!keeper && Has(KeeperReasons, why)) continue;
+        out.emplace_back(why, it->second);
     }
     return out;
 }
@@ -56,6 +63,7 @@ const std::vector<std::string>& Flags() { return FlagWords; }
 const std::vector<std::string>& OwnerOnlyFlags() { return OwnerFlags; }
 const std::vector<std::string>& EdgeReasons() { return Reasons; }
 const std::vector<std::string>& OwnerOnlyEdgeReasons() { return OwnerReasons; }
+const std::vector<std::string>& KeeperOnlyEdgeReasons() { return KeeperReasons; }
 
 OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, const OWGraphOptions& options) {
     OWWorldGraph g;
@@ -63,8 +71,9 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
         g.error = bad;
         return g;
     }
-    // Refused by name before anything is read, judged by the rung read as (the owner as another is that rung): the
-    // owner's two flags from any other rung, then any flag from a public reading; the first unmet in the order hidden,
+    // Refused by name before anything is read, judged by the rung read as (the owner as another is that rung): a
+    // keeper's two flags (the owner's or a co-builder's, serial 140) from any rung below, then any flag from a public
+    // reading; the first unmet in the order hidden,
     // proposed, rooms, map_space, reading_aids (any signed reader may ask the last, serial 104).
     const OWJsonValue* as = reader.Find("as");
     const OWJsonValue& seen = reader.Find("rung")->Text() == "owner" && as && as->IsObject() ? *as : reader;
@@ -74,7 +83,8 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
                                                {"reading_aids", options.reading_aids}};
     for (const char* flag : {"hidden", "proposed", "rooms", "map_space", "reading_aids"}) {
         bool owners = Has(OwnerFlags, flag);
-        if (asked.at(flag) && ((owners && rung != "owner") || rung == "public")) {
+        const bool keeper = rung == "owner" || rung == "co-builder";
+        if (asked.at(flag) && ((owners && !keeper) || rung == "public")) {
             g.refused = flag;
             return g;
         }
@@ -90,7 +100,11 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
         g.error = bad;
         return g;
     }
-    const bool seen_owner = r.seen_rung == "owner";
+    // A keeper (the owner, or a co-builder; serial 140) is served the lists as stored, and its unlensed view holds the
+    // proposed elements, out by default. The hidden and proposed counts are a keeper's, and the counts of a reader that
+    // keeps the owner's (the owner reading as another).
+    const bool seen_keeper = r.seen_rung == "owner" || r.seen_rung == "co-builder";
+    const bool keeper_counts = seen_keeper || r.owner_counts;
     const size_t n = r.els.size();
 
     // The kinds out by default that apply to an element, each by its reason word (a flag's word but rooms -> room and
@@ -104,8 +118,8 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
         if (r.aid[i]) out.push_back("reading_aid");
         return out;
     };
-    // An unlensed graph's candidates: the reader's view, and for the owner (by the rung read as) what is proposed.
-    auto candidate = [&](size_t i) { return r.view[i] || (seen_owner && r.proposed[i]); };
+    // An unlensed graph's candidates: the reader's view, and for a keeper (by the rung read as) what is proposed.
+    auto candidate = [&](size_t i) { return r.view[i] || (seen_keeper && r.proposed[i]); };
     // Out by the first kind its flag does not bring back.
     auto flag_of = [](const std::string& k) -> std::string {
         if (k == "room") return "rooms";
@@ -140,7 +154,7 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
             if (why.empty()) node[i] = 1;
             else ++counts[why];
         }
-        g.cut = Tally(counts, r.owner_counts);
+        g.cut = Tally(counts, r.owner_counts, keeper_counts);
         reason_of = [&](size_t j) { return candidate(j) ? out_by(j) : std::string("not_visible"); };
     }
 
@@ -185,7 +199,7 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
         if (r.stub[source]) continue;  // a stub carries no links
         const OWJsonValue& el = *r.els[source];
         // A schema link (keel's link registry: the single and list links, a Pin's generic pair apart), typed by its
-        // field's target as the lens reader keys it. The owner reading as itself is served the list as stored; any
+        // field's target as the lens reader keys it. A keeper reading as itself is served the list as stored; any
         // other reader the list as keel serves it (less what it hides; a proposed id kept below the public rung), so a
         // hidden target is never a gap.
         for (const OWLens::OWLensField& f : OWLens::FieldsOf(r.types[source])) {
@@ -202,10 +216,10 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
             std::set<size_t> met;
             for (size_t i = 0; i < list.size(); ++i) {
                 std::optional<size_t> t = list[i]->IsString() ? r.Find(f.target, list[i]->Text()) : std::nullopt;
-                visit(source, f.name, t, seen_owner ? int64_t(i) : served, met);
+                visit(source, f.name, t, seen_keeper ? int64_t(i) : served, met);
                 // As served: a proposed id below the public rung too, and a repeat, so an index points into the list
                 // as served.
-                if (seen_owner || (t && r.scoped[*t])) ++served;
+                if (seen_keeper || (t && r.scoped[*t])) ++served;
             }
         }
         // A declared extension link names any element by id, is served as stored to every reader, and names each
@@ -228,7 +242,7 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
         if (a.field != b.field) return a.field < b.field;
         return a.index < b.index;
     });
-    g.edges_cut = Tally(cut_edges, r.owner_counts);
+    g.edges_cut = Tally(cut_edges, r.owner_counts, keeper_counts);
     return g;
 }
 

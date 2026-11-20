@@ -11,6 +11,7 @@
 #include "OWJson.h"
 #include "OWLens.h"
 
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <memory>
@@ -80,9 +81,17 @@ OW_TEST(graph_tables_are_the_fixtures) {
     t.Eq(GraphCases().size(), size_t(62), "the fixture's 62 graph cases");
     t.Ok(List("graph_links") == OWGraph::DeclaredLinks(), "the declared links");
     t.Ok(List("graph_flags") == OWGraph::Flags(), "the flags");
-    t.Ok(List("owner_only_flags") == OWGraph::OwnerOnlyFlags(), "the owner's flags");
+    t.Ok(List("owner_only_flags") == OWGraph::OwnerOnlyFlags(), "a keeper's flags (the key's name is older than the co-builder)");
     t.Ok(List("edges_cut_reasons") == OWGraph::EdgeReasons(), "the reasons a link is cut, in the fixture's order");
-    t.Ok(List("owner_only_edges_cut_reasons") == OWGraph::OwnerOnlyEdgeReasons(), "the owner's reasons");
+    // The fixture's owner_only_edges_cut_reasons are the reasons a reader below a keeper never carries (serial 140's
+    // note): a keeper carries hidden, the owner alone not_visible and anchor_not_visible. Proposed is a keeper's count
+    // here as in the npm and Python packages, beyond the fixture's list.
+    const std::vector<std::string> flags = List("owner_only_flags");
+    std::vector<std::string> owner_alone;
+    for (const std::string& why : List("owner_only_edges_cut_reasons"))
+        if (std::find(flags.begin(), flags.end(), why) == flags.end()) owner_alone.push_back(why);
+    t.Ok(owner_alone == OWGraph::OwnerOnlyEdgeReasons(), "the owner's reasons: the fixture's list less the flags' kinds");
+    t.Ok(List("owner_only_flags") == OWGraph::KeeperOnlyEdgeReasons(), "a keeper's reasons: the flags' own kinds");
 }
 
 OW_TEST(graph_every_case_holds_the_profiles_invariants) {
@@ -172,6 +181,10 @@ OW_TEST(graph_a_refusal_comes_before_any_read) {
     t.Eq(Read(R"({"elements": []})", R"({"rung": "owner", "as": {"rung": "public"}})", rooms).refused,
          std::string("rooms"), "the owner reading as the public is judged by that rung");
     t.Eq(Read(R"({"elements": []})", R"({"rung": "owner"})", all).refused, std::string(), "the owner may ask all five");
+    t.Eq(Read(R"({"elements": []})", R"({"rung": "co-builder"})", all).refused, std::string(),
+         "a co-builder may ask all five (serial 140)");
+    t.Eq(Read(R"({"elements": []})", R"({"rung": "owner", "as": {"rung": "co-builder"}})", proposed).refused,
+         std::string(), "the owner as a co-builder is judged by the co-builder's rung");
     t.Eq(Read(R"({"elements": []})", R"({"rung": "contributor"})", rooms).refused, std::string(), "rooms from a contributor");
     // reading_aids is last in the order (serial 104): map space is named before it, and it alone is named alone.
     OWGraphOptions late;
@@ -365,4 +378,39 @@ OW_TEST(graph_a_hidden_element_in_a_guests_known_of_is_no_node_and_a_link_to_it_
     OWWorldGraph as = Read(world, R"({"rung": "owner", "as": {"rung": "guest", "whole": ["c1", "b"], "known_of": ["h"]}})");
     t.Ok(as.nodes.size() == 2, "the same nodes for the owner reading as the guest");
     t.Ok(as.edges_cut == Counts{{"not_visible", 1}}, "and the link to Hal not_visible");
+}
+
+// Serial 140, a keeper's graph, where the fixture leaves it unpinned: a co-builder's unlensed graph counts the hidden and
+// proposed elements it leaves out as the owner's does, and a contributor's on the same world counts neither; with a lens
+// whose anchors are a proposed element and an id not in the world, the owner (and the owner as a co-builder) counts
+// anchor_not_visible, and a co-builder never does, not even as zero.
+OW_TEST(graph_serial_140_a_keepers_graph_counts_hidden_and_proposed_never_the_owners_two) {
+    using Counts = std::vector<std::pair<std::string, int64_t>>;
+    const char* plain = R"({"elements": [
+        {"id": "c1", "type": "character", "name": "Ada", "friends": ["c2", "c3"]},
+        {"id": "c2", "type": "character", "name": "Ghost", "hidden": true},
+        {"id": "c3", "type": "character", "name": "Maybe", "x_review_proposed": {"by": "m1"}}]})";
+    OWWorldGraph co = Read(plain, R"({"rung": "co-builder"})");
+    t.Ok(co.cut == Counts{{"hidden", 1}, {"proposed", 1}}, "a co-builder counts what it leaves out");
+    t.Ok(co.edges_cut == Counts{{"hidden", 1}, {"proposed", 1}}, "and the links to them");
+    t.Eq(Bytes(co.ToJson()), Bytes(Read(plain, R"({"rung": "owner"})").ToJson()), "a co-builder's unlensed graph is the owner's");
+    OWWorldGraph contributor = Read(plain, R"({"rung": "contributor"})");
+    t.Ok(contributor.cut.empty() && contributor.edges_cut.empty(), "a contributor counts neither");
+    const char* world = R"({"elements": [
+        {"id": "c1", "type": "character", "name": "Ada", "friends": ["c2", "c3"]},
+        {"id": "c2", "type": "character", "name": "Ghost", "hidden": true},
+        {"id": "c3", "type": "character", "name": "Maybe", "x_review_proposed": {"by": "m1"}},
+        {"id": "L", "type": "construct", "supertype": "Lens", "characters": ["c1", "c3", "gone"], "x_lens": {"depth": 0}}]})";
+    OWGraphOptions lens;
+    lens.lens = OWJsonValue::String("L");
+    OWWorldGraph owner = Read(world, R"({"rung": "owner"})", lens);
+    t.Ok(owner.cut == Counts{{"anchor_not_visible", 2}}, "the owner counts the two anchors it cannot see");
+    auto anchor = std::find(owner.edges_cut.begin(), owner.edges_cut.end(), std::pair<std::string, int64_t>{"anchor_not_visible", 1});
+    t.Ok(anchor != owner.edges_cut.end(), "and the link to the proposed one by the lens's reason");
+    t.Eq(Bytes(Read(world, R"({"rung": "owner", "as": {"rung": "co-builder"}})", lens).ToJson()), Bytes(owner.ToJson()),
+         "the owner as a co-builder keeps the owner's counts");
+    OWWorldGraph co_lensed = Read(world, R"({"rung": "co-builder"})", lens);
+    t.Ok(co_lensed.nodes.size() == 1 && co_lensed.nodes[0].id == "c1", "the lens keeps Ada");
+    t.Ok(co_lensed.cut.empty(), "a co-builder carries no anchor_not_visible");
+    t.Ok(co_lensed.edges_cut == Counts{{"outside_lens", 1}}, "only its own count: the hidden Ghost it sees, past depth 0");
 }

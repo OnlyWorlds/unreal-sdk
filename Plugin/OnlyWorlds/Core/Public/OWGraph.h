@@ -72,7 +72,8 @@ struct OWGraphOptions {
     std::optional<int64_t> as_of;
     std::optional<std::string> clock;
     // The flags, each bringing back one kind of element that is out of an unlensed graph by default, marked. hidden and
-    // proposed are the owner's alone; a public reader takes none. With a lens, no flag adds a node.
+    // proposed are a keeper's alone (the owner or a co-builder, serial 140); a public reader takes none. With a lens, no
+    // flag adds a node.
     bool rooms = false;
     bool hidden = false;
     bool proposed = false;
@@ -89,18 +90,22 @@ namespace OWGraph {
 const std::vector<std::string>& DeclaredLinks();
 // Map space, out by default for size: map, pin, marker (type slugs, folded). A Zone is content (serial 92).
 const std::vector<std::string>& MapSpaceTypes();
-// The flags (rooms, hidden, proposed, map_space, reading_aids), and the owner's two. A refusal names the first unmet one
-// in the order hidden, proposed, rooms, map_space, reading_aids.
+// The flags (rooms, hidden, proposed, map_space, reading_aids), and a keeper's two (the owner's or a co-builder's; the
+// name is the fixture's key, older than the co-builder). A refusal names the first unmet one in the order hidden,
+// proposed, rooms, map_space, reading_aids.
 const std::vector<std::string>& Flags();
 const std::vector<std::string>& OwnerOnlyFlags();
 // Every reason a link is cut, one closed list (the graph's out-by-default reasons, not_visible, outside_lens, then the
-// lens's own), and the owner's three.
+// lens's own); the owner's two (not_visible, anchor_not_visible: the owner reading as another keeps them); and a
+// keeper's two (hidden, proposed: the owner's or a co-builder's, serial 140). A reader carries neither list's reasons,
+// not even as zero, where it is not that list's reader.
 const std::vector<std::string>& EdgeReasons();
 const std::vector<std::string>& OwnerOnlyEdgeReasons();
+const std::vector<std::string>& KeeperOnlyEdgeReasons();
 
 // worldGraph(world, reader, options): `world` and `reader` are what OWLens::Resolve takes. Without a lens, the nodes
-// are every element the reader sees less what is out by default: room elements, hidden ones and (for the owner, who
-// sees them) proposed ones, map space (Map, Pin, Marker; a Zone is a node by default) and the reading aids (counted
+// are every element the reader sees less what is out by default: room elements, hidden ones and (for a keeper, the
+// owner or a co-builder, who sees them) proposed ones, map space (Map, Pin, Marker; a Zone is a node by default) and the reading aids (counted
 // reading_aid), each back with its flag. With a lens, the nodes are its kept. The edges are the schema's
 // single and list links and the declared extension links, between nodes only; a link to an id that is not in the world
 // (or not of the field's type) is dropped and not counted. A list names each element once: one that names a target
