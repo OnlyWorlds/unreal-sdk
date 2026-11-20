@@ -12,7 +12,7 @@ they are one table of 253 points (for k kinds, k = 1 to 22, the k points, flat, 
 the same float64 values the npm SDK and the Python package hold, read here from the shared fixture, the pinned dist's
 own (codegen/schema-dist/profiles/layout.fixture.json since serial 132, its `anchors`; Python's json reads a decimal
 exactly) and written as bit patterns, so no parser of a decimal literal stands between the fixture and the table. Its
-`unplaced` suite is not read: the core has no unplaced reader.
+`unplaced` suite holds no number: tests/test_layout.cpp reads it from the fixture as it stands.
 
   codegen/schema-dist/profiles/layout.fixture.json               the pinned dist's layout fixture, vendored
   -> Plugin/OnlyWorlds/Core/Private/OWLayoutAnchors.generated.cpp  OWLayout::AnchorBits

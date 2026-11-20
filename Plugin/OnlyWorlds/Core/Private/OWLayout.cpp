@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstring>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace OnlyWorlds {
@@ -132,6 +133,58 @@ int64_t CellKey(int64_t x, int64_t y) { return (x + 1048576) * 2097152 + (y + 10
 int Find(const std::unordered_map<std::string, int>& index, const std::string& id) {
     auto it = index.find(id);
     return it == index.end() ? -1 : it->second;
+}
+
+// around's reach (its steps 1 and 2): each node's depth from the focus, -1 past the steps; the node whose list each was
+// met in; and each step's newly reached nodes in the order they were reached (the order the npm SDK's depth map holds
+// them in, which orders each neighbour's fan).
+struct Reached {
+    std::vector<int> depth;
+    std::vector<int> via;
+    std::vector<std::vector<int>> reached;
+};
+
+Reached Reach(const Ordered& g, int centre, int steps) {
+    const int n = static_cast<int>(g.nodes.size());
+    std::vector<std::vector<int>> adj(n);
+    for (const Edge& e : g.edges) {
+        int a = Find(g.index, e.source), b = Find(g.index, e.target);
+        if (a < 0 || b < 0) continue;
+        adj[a].push_back(b);
+        if (a != b) adj[b].push_back(a);
+    }
+    Reached r;
+    r.depth.assign(n, -1);
+    r.via.assign(n, -1);
+    r.depth[centre] = 0;
+    r.reached.resize(steps + 1);
+    std::vector<int> frontier{centre};
+    for (int s = 1; s <= steps; ++s) {
+        std::vector<int> next;
+        for (int a : frontier) {
+            for (int to : adj[a]) {
+                if (r.depth[to] >= 0) continue;
+                r.depth[to] = s;
+                r.via[to] = a;
+                next.push_back(to);
+            }
+        }
+        r.reached[s] = next;
+        frontier = std::move(next);
+    }
+    return r;
+}
+
+// `placed` as a set of ids: a member that is not a non-empty string is passed over; null, a string or anything but an
+// array is an error (`fn: ...`).
+bool PlacedIds(const char* fn, const OWJsonValue& placed, std::unordered_set<std::string>& ids, std::string& error) {
+    if (!placed.IsArray()) {
+        error = std::string(fn) + ": placed is a list of element ids";
+        return false;
+    }
+    for (const OWJsonValue& v : placed.Items())
+        if (v.IsString() && !v.Text().empty()) ids.insert(v.Text());
+    return true;
 }
 
 }  // namespace
@@ -310,32 +363,10 @@ OWLayoutAround LayoutAround(const OWJsonValue& graph, std::string_view focus, in
         return out;
     }
     const int n = static_cast<int>(nodes.size());
-    std::vector<std::vector<int>> adj(n);
-    for (const Edge& e : g.edges) {
-        int a = Find(g.index, e.source), b = Find(g.index, e.target);
-        if (a < 0 || b < 0) continue;
-        adj[a].push_back(b);
-        if (a != b) adj[b].push_back(a);
-    }
-    std::vector<int> depth(n, -1), via(n, -1);
-    depth[centre] = 0;
-    // Each step's newly reached elements in the order they were reached: the order the npm SDK's depth map holds them
-    // in, which orders each neighbour's fan.
-    std::vector<std::vector<int>> reached(steps + 1);
-    std::vector<int> frontier{centre};
-    for (int s = 1; s <= steps; ++s) {
-        std::vector<int> next;
-        for (int a : frontier) {
-            for (int to : adj[a]) {
-                if (depth[to] >= 0) continue;
-                depth[to] = s;
-                via[to] = a;
-                next.push_back(to);
-            }
-        }
-        reached[s] = next;
-        frontier = std::move(next);
-    }
+    Reached walk = Reach(g, centre, steps);
+    const std::vector<int>& depth = walk.depth;
+    const std::vector<int>& via = walk.via;
+    const std::vector<std::vector<int>>& reached = walk.reached;
     std::vector<int> ring1 = reached[1];
     std::sort(ring1.begin(), ring1.end(), [&nodes](int a, int b) {
         if (nodes[a].rank != nodes[b].rank) return nodes[a].rank < nodes[b].rank;
@@ -407,6 +438,94 @@ OWLayoutAround LayoutAround(const OWWorldGraph& graph, std::string_view focus, i
     }
     return LayoutAround(graph.ToJson(), focus, steps);
 }
+
+OWLayoutUnplaced UnplacedByKind(const OWJsonValue& graph, const OWJsonValue& placed) {
+    OWLayoutUnplaced out;
+    out.method = "by-kind";
+    std::unordered_set<std::string> ids;
+    if (!PlacedIds("UnplacedByKind", placed, ids, out.error)) return out;
+    Ordered g = ReadGraph("UnplacedByKind", graph);
+    if (!g.error.empty()) {
+        out.error = g.error;
+        return out;
+    }
+    for (const Node& x : g.nodes)
+        if (!ids.count(x.id)) out.unplaced.push_back(x.id);
+    return out;
+}
+
+OWLayoutUnplaced UnplacedByKind(const OWWorldGraph& graph, const OWJsonValue& placed) { return UnplacedByKind(graph.ToJson(), placed); }
+
+OWLayoutUnplaced UnplacedAround(const OWJsonValue& graph, std::string_view focus, const OWJsonValue& placed, int steps) {
+    OWLayoutUnplaced out;
+    out.method = "around";
+    if (steps != 1 && steps != 2) {
+        out.error = "UnplacedAround: steps is 1 or 2, not " + std::to_string(steps);
+        return out;
+    }
+    Ordered g = ReadGraph("UnplacedAround", graph);
+    if (!g.error.empty()) {
+        out.error = g.error;
+        return out;
+    }
+    const int centre = Find(g.index, std::string(focus));
+    if (centre < 0) {
+        out.error = "UnplacedAround: the focus " + std::string(focus) + " is not a node of the graph";
+        return out;
+    }
+    std::unordered_set<std::string> ids;
+    if (!PlacedIds("UnplacedAround", placed, ids, out.error)) return out;
+    const Reached walk = Reach(g, centre, steps);
+    for (size_t j = 0; j < g.nodes.size(); ++j)
+        if (walk.depth[j] >= 0 && !ids.count(g.nodes[j].id)) out.unplaced.push_back(g.nodes[j].id);
+    return out;
+}
+
+OWLayoutUnplaced UnplacedAround(const OWWorldGraph& graph, std::string_view focus, const OWJsonValue& placed, int steps) {
+    if (steps != 1 && steps != 2) {
+        OWLayoutUnplaced out;
+        out.method = "around";
+        out.error = "UnplacedAround: steps is 1 or 2, not " + std::to_string(steps);
+        return out;
+    }
+    return UnplacedAround(graph.ToJson(), focus, placed, steps);
+}
+
+OWLayoutUnplaced UnplacedByLinks3d(const OWJsonValue& graph, const OWJsonValue& placed) {
+    OWLayoutUnplaced out;
+    out.method = "by-links-3d";
+    const OWJsonValue* nodes = graph.IsObject() ? graph.Find("nodes") : nullptr;
+    const OWJsonValue* edges = graph.IsObject() ? graph.Find("edges") : nullptr;
+    if (!nodes || !nodes->IsArray() || !edges || !edges->IsArray()) {
+        out.error = "UnplacedByLinks3d: the graph is { nodes, edges }, as WorldGraph answers it";
+        return out;
+    }
+    std::unordered_set<std::string> taken;
+    if (!PlacedIds("UnplacedByLinks3d", placed, taken, out.error)) return out;
+    std::vector<std::string> ids;
+    ids.reserve(nodes->Size());
+    for (size_t i = 0; i < nodes->Size(); ++i) {
+        const OWJsonValue& node = nodes->Items()[i];
+        const OWJsonValue* id = node.IsObject() ? node.Find("id") : nullptr;
+        if (!id || !id->IsString()) {
+            out.error = "UnplacedByLinks3d: node " + std::to_string(i) + " has no id";
+            return out;
+        }
+        ids.push_back(id->Text());
+    }
+    std::sort(ids.begin(), ids.end());
+    for (size_t i = 1; i < ids.size(); ++i) {
+        if (ids[i] == ids[i - 1]) {
+            out.error = "UnplacedByLinks3d: two nodes share the id " + ids[i];
+            return out;
+        }
+    }
+    for (const std::string& id : ids)
+        if (!taken.count(id)) out.unplaced.push_back(id);
+    return out;
+}
+
+OWLayoutUnplaced UnplacedByLinks3d(const OWWorldGraph& graph, const OWJsonValue& placed) { return UnplacedByLinks3d(graph.ToJson(), placed); }
 
 }  // namespace OWLayout
 }  // namespace OnlyWorlds

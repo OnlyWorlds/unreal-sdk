@@ -2,9 +2,9 @@
 // default layouts page, profiles/layout.md, serial 132), read from the vendored folder through OWJson, whose from_chars
 // reads every double exactly. by-kind compares exactly, every x and y bit for bit: the method is chaotic, so two runtimes
 // agree bit for bit or not at all. around compares within 1e-12: each of its points is one cosine and one sine, and
-// runtimes' cosines may differ in the last place. The fixture's third suite, unplaced, is not read: the core has no
-// unplaced reader. Then the npm SDK's other vectors (test/layout-by-kind.test.mjs). When the pin moves the fixture: run
-// codegen/generate_layout.py and update the hash.
+// runtimes' cosines may differ in the last place. The fixture's third suite, unplaced, is read whole: each case's want,
+// the list of ids, equal exactly and in its order (UnplacedByKind, UnplacedAround). Then the npm SDK's other vectors
+// (test/layout-by-kind.test.mjs). When the pin moves the fixture: run codegen/generate_layout.py and update the hash.
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -111,6 +111,27 @@ void AroundCase(owtest::T& t, const OWJsonValue& c) {
     }
 }
 
+// One case of the unplaced suite, by its method word: the want, the list of ids, equal exactly and in its order.
+void UnplacedCase(owtest::T& t, const OWJsonValue& c) {
+    const std::string name = c.Find("name")->Text();
+    const std::string method = c.Find("method")->Text();
+    OWLayoutUnplaced got;
+    if (method == "by-kind")
+        got = OWLayout::UnplacedByKind(*c.Find("graph"), *c.Find("placed"));
+    else if (method == "around")
+        got = OWLayout::UnplacedAround(*c.Find("graph"), c.Find("focus")->Text(), *c.Find("placed"), static_cast<int>(c.Find("steps")->AsDouble()));
+    else {
+        t.Fail(name + ": a method this suite does not hold: " + method);
+        return;
+    }
+    t.Eq(got.error, std::string(), name + ": an answer");
+    t.Eq(got.method, method, name + ": the method");
+    std::string ids, want;
+    for (const auto& id : got.unplaced) ids += id + " ";
+    for (const auto& w : c.Find("want")->Items()) want += w.Text() + " ";
+    t.Eq(ids, want, name + ": the unplaced ids, in their order");
+}
+
 OWJsonValue Copy(const OWJsonValue& v) { return v; }
 
 // The npm test's seeded shuffle (its generator, seed 99), so a failure reruns the same.
@@ -157,7 +178,6 @@ std::vector<std::string> RingByAngle(const OWLayoutAround& around, const std::ma
 }  // namespace
 
 OW_TEST(layout_fixture_is_the_pinned_dists_bytes_with_seventeen_exact_cases_and_ten_rings) {
-    // The fixture also holds unplaced (15 cases), which no test here reads: the core has no unplaced reader.
     OWBytes bytes;
     t.Ok(OWFiles::Read(FixturePath(), bytes), "the fixture is vendored");
     t.Eq(owtest::Sha256Hex(bytes), std::string(FixtureSha256), "the fixture's bytes are the ones this test pins");
@@ -217,7 +237,41 @@ OW_CASES(layout_fixture_cases) {
         out.emplace_back("layout-by-kind:" + name, [doc, name](owtest::T& t) { ByKindCase(t, *Named("cases", name)); });
     for (const std::string& name : Names("around"))
         out.emplace_back("layout-around:" + name, [doc, name](owtest::T& t) { AroundCase(t, *Named("around", name)); });
+    for (const std::string& name : Names("unplaced"))
+        out.emplace_back("layout-unplaced:" + name, [doc, name](owtest::T& t) { UnplacedCase(t, *Named("unplaced", name)); });
     return out;
+}
+
+OW_TEST(layout_unplaced_seventeen_cases_by_kind_and_around_only) {
+    const OWJsonValue* l = Fixture()->Find("unplaced");
+    size_t byKind = 0, around = 0, other = 0;
+    if (l)
+        for (const OWJsonValue& c : l->Items()) {
+            const std::string m = c.Find("method") ? c.Find("method")->Text() : "";
+            (m == "by-kind" ? byKind : m == "around" ? around : other) += 1;
+        }
+    t.Eq(Names("unplaced").size(), static_cast<size_t>(17), "seventeen unplaced cases");
+    t.Ok(byKind > 0 && around > 0 && other == 0, "methods by-kind and around only");
+}
+
+OW_TEST(layout_unplaced_refuses_a_placed_that_is_no_list) {
+    OWJsonValue g = Parse(R"({"nodes": [{"id": "a", "type": "character"}], "edges": []})");
+    for (const char* bad : {"null", "\"a\"", "{\"a\": true}", "7"}) {
+        OWJsonValue p = Parse(bad);
+        const std::string a = OWLayout::UnplacedByKind(g, p).error, b = OWLayout::UnplacedAround(g, "a", p).error,
+                          c = OWLayout::UnplacedByLinks3d(g, p).error;
+        t.Ok(a == "UnplacedByKind: placed is a list of element ids", std::string(bad) + ": by-kind: " + a);
+        t.Ok(b == "UnplacedAround: placed is a list of element ids", std::string(bad) + ": around: " + b);
+        t.Ok(c == "UnplacedByLinks3d: placed is a list of element ids", std::string(bad) + ": by-links-3d: " + c);
+    }
+    OWJsonValue empty = Parse("[]");
+    t.Ok(OWLayout::UnplacedAround(g, "b", empty).error.find("the focus b is not a node of the graph") != std::string::npos, "around: no focus");
+    t.Ok(OWLayout::UnplacedAround(g, "a", empty, 3).error.find("UnplacedAround: steps is 1 or 2") != std::string::npos, "around: steps");
+    t.Ok(OWLayout::UnplacedByKind(Parse("null"), empty).error.rfind("UnplacedByKind: the graph is { nodes, edges }", 0) == 0, "by-kind: no graph");
+    t.Ok(OWLayout::UnplacedByLinks3d(Parse(R"({"nodes": [{"id": "a"}, {"id": "a"}], "edges": []})"), empty).error == "UnplacedByLinks3d: two nodes share the id a", "by-links-3d: an id twice");
+    t.Ok(OWLayout::UnplacedByLinks3d(Parse(R"({"nodes": [{"type": "map"}], "edges": []})"), empty).error == "UnplacedByLinks3d: node 0 has no id", "by-links-3d: no id");
+    OWLayoutUnplaced ok = OWLayout::UnplacedByKind(g, empty);
+    t.Ok(ok.error.empty() && ok.method == "by-kind" && ok.unplaced == std::vector<std::string>{"a"}, "an empty list places nothing");
 }
 
 OW_TEST(layout_the_order_nodes_and_links_are_handed_in_moves_no_point) {

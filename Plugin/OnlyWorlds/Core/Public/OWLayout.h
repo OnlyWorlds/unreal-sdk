@@ -66,6 +66,14 @@ struct OWLayoutAround {
     std::string error;
 };
 
+// What an Unplaced reading answers: the ids of the nodes a saved layout Map of the method does not place, by id in code
+// point order (the default layouts page's `unplaced`), and the method's word; or an error naming what (and no ids).
+struct OWLayoutUnplaced {
+    std::string method;
+    std::vector<std::string> unplaced;
+    std::string error;
+};
+
 namespace OWLayout {
 
 // Lay out a whole graph by kind. Each kind present gets an anchor on a circle, in colour group order and then by type
@@ -86,6 +94,24 @@ OWLayoutByKind LayoutByKind(const OWWorldGraph& graph);
 // cannot read, or a focus that is not one of the graph's nodes.
 OWLayoutAround LayoutAround(const OWJsonValue& graph, std::string_view focus, int steps = 1);
 OWLayoutAround LayoutAround(const OWWorldGraph& graph, std::string_view focus, int steps = 1);
+
+// What a saved layout Map does not place (the page's `unplaced`): the ids of the nodes the method's reading counts that
+// are not in `placed`, by id in code point order. `placed` is the element ids of the Map's Pins (OWMapSpace's pins on
+// that Map, their element ids), a JSON array: a member that is not a non-empty string names no element and is passed
+// over (the number 7 is not the id "7"), and an id the method would not place is no part of the answer. `placed` null, a
+// string or anything but an array is an error. The answer does not say why an element has no Pin.
+//
+// by-kind places every node, so every node counts; the graph is read as LayoutByKind reads it.
+OWLayoutUnplaced UnplacedByKind(const OWJsonValue& graph, const OWJsonValue& placed);
+OWLayoutUnplaced UnplacedByKind(const OWWorldGraph& graph, const OWJsonValue& placed);
+// around counts the focus and every node within its steps; an error as LayoutAround's (steps, graph, focus).
+OWLayoutUnplaced UnplacedAround(const OWJsonValue& graph, std::string_view focus, const OWJsonValue& placed, int steps = 1);
+OWLayoutUnplaced UnplacedAround(const OWWorldGraph& graph, std::string_view focus, const OWJsonValue& placed, int steps = 1);
+// by-links-3d counts every node of the graph, of any type, also one it would not place (linked to no other and pinned on
+// no map), so for the Map an answer makes this is that answer's own `unplaced`; its Maps, Pins and held points are not
+// read. An error when the graph is not {nodes, edges}, a node has no text id, or two nodes share an id.
+OWLayoutUnplaced UnplacedByLinks3d(const OWJsonValue& graph, const OWJsonValue& placed);
+OWLayoutUnplaced UnplacedByLinks3d(const OWWorldGraph& graph, const OWJsonValue& placed);
 
 // The anchor table, bit patterns of float64s (generated from the shared fixture; its test holds it to the fixture).
 constexpr std::size_t AnchorCount = 506;
