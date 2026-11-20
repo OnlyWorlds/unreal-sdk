@@ -78,7 +78,7 @@ OWWorldGraph Read(const char* world, const char* reader, const OWGraphOptions& o
 }  // namespace
 
 OW_TEST(graph_tables_are_the_fixtures) {
-    t.Eq(GraphCases().size(), size_t(62), "the fixture's 62 graph cases");
+    t.Eq(GraphCases().size(), size_t(66), "the fixture's 66 graph cases");
     t.Ok(List("graph_links") == OWGraph::DeclaredLinks(), "the declared links");
     t.Ok(List("graph_flags") == OWGraph::Flags(), "the flags");
     t.Ok(List("owner_only_flags") == OWGraph::OwnerOnlyFlags(), "a keeper's flags (the key's name is older than the co-builder)");

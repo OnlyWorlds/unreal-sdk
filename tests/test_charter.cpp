@@ -22,8 +22,9 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.139's MANIFEST.json records it (serial 135 added design_cases, serial 138 three more).
-const char* const DistSha256 = "429a110c6e02ca981574dec042f141f54c0d652c4b4fa1eda2d2a55ef03150b2";
+// The fixture's sha256 as dist.141's MANIFEST.json records it (serial 135 added design_cases, serial 138 three more,
+// serial 141 three more and ten Domain order cases).
+const char* const DistSha256 = "500f68f166ae255b7eb4a4d79e9085491799e8a6eed928abc62bb8f1b4a89729";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/charter.fixture.json"; }
 
@@ -150,7 +151,7 @@ OWJsonValue WorldWith(std::string_view elements, std::string_view extra = "") {
 OW_TEST(charter_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the charter fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.139's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.141's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -170,12 +171,12 @@ OW_TEST(charter_fixture_is_the_pinned_one) {
         names.insert(Str(c, "name"));
         if (Runs(Str(c, "kind"))) ++run;
     }
-    t.Eq(cases->Size(), size_t(47), "47 cases");
-    t.Eq(names.size(), size_t(47), "each name its own");
-    t.Eq(kinds["charter"], size_t(41), "kind charter");
+    t.Eq(cases->Size(), size_t(57), "57 cases");
+    t.Eq(names.size(), size_t(57), "each name its own");
+    t.Eq(kinds["charter"], size_t(51), "kind charter");
     t.Eq(kinds["element"], size_t(6), "kind element");
     t.Eq(kinds.size(), size_t(2), "and no other kind");
-    t.Eq(run, size_t(47), "every case runs here");
+    t.Eq(run, size_t(57), "every case runs here");
     const OWJsonValue* worlds = doc->Find("worlds");
     t.Eq(worlds ? worlds->Size() : size_t(0), size_t(9), "nine worlds");
 }
@@ -270,8 +271,8 @@ OW_TEST(charter_design_cases_are_serial_135s) {
     if (!cases) return;
     std::set<std::string> names;
     for (const OWJsonValue& c : cases->Items()) names.insert(Str(c, "name"));
-    t.Eq(cases->Size(), size_t(16), "16 design cases (13 at serial 135, 16 at serial 138)");
-    t.Eq(names.size(), size_t(16), "each name its own");
+    t.Eq(cases->Size(), size_t(19), "19 design cases (13 at serial 135, 16 at serial 138, 19 at serial 141)");
+    t.Eq(names.size(), size_t(19), "each name its own");
     t.Ok(OWCharter::DesignStates() == std::vector<std::string>{"in design", "locked"}, "the two design states");
 }
 

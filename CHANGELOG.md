@@ -341,6 +341,13 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.141` (`f87f9ab`): canonical `00.34.01` unchanged; only the charter and lens pages and
+  their fixtures moved, and the generated files moved in their stamp only (the generators' `--check` hold). Serial
+  141: the charter page says folded Domain names compare by code point, as written, never by UTF-16 unit, a collation
+  or a locale, with nothing normalized, and a name is trimmed and folded as the room page defines both. The charter
+  fixture gains ten Domain order cases (57 in all) and three design cases (19), the lens fixture four graph cases on a
+  co-builder's lens anchors (66 graph cases, 256 in all); every one passes with no reader change; the tests' sha and
+  count pins move with the fixtures.
 - Schema pin to `v0.34.1-dist.140` (`5195351`): canonical `00.34.01` unchanged; only the lens page and its fixture
   moved, and the generated files moved in their stamp only (the generators' `--check` hold). Serial 140: in the graph,
   the flags `hidden` and `proposed` and the hidden and proposed counts are a keeper's (the owner or a co-builder),
