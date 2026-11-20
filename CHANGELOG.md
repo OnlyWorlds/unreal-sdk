@@ -7,6 +7,24 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- The third default layout, `by-links-3d` (the default layouts page, serial 137), in the core:
+  `OWLayout::LayoutByLinks3d(graph, elements, held, heldUnit)` lays a whole graph out in three dimensions by its links.
+  The body of the graph is cut into groups round its most linked elements, packed apart in directions read from a
+  table (`OWLayoutDirections.generated.cpp`, written by the new `codegen/generate_layout_3d.py` from the pinned dist's
+  table, never computed), and settled by 300 seeded force steps; what hangs off the body fans out from it. The world's
+  Map that holds the most of the graph's elements by a Pin, three or more, is a flat plate they stand on, and a Map of a
+  place on it a small plate above; a saved layout Map is never the plate. Every other piece of linked elements is laid
+  out on its own, round its pinned or held elements or on a ring beside the main shape; an element linked to no other
+  and pinned on no map is not placed and is listed in `unplaced`. `held` and `heldUnit` hand back points an earlier
+  answer gave, so those elements stand where they stood. The answer, `OWLayoutByLinks3d` (`method` `by-links-3d`,
+  `version` 2, `points` with `how`, `group`, `part` and `held`, `centres`, `unplaced`), or a refusal by the page's
+  code (`held-not-object`, `held-not-point`, `held-unit`, `held-box`). Every case of the method's fixture (116) passes:
+  each point to the last bit, save those the page places with a cosine, a sine or an arcsine, within its 6e-8. No
+  Blueprint layer.
+- What a saved layout Map does not place (the default layouts page's `unplaced`), in the core:
+  `OWLayout::UnplacedByKind`, `UnplacedAround` and `UnplacedByLinks3d` answer the ids of the nodes each method's reading
+  counts that are not in `placed` (the element ids of the Map's Pins), by id in code point order; a member of `placed`
+  that is not a non-empty string names no element. Every case of both fixtures' `unplaced` suites passes (17 and 9).
 - A co-builder, and a contributor's own hidden creations (the lens profile, serial 138), in the core: the hidden mark
   keeps an element from every reader but a keeper (the owner or a co-builder) and the one who made it. A reader's
   `rung` may be `co-builder`, which reads the whole world as the owner does, hidden elements included and bodies as

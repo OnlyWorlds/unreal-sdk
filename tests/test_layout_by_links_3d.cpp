@@ -302,6 +302,72 @@ OW_CASES(layout_by_links_3d_cases) {
     return out;
 }
 
+// The page's "A saved by-links-3d Map": the answer saved as a Map marked by-links-3d, one whole-number Pin per placed
+// element. The map-space layout reading reads it as a layout map of by-links-3d; its Pins' element ids, as the map-space
+// reading answers them, are `placed`, and UnplacedByLinks3d gives the answer's own unplaced, and a node the world gained
+// since too; laid out again with the saved Map among the world's elements, every point is the same (a layout map is never
+// the plate, though this one holds a Pin for more elements than the real Map).
+OW_TEST(layout_by_links_3d_a_saved_map_reads_back_as_a_layout_map_and_its_unplaced_is_the_answers) {
+    const OWJsonValue* c = Named("cases", "a saved layout Map beside a real Map");
+    t.Ok(c != nullptr, "the case");
+    if (!c) return;
+    const OWJsonValue& input = *c->Find("input");
+    OWJsonValue graph = OWJsonValue::Object();
+    graph.Set("nodes", *input.Find("nodes"));
+    graph.Set("edges", *input.Find("edges"));
+    const OWLayoutByLinks3d answer = OWLayout::LayoutByLinks3d(graph, input.Find("rows"));
+    t.Ok(answer.error.empty() && !answer.points.empty() && !answer.unplaced.empty(), "an answer that leaves some unplaced");
+
+    OWJsonValue saved = OWJson::Parse(R"({"id": "saved", "type": "map", "name": "saved", "x_layout": {"method": "by-links-3d"}})").value;
+    OWJsonValue rows = OWJsonValue::Array();
+    rows.Push(saved);
+    OWJsonValue pins = OWJsonValue::Array();
+    for (size_t i = 0; i < answer.points.size(); ++i) {
+        const OWLayout3dPoint& p = answer.points[i];
+        OWJsonValue pin = OWJsonValue::Object();
+        char id[16];
+        std::snprintf(id, sizeof id, "S%03zu", i);
+        pin.Set("id", OWJsonValue::String(id));
+        pin.Set("type", OWJsonValue::String("pin"));
+        pin.Set("map", OWJsonValue::String("saved"));
+        pin.Set("element_type", OWJsonValue::String("character"));
+        pin.Set("element_id", OWJsonValue::String(p.id));
+        pin.Set("x", OWJsonValue::Number(static_cast<int64_t>(std::llround(p.x))));
+        pin.Set("y", OWJsonValue::Number(static_cast<int64_t>(std::llround(p.y))));
+        pin.Set("z", OWJsonValue::Number(static_cast<int64_t>(std::llround(p.z))));
+        pins.Push(pin);
+        rows.Push(pin);
+    }
+    OWJsonValue maps = OWJsonValue::Array();
+    maps.Push(saved);
+    const OWMapLayout layout = OWMapSpace::LayoutOf(saved, maps, pins);
+    t.Ok(layout.error.empty() && layout.layout && *layout.layout == "by-links-3d", "a layout map of by-links-3d");
+
+    OWJsonValue placed = OWJsonValue::Array();
+    for (const OWMapSpacePin& p : OWMapSpace::MapSpaceOf(rows).pins)
+        if (p.map == "saved" && p.element_id) placed.Push(OWJsonValue::String(*p.element_id));
+    t.Eq(placed.Size(), answer.points.size(), "every Pin is read, one per placed element");
+    OWLayoutUnplaced read = OWLayout::UnplacedByLinks3d(graph, placed);
+    t.Ok(read.error.empty() && read.unplaced == answer.unplaced, "its unplaced is the answer's own: " + Joined(read.unplaced) + "against " + Joined(answer.unplaced));
+
+    OWJsonValue grown = graph;
+    grown.Find("nodes")->Push(OWJson::Parse(R"({"id": "a0", "type": "character"})").value);
+    std::vector<std::string> want = answer.unplaced;
+    want.push_back("a0");
+    std::sort(want.begin(), want.end());
+    t.Eq(Joined(OWLayout::UnplacedByLinks3d(grown, placed).unplaced), Joined(want), "a node the world gained since is unplaced too");
+
+    OWJsonValue world = *input.Find("rows");
+    for (const OWJsonValue& r : rows.Items()) world.Push(r);
+    const OWLayoutByLinks3d again = OWLayout::LayoutByLinks3d(graph, &world);
+    bool same = again.error.empty() && again.points.size() == answer.points.size() && again.centres == answer.centres && again.unplaced == answer.unplaced;
+    for (size_t i = 0; same && i < answer.points.size(); ++i) {
+        const OWLayout3dPoint &a = again.points[i], &b = answer.points[i];
+        same = a.id == b.id && Bits(a.x) == Bits(b.x) && Bits(a.y) == Bits(b.y) && Bits(a.z) == Bits(b.z) && a.how == b.how && a.group == b.group && a.part == b.part;
+    }
+    t.Ok(same, "laid out again with the saved Map among the world's elements, every point the same bits (the saved Map is no plate)");
+}
+
 OW_TEST(layout_by_links_3d_a_graph_it_cannot_read_is_an_error_without_a_code) {
     auto bad = [&t](const char* graph, const std::string& words) {
         const OWLayoutByLinks3d got = OWLayout::LayoutByLinks3d(OWJson::Parse(graph).value);
