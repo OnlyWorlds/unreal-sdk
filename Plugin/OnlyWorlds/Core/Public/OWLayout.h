@@ -1,6 +1,9 @@
 #pragma once
-// Two layout methods for a world nobody laid out, read from its graph as OWGraph::WorldGraph answers it (the npm SDK's
-// layoutByKind and layoutAround, 4.167.0, and the Python package's layout_by_kind and layout_around, 0.127.0).
+// Three layout methods for a world nobody laid out, read from its graph as OWGraph::WorldGraph answers it (the npm SDK's
+// layoutByKind and layoutAround, 4.167.0, and the Python package's layout_by_kind and layout_around, 0.127.0), and the
+// third, by-links-3d, written from the default layouts page (serial 137) and held to its fixture: below, LayoutByLinks3d,
+// with its own account of what is exact. For each method an Unplaced reading: which elements a saved layout Map of the
+// method does not place.
 //
 // by-kind: each kind of element gets a point on a circle, links act as springs, neighbours push apart, for a fixed
 // number of seeded steps; the answer is fitted into a square. around: one element at the centre, its neighbours on rings
@@ -27,6 +30,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -66,6 +70,41 @@ struct OWLayoutAround {
     std::string error;
 };
 
+// One element placed by by-links-3d: its point, in units where a link at rest is 60 long, and how it got there.
+struct OWLayout3dPoint {
+    std::string id;
+    double x = 0;
+    double y = 0;
+    double z = 0;
+    // centre (a group's centre), with (in a centre's group), arm (hanging off the body, more than one link out or with
+    // links of its own), link (its only link is to the body) or map (at its Pin on the world's map).
+    std::string how;
+    // The id of the centre it stands with (a centre's own id, a pinned centre's too), or none.
+    std::optional<std::string> group;
+    // None where group is an id; else "map" (pinned) or "one-link" (arm or link).
+    std::optional<std::string> part;
+    // True when it stands at its held point (a held element that is not pinned).
+    bool held = false;
+};
+
+// What LayoutByLinks3d answers: one row per placed element, in the order the nodes were handed in; the centres (the main
+// shape's in rank order, then each other piece's, the pieces most nodes first, a tie to the one holding the lowest id);
+// the elements it does not place (linked to no other and pinned on no map), by id in code point order. Or, for a call
+// it refuses, `code` the page's refusal (held-not-object, held-not-point, held-unit, held-box) and `error` naming what;
+// for a graph it cannot read, `error` alone. A refused call answers nothing else.
+struct OWLayoutByLinks3d {
+    std::string method = "by-links-3d";
+    // The version of the method's answers, the npm SDK's BY_LINKS_3D_VERSION: raised whenever an answer to a case of the
+    // method's fixture moves, so a tool that keeps a picture to hand back as held can tell it from one the method no
+    // longer gives.
+    int version = 2;
+    std::vector<OWLayout3dPoint> points;
+    std::vector<std::string> centres;
+    std::vector<std::string> unplaced;
+    std::string code;
+    std::string error;
+};
+
 // What an Unplaced reading answers: the ids of the nodes a saved layout Map of the method does not place, by id in code
 // point order (the default layouts page's `unplaced`), and the method's word; or an error naming what (and no ids).
 struct OWLayoutUnplaced {
@@ -94,6 +133,34 @@ OWLayoutByKind LayoutByKind(const OWWorldGraph& graph);
 // cannot read, or a focus that is not one of the graph's nodes.
 OWLayoutAround LayoutAround(const OWJsonValue& graph, std::string_view focus, int steps = 1);
 OWLayoutAround LayoutAround(const OWWorldGraph& graph, std::string_view focus, int steps = 1);
+
+// Lay out a whole graph in three dimensions by its links (the default layouts page, `by-links-3d`). The largest part of
+// the graph that no single element's removal parts (its body) is cut into groups round its most linked elements, the
+// groups are packed apart in directions read from a table, and 300 seeded force steps settle each group round its point;
+// what hangs off the body fans out from it. When the world has a Map that holds three or more of the graph's elements by
+// a Pin, the one that holds the most (a tie to the greater id) is a flat plate with each of its pinned elements at its
+// Pin, and a Map over a place on it a small plate above it. Every other piece of linked elements is laid out the same
+// way on its own: one with a pinned or held element stands where those points put it, the rest on a ring beside the
+// main shape. An element linked to no other and pinned on no map is not placed, and is listed in `unplaced`.
+//
+// `graph` is {nodes, edges} as WorldGraph answers it, of any types, in any order; leave Map, Pin and Marker out of it.
+// `elements` is the world's elements as served, a JSON list (only Maps and Pins are read, through OWMapSpace::MapSpaceOf
+// and OWMapSpace::LayoutOf, and a layout map is never the plate), or null for none. `held`: points an earlier answer
+// gave, an object of element id to [x, y, z], so those elements stand where they stood and the rest is laid out round
+// them; `heldUnit` the step they were rounded to (whole numbers: 1), from 0 to an eighth of a rest. Null (or a JSON null)
+// for either is absent. The same input gives the same points in every runtime: to the last bit for every element placed
+// centre, with or map off the ring and every one at its held point, and within 6e-8 for the rest (step 9's cosine and
+// sine, step 11's arcsine, cosine and sine).
+//
+// Refused (`code`), before anything runs: `held` not an object (held-not-object); a held value that is not exactly
+// three finite numbers (held-not-point); a `heldUnit` that is not a finite number from 0 to an eighth of a rest
+// (held-unit). As each piece is laid out, the main one first: the held points it holds wider apart than 768 rests on an
+// axis (held-box). An `error` without a code: a graph that is not {nodes, edges}, a node without a text id, two nodes
+// with one id, elements that are not a list.
+OWLayoutByLinks3d LayoutByLinks3d(const OWJsonValue& graph, const OWJsonValue* elements = nullptr, const OWJsonValue* held = nullptr,
+                                  const OWJsonValue* heldUnit = nullptr);
+OWLayoutByLinks3d LayoutByLinks3d(const OWWorldGraph& graph, const OWJsonValue* elements = nullptr, const OWJsonValue* held = nullptr,
+                                  const OWJsonValue* heldUnit = nullptr);
 
 // The by-links-3d directions table, bit patterns of float64s (generated from the shared table by
 // codegen/generate_layout_3d.py; its test holds it to the vendored table): for K parts, 1 to 37, K vectors (x, y, z) from
