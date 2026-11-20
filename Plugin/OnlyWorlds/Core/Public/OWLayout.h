@@ -95,6 +95,13 @@ OWLayoutByKind LayoutByKind(const OWWorldGraph& graph);
 OWLayoutAround LayoutAround(const OWJsonValue& graph, std::string_view focus, int steps = 1);
 OWLayoutAround LayoutAround(const OWWorldGraph& graph, std::string_view focus, int steps = 1);
 
+// The by-links-3d directions table, bit patterns of float64s (generated from the shared table by
+// codegen/generate_layout_3d.py; its test holds it to the vendored table): for K parts, 1 to 37, K vectors (x, y, z) from
+// index 3 * K * (K - 1) / 2.
+constexpr int DirectionsMax = 37;
+constexpr std::size_t DirectionCount = 2109;
+extern const uint64_t DirectionBits[DirectionCount];
+
 // What a saved layout Map does not place (the page's `unplaced`): the ids of the nodes the method's reading counts that
 // are not in `placed`, by id in code point order. `placed` is the element ids of the Map's Pins (OWMapSpace's pins on
 // that Map, their element ids), a JSON array: a member that is not a non-empty string names no element and is passed
