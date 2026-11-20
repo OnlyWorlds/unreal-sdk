@@ -334,6 +334,12 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.140` (`5195351`): canonical `00.34.01` unchanged; only the lens page and its fixture
+  moved, and the generated files moved in their stamp only (the generators' `--check` hold). Serial 140: in the graph,
+  the flags `hidden` and `proposed` and the hidden and proposed counts are a keeper's (the owner or a co-builder),
+  where they were the owner's alone, so a co-builder's unlensed graph is answered as the owner's is on the same inputs;
+  `not_visible` and `anchor_not_visible` stay the owner's. The lens fixture gains six graph cases (252 in all); no
+  answer on an existing case moved; the tests' sha and count pins move with the fixture.
 - Schema pin to `v0.34.1-dist.139` (`fc46657`): canonical `00.34.01` unchanged; no schema file, `schema.json` or
   `views.json` moved, and the generated files moved in their stamp only, the layout anchor table in the fixture
   sha256 it names (no anchor moved; the generators' `--check` hold). Serial 137: a third default layout,
