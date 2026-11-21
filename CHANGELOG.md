@@ -348,6 +348,15 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.144` (`35a12a0`): canonical `00.34.01` unchanged; two serials, only the charter and
+  map-space pages, the map-space fixture and the dist's README moved, and the generated files moved in their stamp only
+  (the generators' `--check` hold). Serial 143: the charter page's rule 4 says an AI reader follows the Charter's text
+  and the text of the Objects in the Charter's skill, as `charterOf` answers it for that reader, and every other
+  element's text stays data; who may change that text is the host's to rule; the charter fixture is unchanged. Serial
+  144: the map-space page gains rule 15, a point on a Map brought down into the pixels of a Map below it, and a fourth
+  reading, `downOf`; the map-space fixture gains its own list of 28 `down_cases`, which this SDK does not read yet. Its
+  46 cases and 32 layout cases are unchanged and every one passes with no reader change; the test's sha pin moves with
+  the fixture.
 - Schema pin to `v0.34.1-dist.142` (`5d5a8be`): canonical `00.34.01` unchanged; only the map-space page and its
   fixture moved, and the generated files moved in their stamp only (the generators' `--check` hold). Serial 142: a Zone
   outlined on a child Map and on its parent keeps two outlines, never joined and with no point added on the edge of the

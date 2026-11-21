@@ -24,9 +24,10 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.142's MANIFEST.json records it (dist.137 added four cases and three layout cases,
-// dist.139 the frame_cases, which no test here reads, dist.142 three cases of a Zone on a child Map and its parent).
-const char* const DistSha256 = "4ebec65d75b6de4e9a2eb9e1723c8978edef6191ba7fb783d978f882ae3f26f6";
+// The fixture's sha256 as dist.144's MANIFEST.json records it (dist.137 added four cases and three layout cases,
+// dist.139 the frame_cases, which no test here reads, dist.142 three cases of a Zone on a child Map and its parent,
+// dist.144 the down_cases, which no test here reads either).
+const char* const DistSha256 = "143d19bb65f8e552795a123658142d65b441b0c91f5ca66e23034a4c39f5a650";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/map-space.fixture.json"; }
 
@@ -114,7 +115,7 @@ OWJsonValue Served(const OWJsonValue& elements) {
 OW_TEST(map_space_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the map-space fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.142's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.144's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
