@@ -24,9 +24,9 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.139's MANIFEST.json records it (dist.137 added four cases and three layout cases,
-// dist.139 the frame_cases, which no test here reads).
-const char* const DistSha256 = "f1d832d63b9b0d071bd1bc1c2d16a97b3b9db405a9e01a63451ca74ef0cec657";
+// The fixture's sha256 as dist.142's MANIFEST.json records it (dist.137 added four cases and three layout cases,
+// dist.139 the frame_cases, which no test here reads, dist.142 three cases of a Zone on a child Map and its parent).
+const char* const DistSha256 = "4ebec65d75b6de4e9a2eb9e1723c8978edef6191ba7fb783d978f882ae3f26f6";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/map-space.fixture.json"; }
 
@@ -114,7 +114,7 @@ OWJsonValue Served(const OWJsonValue& elements) {
 OW_TEST(map_space_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the map-space fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.139's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.142's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -128,8 +128,8 @@ OW_TEST(map_space_fixture_is_the_pinned_one) {
         names.insert(Str(*c, "name"));
         if (const OWJsonValue* ch = c->Find("choice")) choices.insert(Str(ch));
     }
-    t.Eq(Cases().size(), size_t(43), "43 cases (34 at dist.106, 35 at dist.119, 39 at dist.126, 43 at dist.137)");
-    t.Eq(names.size(), size_t(43), "each name its own");
+    t.Eq(Cases().size(), size_t(46), "46 cases (34 at dist.106, 35 at dist.119, 39 at dist.126, 43 at dist.137, 46 at dist.142)");
+    t.Eq(names.size(), size_t(46), "each name its own");
     t.Ok(names.count("layout-map-read-as-before") == 1, "dist.119's case: a layout map read as any Map (rule 11)");
     t.Ok(choices == std::set<std::string>{"A", "B", "C", "D", "E", "G", "H", "I", "J", "K"},
          "the cases that carry a ruled reading: A to E, G to K");
@@ -397,7 +397,7 @@ OW_TEST(map_space_fixture_holds_thirty_two_layout_cases_beside_its_cases) {
     t.Eq(names.size(), size_t(32), "each name its own");
     t.Ok(names.count("parentless-layout-beside-ground") == 1 && names.count("ground-beside-parentless-layout") == 1,
          "dist.119's two cases: a layout Map and its ground, neither with a parent_map, each read in turn");
-    t.Eq(Cases().size(), size_t(43), "the map-space reading's 43 cases beside them");
+    t.Eq(Cases().size(), size_t(46), "the map-space reading's 46 cases beside them");
 }
 
 // The replay reads every row a case names: one per `map` case, each of a `map_index` case's positions (dist.111's

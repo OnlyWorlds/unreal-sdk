@@ -341,6 +341,12 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.142` (`5d5a8be`): canonical `00.34.01` unchanged; only the map-space page and its
+  fixture moved, and the generated files moved in their stamp only (the generators' `--check` hold). Serial 142: a Zone
+  outlined on a child Map and on its parent keeps two outlines, never joined and with no point added on the edge of the
+  child's rectangle or its parent frame, and what a tool draws there is the tool's; rule 4 says one outline per Map the
+  Zone has placed Markers on. The map-space fixture gains three cases (46 in all); every one passes with no reader
+  change; the tests' sha and count pins move with the fixture.
 - Schema pin to `v0.34.1-dist.141` (`f87f9ab`): canonical `00.34.01` unchanged; only the charter and lens pages and
   their fixtures moved, and the generated files moved in their stamp only (the generators' `--check` hold). Serial
   141: the charter page says folded Domain names compare by code point, as written, never by UTF-16 unit, a collation
