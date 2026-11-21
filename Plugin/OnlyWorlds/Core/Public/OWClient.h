@@ -145,6 +145,11 @@ struct OWBulkOptions {
     // Sent as Idempotency-Key when not empty; an element without an id then gets the id derived from the key and its
     // position (OWId::Keyed), so a retry sends the same body and keel replays (OWBulkResult::was_replay).
     std::string idempotency_key;
+    // True (sent as create_only): every item with an id is created as Create creates it, never replaced. An id the world
+    // already holds answers that item's slot 409 id_conflict (its error's IsIdConflict), and the element stays as it
+    // was; the rest of the batch goes on. False (the default) sends no create_only, the body earlier versions sent: an
+    // item with an id held replaces it whole. A bool, so a value that is not true or false cannot be given.
+    bool create_only = false;
 };
 
 // One item's outcome in an OWBulkResult. Mirrors the TypeScript SDK's `OwBulkItemResult`.
@@ -401,7 +406,8 @@ public:
     // `editLinks`.
     void EditLinks(const std::string& type, const std::string& id, const std::string& field, const OWLinkEdit& edit,
                    const OWWriteOptions& options, OWHandler<OWJsonValue> done);
-    // POST /bulk/: write many elements of mixed types in one request, {items: [{type, element}], atomic}. Each element
+    // POST /bulk/: write many elements of mixed types in one request, {items: [{type, element}], atomic}, and
+    // create_only: true when options.create_only is (each item with an id created, never replaced). Each element
     // is cleaned as a single write's is, and one without an id gets one by its position: under
     // options.idempotency_key the id derived from the key and the position, so a retry sends the same body and replays
     // (was_replay), else a fresh UUIDv7. keel answers 200 even when slots failed: read the slots. Refused, nothing

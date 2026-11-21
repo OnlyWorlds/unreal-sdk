@@ -7,6 +7,13 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWBulkOptions::create_only`, in the core: `Bulk` with it true sends `create_only`, and every item with an id is
+  created as `Create` creates it, never replaced. An id the world already holds answers that item's slot 409
+  `id_conflict`, and the element stays as it was; the rest of the batch goes on as before, and the slot reads as any
+  failed slot does (`OWBulkResult::Failed`, its error's `IsIdConflict`). False (the default), the body is the one
+  earlier versions sent. Parity with the TypeScript SDK 4.185.0, its test vector ported (its refusal of a value that is
+  not a boolean has no counterpart here: the member is a `bool`). Core only: the Blueprint node `BulkWrite` takes
+  `atomic` and a key, not this option yet.
 - The third default layout, `by-links-3d` (the default layouts page, serial 137), in the core:
   `OWLayout::LayoutByLinks3d(graph, elements, held, heldUnit)` lays a whole graph out in three dimensions by its links.
   The body of the graph is cut into groups round its most linked elements, packed apart in directions read from a

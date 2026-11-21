@@ -393,6 +393,57 @@ OW_TEST(client_write_bulk_sends_each_item_cleaned_with_ids_by_position) {
     t.Ok(items && items->Size() == 1 && IsV7(TextOf(*items->Items()[0].Find("element"), "id")), "a fresh v7 without a key");
 }
 
+// The TypeScript SDK 4.185.0's vector: create_only true is sent as create_only; left out or false, the body is the one
+// earlier versions sent. Its refusal of a value that is not a boolean has no counterpart: OWBulkOptions::create_only is
+// a bool. Kills: create_only never sent, sent always, or sent as false.
+OW_TEST(client_write_bulk_create_only_is_sent_when_true_and_left_out_otherwise) {
+    auto fake = Fake("{\"errors\":false,\"items\":[]}");
+    OWClient c = Make(fake);
+    Got<OWBulkResult> g;
+    std::vector<OWBulkItem> items = {{"character", Parse("{\"id\":\"mine\",\"name\":\"A\"}")}};
+    OWBulkOptions on;
+    on.create_only = true;
+    c.Bulk(items, on, g.H());
+    t.Ok(g.reply.Ok(), g.Why());
+    OWJsonValue body = BodyOf(fake->Last());
+    t.Ok(body.Keys() == std::vector<std::string>{"items", "atomic", "create_only"}, "items, atomic, create_only: " +
+                                                                                     fake->Last().body.value_or(""));
+    t.Ok(body.Find("create_only") && body.Find("create_only")->IsBool() && body.Find("create_only")->AsBool(),
+         "create_only a JSON true");
+    for (bool given : {false, true}) {
+        OWBulkOptions o;
+        if (given) o.create_only = false;
+        c.Bulk(items, o, g.H());
+        t.Ok(BodyOf(fake->Last()).Keys() == std::vector<std::string>{"items", "atomic"},
+             std::string(given ? "false" : "left out") + ": " + fake->Last().body.value_or(""));
+    }
+}
+
+// Under create_only an id the world already holds answers its slot 409 id_conflict, and the rest of the batch goes on:
+// that slot reads as any failed slot does.
+OW_TEST(client_write_bulk_a_409_id_conflict_slot_reads_as_a_failed_slot) {
+    auto fake = Fake();
+    fake->Then(200,
+               "{\"errors\":true,\"items\":[{\"status\":409,\"id\":\"mine\",\"error\":{\"type\":\"invalid_request\","
+               "\"code\":\"id_conflict\",\"message\":\"A create supplied an id that already exists.\",\"param\":\"id\"}},"
+               "{\"status\":201,\"id\":\"b\"}]}");
+    OWClient c = Make(fake);
+    Got<OWBulkResult> g;
+    OWBulkOptions o;
+    o.create_only = true;
+    c.Bulk({{"character", Parse("{\"id\":\"mine\"}")}, {"character", Parse("{}")}}, o, g.H());
+    t.Ok(g.reply.Ok(), g.Why());
+    const OWBulkResult& b = g.reply.value;
+    t.Ok(b.Failed() == std::vector<size_t>{0}, "Failed names the held id's slot");
+    t.Eq(b.SucceededCount(), size_t(1), "the rest of the batch goes on");
+    if (b.items.size() != 2 || !b.items[0].error) return;
+    t.Eq(b.items[0].status, 409, "");
+    t.Eq(IdText(b.items[0].id), "mine", "");
+    t.Eq(b.items[0].error->status, 409, "the slot's status");
+    t.Eq(b.items[0].error->code, "id_conflict", "");
+    t.Ok(b.items[0].error->IsIdConflict(), "");
+}
+
 OW_TEST(client_write_bulk_answers_its_slots) {
     auto fake = Fake();
     fake->Then(200,

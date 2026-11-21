@@ -204,6 +204,7 @@ void Writes(OWClient& c, FakeTransport& fake) {
     OWBulkOptions bulk;
     bulk.atomic = true;
     bulk.idempotency_key = "k2";
+    bulk.create_only = true;
     c.Bulk({{"character", Json("{\"name\":\"A\",\"updated_at\":\"t\"}")},
             {"location", Json("{\"name\":\"Port\",\"parent_location\":null}")}},
            bulk, Ignore<OWBulkResult>());
@@ -459,6 +460,13 @@ OW_TEST(client_wire_the_recording_covers_every_read_and_write) {
     t.Ok(bearer, "a Bearer is recorded");
     t.Ok(head, "a tip read is recorded");
     t.Ok(after, "a feed page's after is recorded");
+    size_t create_only = 0;
+    for (const OWRequest& c : calls) {
+        if (c.method != "POST" || KeelPath(c) != "/api/v2/bulk" || !c.body) continue;
+        const OWJsonValue* v = Json(*c.body).Find("create_only");
+        if (v && v->IsBool() && v->AsBool()) ++create_only;
+    }
+    t.Eq(create_only, size_t(4), "a bulk write with create_only on each world key");
 }
 
 // -- What the client and the readers read ----------------------------------------------------------------------------------

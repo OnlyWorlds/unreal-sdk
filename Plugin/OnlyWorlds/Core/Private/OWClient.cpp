@@ -934,6 +934,7 @@ void OWClient::Bulk(const std::vector<OWBulkItem>& items, const OWBulkOptions& o
     OWJsonValue body = OWJsonValue::Object();
     body.Set("items", std::move(list));
     body.Set("atomic", OWJsonValue::Bool(options.atomic));
+    if (options.create_only) body.Set("create_only", OWJsonValue::Bool(true));
     How how;
     how.write = true;
     how.body = Compact(body);
