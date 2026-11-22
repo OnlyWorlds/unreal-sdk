@@ -96,6 +96,11 @@ Nothing is released yet; the history before this file is in the git log.
   id by its type. `OWCharter::Served` and `OWStrand::Served` keep a served `type`, and an entry served without one (a
   keel from before serial 133) reads its fixed type. Every case of serial 133's two fixtures passes. The Blueprint layer (`FOWCharterLaw`, `FOWCharterGuide`,
   `FOWCharterDomain`) does not carry `type` yet.
+- A test in the core holds what `OWCharter::Served` hands over from each served entry: its kind's named keys in the
+  charter page's shape, the Charter `{id, type, name, rules, skill}`, the Guide `{id, type, name}`, each Domain `{id,
+  type, name, sentence, hubs}` and each hub `{type, id}`. A key the page does not give (a host's `description`, say)
+  is dropped, as it always was: the page's packet carries none of the text an AI reader follows, which it reads from
+  the element whole. Nothing the core sends or reads changed.
 - The plugin's module compiles with precise floating point on every target (`FPSemantics = FPSemanticsMode.Precise`
   in `OnlyWorlds.Build.cs`). A game, client or server target defaulted to MSVC's `/fp:fast`, so a packaged game
   compiled the core under it, where the compiler may reorder arithmetic and, on a CPU target with FMA, fuse a multiply

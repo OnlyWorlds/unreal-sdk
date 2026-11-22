@@ -165,6 +165,25 @@ OW_TEST(front_door_entries_served_without_a_type_read_their_fixed_type) {
     t.Eq(Keys(*packet.Find("strand")->Find("now")), std::string("id,type,name"), "the page's order");
 }
 
+OW_TEST(front_door_a_served_entry_hands_over_its_kinds_keys_alone) {
+    // The charter profile's shape: each entry is its kind's named keys, and the packet carries none of the text an AI
+    // follows. A key the reader does not know (a host's `description`, its text in it) is dropped, on a hub as well.
+    std::optional<OWReadingAids> aids = OWCharter::Served(Parse(R"({"reading_aids": {
+        "charter": {"id": "law-1", "type": "law", "name": "House rules", "rules": [], "skill": ["obj-1"],
+            "description": "Be kind to the keeper."},
+        "guide": {"id": "con-g", "type": "construct", "name": "Start here", "description": "Walk the harbour first."},
+        "domains": [{"id": "con-d1", "type": "construct", "name": "The Harbour", "sentence": "Where ships come in.",
+            "hubs": [{"type": "location", "id": "loc-1", "name": "The Quay"}], "description": "Where ships come in."}]}})"));
+    if (!aids || !aids->charter || !aids->guide || aids->domains.size() != 1) return t.Fail("no packet");
+    const OWJsonValue packet = aids->ToJson();
+    t.Eq(Keys(*packet.Find("charter")), std::string("id,type,name,rules,skill"), "the Charter's five");
+    t.Eq(Keys(*packet.Find("guide")), std::string("id,type,name"), "the Guide's three");
+    const OWJsonValue& domain = packet.Find("domains")->Items()[0];
+    t.Eq(Keys(domain), std::string("id,type,name,sentence,hubs"), "a Domain's five");
+    t.Eq(Keys(domain.Find("hubs")->Items()[0]), std::string("type,id"), "a hub's two");
+    t.Ok(aids->charter->skill == std::vector<std::string>{"obj-1"}, "a known key as served");
+}
+
 OW_TEST(front_door_an_answer_without_the_packet_reads_none) {
     // A player's join answer, an older keel: no reading_aids at all.
     t.Ok(!OWCharter::Served(Parse(R"({"kind": "player", "key": "ow_r_guest"})")).has_value(), "no packet");
