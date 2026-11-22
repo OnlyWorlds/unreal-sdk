@@ -22,6 +22,7 @@
 #include "OWCharter.h"
 #include "OWClient.h"
 #include "OWFiles.h"
+#include "OWJoin.h"
 #include "OWJson.h"
 #include "OWLens.h"
 
@@ -61,6 +62,12 @@ const std::set<std::string> Undeclarable = {"content-type"};
 const std::map<std::string, std::string> NotServed = {
     {"world", "schema.json's base field (the folder format carries it); keel names an element's world by the key, and "
               "serves no world key on the body"},
+};
+
+// Keys a join model reads that keel does not serve on that answer, on purpose, each with why (the path, then the key).
+const std::map<std::string, std::string> JoinNotServed = {
+    {"/api/v2/join/preview world.id", "OWJoinWorld is shared with OWJoined, whose world carries the id; a preview's "
+                                      "never does (the code is unspent)"},
 };
 
 // Codes a helper names that keel's document does not list yet, each with why. Each must stay unlisted.
@@ -294,6 +301,19 @@ const std::vector<OWRequest>& Record() {
             c->List("location", parent, Ignore<OWPage>());
             Writes(*c, *fake);  // refused, nothing sent: neither writes
         }
+        // Joining is keyless, so it is not on the client; the same transport records it. The redeem passes every
+        // option. A person's join goes on an account token.
+        fake->body = "{}";
+        OWJoinConfig where;
+        where.transport = fake;
+        where.base_url = Base;
+        OWJoin::Preview("ow_j_x", where, Ignore<OWJoinPreview>());
+        OWRedeemOptions all;
+        all.name = "N";
+        all.agent_name = "A";
+        all.character = "c1";
+        OWJoin::Redeem("ow_j_x", all, where, Ignore<OWJoined>());
+        make("ow_a_test", "0000", std::nullopt)->AcceptJoin("ow_j_x", Ignore<OWJoinedMembership>());
         return fake->calls;
     }();
     return calls;
@@ -421,15 +441,15 @@ OW_TEST(client_wire_every_body_key_is_one_keel_declares) {
             ++checked;
         }
     }
-    t.Eq(checked, size_t(4 * (6 + 2)), "six bodies and two bulk items on each world key");
+    t.Eq(checked, size_t(4 * (6 + 2) + 3), "six bodies and two bulk items on each world key, and the three joins");
 }
 
 OW_TEST(client_wire_the_recording_covers_every_read_and_write) {
     // An empty recording would pass the checks above with nothing checked.
     const std::vector<OWRequest>& calls = Record();
-    t.Eq(calls.size(), size_t(4 * (12 + 7) + 6 + 5),
+    t.Eq(calls.size(), size_t(4 * (12 + 7) + 6 + 5 + 3),
          "12 reads and 7 writes on each world key (ListAll one page), 6 reads on an account token, 5 on no key (its "
-         "roster refused); neither writes");
+         "roster refused); neither writes; the keyless preview and redeem, and a person's join on an account token");
     std::set<std::string> paths;
     size_t world = 0, agent_pin_reads = 0;
     bool tag = false, pin = false, bearer = false, head = false, after = false;
@@ -448,7 +468,8 @@ OW_TEST(client_wire_the_recording_covers_every_read_and_write) {
                           "GET /api/v2/character", "GET /api/v2/location", "GET /api/v2/character/c1",
                           "GET /api/v2/changes", "POST /api/v2/character", "PUT /api/v2/character/c1",
                           "PATCH /api/v2/character/c1", "DELETE /api/v2/character/c1",
-                          "POST /api/v2/character/c1/links/friends", "POST /api/v2/bulk"})
+                          "POST /api/v2/character/c1/links/friends", "POST /api/v2/bulk", "POST /api/v2/join/preview",
+                          "POST /api/v2/join", "POST /api/v2/account/join"})
         t.Ok(paths.count(p) == 1, std::string(p) + " is recorded");
     for (const char* h : {"If-Match", "Idempotency-Key", "X-OW-Client", "X-OW-Agent", "Content-Type"})
         t.Ok(std::any_of(calls.begin(), calls.end(), [&](const OWRequest& c) { return c.Header(h) != nullptr; }),
@@ -545,6 +566,67 @@ OW_TEST(client_wire_the_reading_aids_are_the_packet_owcharter_served_reads) {
         std::sort(served.begin(), served.end());
         t.Eq(Joined(read), Joined(served), std::string(method) + " " + path);
     }
+}
+
+OW_TEST(client_wire_every_key_a_join_model_reads_is_one_keel_serves) {
+    // The join answers, one level down as the fixture lists them: a glimpse's things and links are not listed below
+    // that, so their keys are held by the glimpse vector in test_join.cpp instead.
+    std::vector<std::string> preview = Response("/api/v2/join/preview", "POST");
+    std::vector<std::string> joined = Response("/api/v2/join", "POST");
+    std::vector<std::string> membership = Response("/api/v2/account/join", "POST");
+    t.Ok(!preview.empty() && !joined.empty() && !membership.empty(), "keel documents the three answers");
+    struct Case {
+        const std::vector<std::string>* read;
+        std::vector<std::string> served;
+        const char* label;
+        const char* not_served_prefix;
+    };
+    for (const Case& c : std::vector<Case>{
+             {&OWJoinPreview::Keys(), Top(preview), "OWJoinPreview", ""},
+             {&OWJoinWorld::Keys(), Below(preview, "world."), "a preview's OWJoinWorld", "/api/v2/join/preview world."},
+             {&OWJoinPick::Keys(), Below(preview, "characters[]."), "OWJoinPick", ""},
+             {&OWJoinGlimpse::Keys(), Below(preview, "glimpse."), "OWJoinGlimpse", ""},
+             {&OWJoined::Keys(), Top(joined), "OWJoined", ""},
+             {&OWJoinWorld::Keys(), Below(joined, "world."), "a join's OWJoinWorld", ""},
+             {&OWJoinCharacter::Keys(), Below(joined, "character."), "OWJoinCharacter", ""},
+             {&OWJoinSeat::Keys(), Below(joined, "seat."), "OWJoinSeat", ""},
+             {&OWJoinedMembership::Keys(), Top(membership), "OWJoinedMembership", ""},
+         }) {
+        std::string unserved;
+        for (const std::string& k : *c.read)
+            if (!Has(c.served, k) && !JoinNotServed.count(c.not_served_prefix + k))
+                unserved += (unserved.empty() ? "" : ", ") + k;
+        t.Eq(unserved, std::string(), std::string(c.label) + " reads only keys keel serves (" + Joined(c.served) + ")");
+    }
+    const std::string on_preview = "/api/v2/join/preview ";
+    for (const auto& [key, why] : JoinNotServed) {
+        t.Ok(key.rfind(on_preview, 0) == 0, key + ": a preview's key (" + why + ")");
+        t.Ok(!Has(preview, key.substr(on_preview.size())), "keel serves " + key + " now; drop it from JoinNotServed");
+    }
+}
+
+OW_TEST(client_wire_the_preview_reads_every_key_keel_serves_on_it) {
+    // The other way round, for the preview alone (the Unity SDK's ThePreview_ReadsEveryKeyKeelServesOnIt; npm's wire
+    // check holds OwJoinPreview and its glimpse both ways since 4.189.0): a screen reads a preview whole before anyone
+    // joins, so a key keel adds there fails here until it is read.
+    std::vector<std::string> served = Response("/api/v2/join/preview", "POST");
+    t.Ok(!served.empty(), "keel documents the preview");
+    const std::vector<std::pair<std::string, const std::vector<std::string>*>> below = {
+        {"world.", &OWJoinWorld::Keys()}, {"characters[].", &OWJoinPick::Keys()}, {"glimpse.", &OWJoinGlimpse::Keys()}};
+    std::string unread;
+    for (const std::string& k : served) {
+        const std::vector<std::string>* read = &OWJoinPreview::Keys();
+        std::string key = k;
+        for (const auto& [prefix, keys] : below) {
+            if (k.rfind(prefix, 0) != 0) continue;
+            read = keys;
+            key = k.substr(prefix.size());
+        }
+        if (!Has(*read, key)) unread += (unread.empty() ? "" : ", ") + k;
+    }
+    t.Eq(unread, std::string(), "OWJoinPreview reads every key keel serves on a preview");
+    for (const char* k : {"glimpse.things", "glimpse.links", "glimpse.picked_by", "note", "characters[].taken"})
+        t.Ok(Has(served, k), std::string("keel serves ") + k + " on a preview");
 }
 
 OW_TEST(client_wire_the_members_and_me_answers_serve_what_their_docs_name) {
