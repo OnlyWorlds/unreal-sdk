@@ -7,6 +7,24 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- Joining a world by invite link, in the core (`OWJoin.h`): `OWJoin::ParseLink(text)` reads the `ow_j_` code out of a
+  pasted link or a bare code (`""` when the text holds none; trimmed of Unicode's White_Space, read after the last
+  `#`, no white space inside, text that is not UTF-8 none). `OWJoin::Preview(code, where, done)` (POST `/join/preview`)
+  and `OWJoin::Redeem(code, options, where, done)` (POST `/join`) send no credential, only `{code}` and the
+  `OWRedeemOptions` set (`name`, `agent_name`, `character`, in that order) with `Content-Type`, through the
+  `OWJoinConfig`'s transport and `base_url` (production's by default, `""` too). They answer an `OWJoinPreview` (the
+  reader, the world without its id, the inviter, the role, a person link's note, the glimpse as an `OWJoinGlimpse` of
+  things and links with `ToJson()`, and a table's `max_uses`, `uses_left`, `name_required` and `OWJoinPick`s, with
+  `IsTable()`) and an `OWJoined` (a player's read key and Character, or an agent's seat key, secret, seat, base URL,
+  `.env` lines, its `front_door` as served and its `reading_aids` as `OWCharter::Served` reads them; `RoleInWorld()`;
+  `served` the answer whole). `OWClient::AcceptJoin(code, done)` (POST `/account/join`) accepts a person's link on an
+  account token, the Bearer alone, answering an `OWJoinedMembership`. `OWJoin::PreviewOf`, `JoinedOf` and
+  `MembershipOf` read a kept answer. `OWApiError` tells keel's join refusals apart: `IsCharacterTaken`,
+  `IsCharacterInvalid`, `IsWorldFull`, `IsAlreadyMember`, `IsPinRequired`. Refused with nothing sent: an empty code
+  (all three), no transport, and `AcceptJoin` on any key but an `ow_a_` token. The wire test records the three
+  routes and holds each join model to keel's document, the preview both ways. Parity with the Unity SDK's `OWJoin`
+  and `AcceptJoinAsync`, the Godot SDK's `OWJoin` and `accept_join`, and the TypeScript SDK's `previewJoin`,
+  `redeemJoin` and `acceptJoin`. Not on Blueprints yet.
 - The map-space profile's frame reading (rules 13 and 14, serial 139), in the core: `OWMapSpace::CarryOf(map, x, y,
   maps)` answers an `OWMapCarry`, `{parent_frame, lint, points, stop}`: where a point on a child Map lies on its
   parent, by the child's `x_parent_frame` (`[x0, y0, x1, y1]` in the parent's pixels), and on each Map above it, one
