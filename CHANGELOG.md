@@ -348,6 +348,15 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.145` (`f73146c`): canonical `00.34.01` unchanged; only the charter and checks pages,
+  the charter fixture and the views fixture moved, and the generated files moved in their stamp only (the generators'
+  `--check` hold). The charter page's rule 4 names the field an AI reader follows: the `description` of the Charter
+  and of each Object in its skill, whole as the world holds it, a part or a shortened copy of it being data. A leading
+  Charter whose `description` holds nothing gives that reader no house rules, and its text is taken from no other
+  field and no older Charter. The checks page says its rule list is checked, never followed. The charter fixture gains
+  four cases (61 in all), each a newer Charter whose `description` holds nothing leading with an empty skill;
+  `charterOf` answers all four as the page says with no change, and every existing case passes; the test's sha and
+  count pins move with the fixture. The views fixture's one quote of the charter page follows its new wording.
 - Schema pin to `v0.34.1-dist.144` (`35a12a0`): canonical `00.34.01` unchanged; two serials, only the charter and
   map-space pages, the map-space fixture and the dist's README moved, and the generated files moved in their stamp only
   (the generators' `--check` hold). Serial 143: the charter page's rule 4 says an AI reader follows the Charter's text

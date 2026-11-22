@@ -22,9 +22,9 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.141's MANIFEST.json records it (serial 135 added design_cases, serial 138 three more,
-// serial 141 three more and ten Domain order cases).
-const char* const DistSha256 = "500f68f166ae255b7eb4a4d79e9085491799e8a6eed928abc62bb8f1b4a89729";
+// The fixture's sha256 as dist.145's MANIFEST.json records it (serial 135 added design_cases, serial 138 three more,
+// serial 141 three more and ten Domain order cases, serial 145 four Charters whose description holds nothing).
+const char* const DistSha256 = "ea57091a988a4dd083d7d4cfc5e7985c6aa00f67fdce1b661c0d5023a15cbf35";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/charter.fixture.json"; }
 
@@ -151,7 +151,7 @@ OWJsonValue WorldWith(std::string_view elements, std::string_view extra = "") {
 OW_TEST(charter_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the charter fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.141's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.145's");
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
     OWJsonParseResult m = OWJson::Parse(manifest);
@@ -171,12 +171,12 @@ OW_TEST(charter_fixture_is_the_pinned_one) {
         names.insert(Str(c, "name"));
         if (Runs(Str(c, "kind"))) ++run;
     }
-    t.Eq(cases->Size(), size_t(57), "57 cases");
-    t.Eq(names.size(), size_t(57), "each name its own");
-    t.Eq(kinds["charter"], size_t(51), "kind charter");
+    t.Eq(cases->Size(), size_t(61), "61 cases");
+    t.Eq(names.size(), size_t(61), "each name its own");
+    t.Eq(kinds["charter"], size_t(55), "kind charter");
     t.Eq(kinds["element"], size_t(6), "kind element");
     t.Eq(kinds.size(), size_t(2), "and no other kind");
-    t.Eq(run, size_t(57), "every case runs here");
+    t.Eq(run, size_t(61), "every case runs here");
     const OWJsonValue* worlds = doc->Find("worlds");
     t.Eq(worlds ? worlds->Size() : size_t(0), size_t(9), "nine worlds");
 }
