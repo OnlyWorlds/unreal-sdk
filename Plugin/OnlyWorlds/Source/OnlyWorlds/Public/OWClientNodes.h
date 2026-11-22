@@ -441,7 +441,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
 	static UOWClientRead* ReadWorld(const FOWClientConfig& Config);
 
-	/** GET /me/: who this world key is, as served (world, scope, kind, role, membership, character, lenses, reading aids). The one read sent with the PIN; an account token and no key are refused. The core's Me. */
+	/** GET /me/: who this world key is, as served (world, scope, kind, role, membership, character, lenses, reading aids). The one read sent with the PIN, so a wrong PIN shows here first: the connection test for a key that can write; beside a key that cannot (a read key, a player's), onlyworlds.com never reads a PIN. An account token and no key are refused. The core's Me. */
 	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
 	static UOWClientRead* ReadMe(const FOWClientConfig& Config);
 

@@ -326,8 +326,10 @@ public:
     void GetWorld(OWHandler<OWJsonValue> done);
     // GET /me/: who this world key is, the body as served: {world, scope, kind, role, membership, character, lenses,
     // name?, front_door, reading_aids}; OWCharter::Served(reply.value) reads its reading aids (the Charter, the Guide,
-    // the Domains, the strand). The connection test: the one read sent with the PIN. A world key's call: an account
-    // token and a keyless client are refused, nothing sent. Mirrors the TypeScript SDK's `me`.
+    // the Domains, the strand). The one read sent with the PIN, so a wrong PIN shows on this call first, which makes it
+    // the connection test for a key that can write; beside a key that cannot (a read key, a player's), onlyworlds.com
+    // never reads a PIN. A world key's call: an account token and a keyless client are refused, nothing sent. Mirrors
+    // the TypeScript SDK's `me`.
     void Me(OWHandler<OWJsonValue> done);
     // GET /members/: the world's roster, the rows of keel's {data} (no paging) as a JSON array, each row as served: id
     // (the membership id created_by holds, null for the owner), kind, role, character, status (removed rows stay),

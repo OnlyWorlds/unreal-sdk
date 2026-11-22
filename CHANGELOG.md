@@ -114,6 +114,10 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- `OWClient::Me`'s comment, in the core, and the Blueprint node `ReadMe`'s tooltip: the PIN is sent on `GET /me`, so
+  a wrong PIN shows on this call first, which makes it the connection test for a key that can write; beside a key
+  that cannot (a read key, a player's), onlyworlds.com never reads a PIN. The TypeScript SDK 4.185.0's sentence on
+  `me()`. Docs only: nothing is sent differently.
 - `OWGraph::WorldGraph`, in the core: a co-builder reads the graph as a keeper (the lens page, serial 140). The flags
   `hidden` and `proposed`, and the `hidden` and `proposed` counts in `cut` and `edges_cut`, are a keeper's (the owner
   or a co-builder), where they were the owner's alone, so a co-builder's unlensed graph is answered as the owner's is
