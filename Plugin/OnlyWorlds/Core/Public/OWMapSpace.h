@@ -5,10 +5,13 @@
 // cameras, walls, doors and units are a drawing tool's. It adds nothing to the world and stores nothing. The npm
 // SDK's mapSpace and the Python package's map_space give the same answer; held to the profile's conformance fixture
 // (profiles/map-space.fixture.json). Since serial 110 also the profile's second, small reading, LayoutOf: one Map's
-// layout keys (`x_layout` on the Map, `x_hand` on its Pins), held to the fixture's `layout_cases`.
+// layout keys (`x_layout` on the Map, `x_hand` on its Pins), held to the fixture's `layout_cases`. Since serial 139
+// also its third, CarryOf: where a point on a child Map lies on its parent and on each Map above it (rules 13 and
+// 14), held to the fixture's `frame_cases`.
 
 #include "OWJson.h"
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -109,6 +112,36 @@ struct OWMapLayout {
     OWJsonValue ToJson() const;
 };
 
+// One point of a frame reading: a Map's id and the point in its pixels, from its bottom left, each coordinate the
+// 64-bit float the carry gives.
+struct OWMapCarryPoint {
+    std::string map;
+    double x = 0;
+    double y = 0;
+};
+
+// What CarryOf answers: one Map's frame reading (the map-space profile's rules 13 and 14, serial 139).
+struct OWMapCarry {
+    // The Map's `x_parent_frame` as written, [x0, y0, x1, y1] each read as a 64-bit float, when it is a parent frame,
+    // else none: also on a Map whose parent is not served or closes a ring. The Map's own: it does not depend on the
+    // point.
+    std::optional<std::array<double, 4>> parent_frame;
+    // `no_parent`, `not_four_numbers` or `not_a_box` when this Map's own key is one (CarryLints()), else none. A Map
+    // further up the chain is read for its own lint by its own reading.
+    std::optional<std::string> lint;
+    // The point on this Map as given, then the point on each Map it is carried to, up the `parent_map` chain.
+    std::vector<OWMapCarryPoint> points;
+    // Why the last point is carried no further (CarryStops()); none only for a row that is no Map.
+    std::optional<std::string> stop;
+    // Empty unless the call was a mistake (a map that is not an object, a point that is not two finite numbers, maps
+    // that is not a list): it names the mistake and nothing is read.
+    std::string error;
+
+    // The answer in the fixture's shape, {parent_frame, lint, points, stop} (all four, in that order), each point as
+    // {map, x, y}; a number spelled as JSON.stringify writes the double.
+    OWJsonValue ToJson() const;
+};
+
 namespace OWMapSpace {
 
 // The reasons `out` counts, in the answer's order: no_point, no_markers, dangling, no_map.
@@ -153,6 +186,34 @@ inline constexpr const char* Board = "hand";
 // layout map none, whatever its Pins carry. A Pin whose element the reader cannot see is still a Pin. Ids in code
 // point order. Pure; MapSpaceOf reads neither key. The npm SDK's layoutOf and the Python package's layout_of.
 OWMapLayout LayoutOf(const OWJsonValue& map, const OWJsonValue& maps, const OWJsonValue& pins);
+
+// Why the walk up `parent_map` ended (rule 14), in the page's order: top, dangling, cycle, no_frame, no_carry.
+const std::vector<std::string>& CarryStops();
+
+// What is wrong with a Map's own `x_parent_frame` (rule 13), in the page's order: no_parent, not_four_numbers,
+// not_a_box.
+const std::vector<std::string>& CarryLints();
+
+// A number as rule 13 reads one: a JSON number held as a finite 64-bit float, the double nearest its text (as
+// JSON.parse reads it, so a magnitude below a double's least reads as 0); one too large for a double (`1E400`, which
+// JSON.parse reads as Infinity) is none, and so is a string, a boolean, null, a list and an object.
+std::optional<double> NumberOf(const OWJsonValue* v);
+
+// carryOf(map, point, maps), the profile's frame reading of one Map: where the point (x, y) on `map` lies on the Map
+// its `parent_map` names, and on each Map above it. `maps` is the Maps the reader is served (a JSON list): rows of any
+// other type are skipped, a row whose `type` is not exactly `map` or that has no non-empty string id is no Map, and of
+// two rows with one id the last served is read. A `map` that is no Map answers {null, null, [], null}.
+// The Map's own `x_parent_frame` is read only when its `parent_map` is a link (a non-empty string; else a key present
+// and not null is the lint `no_parent`); it is a parent frame when it is a list of exactly four numbers (NumberOf) with
+// x0 < x1 and y0 < y1 (else `not_four_numbers`, or `not_a_box`, never normalised); absent or null is none, with no
+// lint. The point is carried one level at a time, by each level's own frame, as `x0 + ((x * (x1 - x0)) / width)` and
+// `y0 + ((y * (y1 - y0)) / height)` in 64-bit floats in that order, never through one product of the levels' ratios.
+// At each Map the walk ends on the first of: no `parent_map` (`top`), a parent not served (`dangling`), a parent the
+// walk already reached, this Map included (`cycle`), no parent frame (`no_frame`), a written `width` or `height` that
+// is not a whole number above 0 by value (`no_carry`). A size is any whole double, with no bound at 2^53, as the npm
+// SDK's isCarrySize reads it (WholeOf, which MapSpaceOf reads sizes by, stops at 2^53). A point outside the child is
+// carried as written; z is not carried. Pure. The npm SDK's carryOf (4.183.0), held to the fixture's `frame_cases`.
+OWMapCarry CarryOf(const OWJsonValue& map, double x, double y, const OWJsonValue& maps);
 
 }  // namespace OWMapSpace
 }  // namespace OnlyWorlds

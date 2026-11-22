@@ -3,7 +3,10 @@
 // compared as bytes (key order, list order and each number's spelling as JSON.stringify writes it); then the profile's
 // invariants over every case (four keys in order, read twice the same bytes, the rows held one per id read forwards and
 // backwards the same bytes, every Marker and Pin held placed or counted once) and readings the fixture leaves open (a
-// caller's mistake, rows that are no element, a whole number's edges).
+// caller's mistake, rows that are no element, a whole number's edges). Then the layout reading on its `layout_cases`,
+// and the frame reading (CarryOf) on its `frame_cases`, each compared as npm's carry-of test compares it: a number as a
+// 64-bit float, exactly, everything else as written, key order held; the fixture's numbers held to the bits Python
+// reads (tests/data/map-space-frames.bits.json) first, so no answer is checked against a misread want.
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -13,11 +16,15 @@
 #include "OWMapSpace.h"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 using namespace OnlyWorlds;
 using owtest::P;
@@ -25,7 +32,7 @@ using owtest::P;
 namespace {
 
 // The fixture's sha256 as dist.144's MANIFEST.json records it (dist.137 added four cases and three layout cases,
-// dist.139 the frame_cases, which no test here reads, dist.142 three cases of a Zone on a child Map and its parent,
+// dist.139 the frame_cases, read by the carry tests below, dist.142 three cases of a Zone on a child Map and its parent,
 // dist.144 the down_cases, which no test here reads either).
 const char* const DistSha256 = "143d19bb65f8e552795a123658142d65b441b0c91f5ca66e23034a4c39f5a650";
 
@@ -597,4 +604,263 @@ OW_TEST(map_space_layout_py_a_ground_map_that_is_no_id_is_no_ground) {
                                 named + "}}}}";
         t.Ok(!Layout(map.c_str(), R"([{"type": "map", "id": "g"}])", "[]").ground, std::string("ground map ") + named);
     }
+}
+
+// -- the frame reading (rules 13 and 14, serial 139): CarryOf on the fixture's frame_cases ----------------------------
+
+namespace {
+
+std::vector<const OWJsonValue*> FrameCases() {
+    std::vector<const OWJsonValue*> out;
+    if (const OWJsonValue* cases = Fixture()->Find("frame_cases"))
+        for (const OWJsonValue& c : cases->Items()) out.push_back(&c);
+    return out;
+}
+
+// The frame cases' numbers as Python reads them (tests/data/map-space-frames.bits.json, codegen/generate_frame_bits.py):
+// every number written with a fraction or an exponent, by its path into the case, as 16 hex digits.
+std::shared_ptr<OWJsonValue> FrameBits() {
+    static std::shared_ptr<OWJsonValue> doc = [] {
+        OWBytes bytes;
+        OWFiles::Read(P().root + "/tests/data/map-space-frames.bits.json", bytes);
+        OWJsonParseResult r = OWJson::Parse(bytes);
+        return std::make_shared<OWJsonValue>(r.ok ? std::move(r.value) : OWJsonValue());
+    }();
+    return doc;
+}
+
+uint64_t BitsOf(double d) {
+    uint64_t b = 0;
+    std::memcpy(&b, &d, sizeof b);
+    return b;
+}
+
+// The rows a case reads: the last Map row served with the case's id, or each row `map_index` lists (npm's rowsRead).
+std::vector<const OWJsonValue*> RowsRead(owtest::T& t, const OWJsonValue& c) {
+    std::vector<const OWJsonValue*> rows;
+    const OWJsonValue& elements = ElementsOf(c);
+    if (const OWJsonValue* index = c.Find("map_index")) {
+        t.Ok(!c.Find("map"), "both map and map_index");
+        for (const OWJsonValue& i : index->Items()) {
+            std::optional<int64_t> n = OWMapSpace::WholeOf(&i);
+            if (!n || *n < 0 || size_t(*n) >= elements.Size()) {
+                t.Fail("a map_index past the elements");
+                continue;
+            }
+            rows.push_back(&elements.Items()[size_t(*n)]);
+        }
+        t.Ok(!rows.empty(), "map_index is a list of positions");
+        return rows;
+    }
+    const std::string id = Str(c, "map");
+    const OWJsonValue* last = nullptr;
+    for (const OWJsonValue& e : elements.Items())
+        if (Str(e, "type") == "map" && Str(e, "id") == id && !id.empty()) last = &e;
+    if (last) rows.push_back(last);
+    else t.Fail("no Map row with the case's id");
+    return rows;
+}
+
+// Exactly equal (npm's same): a number as a 64-bit float, == (so 0 and -0 are one number), every other part as
+// written, key order held.
+void Same(owtest::T& t, const OWJsonValue& got, const OWJsonValue& want, const std::string& path) {
+    if (want.IsNumber()) {
+        std::optional<double> g = OWMapSpace::NumberOf(&got), w = OWMapSpace::NumberOf(&want);
+        if (!got.IsNumber() || !g || !w) return t.Fail(path + ": a number");
+        t.Ok(*g == *w, path + ": " + got.Text() + " is not " + want.Text());
+        return;
+    }
+    if (want.IsArray()) {
+        if (!got.IsArray()) return t.Fail(path + ": a list");
+        t.Eq(got.Size(), want.Size(), path + ": length");
+        for (size_t i = 0; i < want.Size() && i < got.Size(); ++i)
+            Same(t, got.Items()[i], want.Items()[i], path + "[" + std::to_string(i) + "]");
+        return;
+    }
+    if (want.IsObject()) {
+        if (!got.IsObject()) return t.Fail(path + ": an object");
+        t.Ok(got.Keys() == want.Keys(), path + ": keys in order");
+        for (size_t i = 0; i < want.Keys().size(); ++i) {
+            const OWJsonValue* g = got.Find(want.Keys()[i]);
+            if (!g) {
+                t.Fail(path + "." + want.Keys()[i] + ": missing");
+                continue;
+            }
+            Same(t, *g, want.Items()[i], path + "." + want.Keys()[i]);
+        }
+        return;
+    }
+    t.Ok(got == want, path + ": " + Compact(got) + " is not " + Compact(want));
+}
+
+std::pair<double, double> PointOf(const OWJsonValue& c) {
+    const OWJsonValue* p = c.Find("point");
+    if (!p || !p->IsArray() || p->Size() != 2) return {NAN, NAN};
+    return {OWMapSpace::NumberOf(&p->Items()[0]).value_or(NAN), OWMapSpace::NumberOf(&p->Items()[1]).value_or(NAN)};
+}
+
+void FrameCase(owtest::T& t, const OWJsonValue& c) {
+    const OWJsonValue* want = c.Find("want");
+    if (!want || !want->IsObject() || !c.Find("elements")) return t.Fail("the case has no elements or no want");
+    const auto [x, y] = PointOf(c);
+    for (const OWJsonValue* row : RowsRead(t, c)) {
+        OWMapCarry got = OWMapSpace::CarryOf(*row, x, y, ElementsOf(c));
+        t.Eq(got.error, std::string(), "no caller's mistake");
+        Same(t, got.ToJson(), *want, "answer");
+        // The struct's own doubles, beside their JSON spelling: each point to the bit.
+        const OWJsonValue* points = want->Find("points");
+        if (points && points->Size() == got.points.size())
+            for (size_t i = 0; i < got.points.size(); ++i) {
+                const OWJsonValue& w = points->Items()[i];
+                t.Ok(got.points[i].map == Str(w, "map") &&
+                         got.points[i].x == OWMapSpace::NumberOf(w.Find("x")).value_or(NAN) &&
+                         got.points[i].y == OWMapSpace::NumberOf(w.Find("y")).value_or(NAN),
+                     "points[" + std::to_string(i) + "] as doubles");
+            }
+    }
+}
+
+}  // namespace
+
+OW_TEST(map_space_carry_the_fixture_holds_its_frame_cases_and_the_bits_file_is_its_own) {
+    const size_t n = FrameCases().size();
+    t.Ok(n > 0, "the fixture holds frame_cases");
+    std::set<std::string> names;
+    for (const OWJsonValue* c : FrameCases()) names.insert(Str(*c, "name"));
+    t.Eq(names.size(), n, "each frame case named once");
+    auto bits = FrameBits();
+    t.Eq(Str(*bits, "fixture_sha256"), std::string(DistSha256), "the bits file names the pinned fixture's sha256");
+    std::optional<int64_t> counted = OWMapSpace::WholeOf(bits->Find("frame_cases"));
+    t.Ok(counted && size_t(*counted) == n, "the bits file counts the fixture's frame cases: " + std::to_string(n));
+    const OWJsonValue* cases = bits->Find("cases");
+    t.Ok(cases && cases->Keys().size() == n, "the bits file holds each frame case");
+    // serial 139 has 66; a new pin that moves the count moves this line with the sha.
+    t.Eq(n, size_t(66), "66 frame cases at dist.139 to dist.145");
+}
+
+OW_TEST(map_space_carry_the_readers_numbers_are_pythons_to_the_bit) {
+    // The core's reader against the fixture's raw text: every number written with a fraction or an exponent, read by
+    // NumberOf, is the double Python's json reads (the nearest double), so no want and no input passes through a
+    // misread. 115 numbers at serial 139.
+    const OWJsonValue* cases = FrameBits()->Find("cases");
+    if (!cases) return t.Fail("the bits file did not load");
+    size_t numbers = 0;
+    for (const OWJsonValue* c : FrameCases()) {
+        const std::string name = Str(*c, "name");
+        const OWJsonValue* entries = cases->Find(name);
+        if (!entries) {
+            t.Fail(name + ": not in the bits file");
+            continue;
+        }
+        for (const OWJsonValue& entry : entries->Items()) {
+            const OWJsonValue* v = c;
+            std::string path;
+            for (const OWJsonValue& step : entry.Items()[0].Items()) {
+                if (!v) break;
+                if (step.IsString()) {
+                    v = v->Find(step.Text());
+                    path += "." + step.Text();
+                } else {
+                    size_t i = size_t(OWMapSpace::WholeOf(&step).value_or(-1));
+                    v = v->IsArray() && i < v->Size() ? &v->Items()[i] : nullptr;
+                    path += "[" + std::to_string(i) + "]";
+                }
+            }
+            ++numbers;
+            std::optional<double> d = OWMapSpace::NumberOf(v);
+            uint64_t want = std::stoull(entry.Items()[1].Text(), nullptr, 16);
+            t.Ok(d && BitsOf(*d) == want, name + path + ": " + (v ? v->Text() : "<none>") + " read to its bits");
+        }
+    }
+    t.Eq(numbers, size_t(115), "115 numbers with a fraction or an exponent at serial 139");
+}
+
+OW_CASES(map_space_carry_fixture_cases) {
+    owtest::Cases out;
+    auto doc = Fixture();
+    if (FrameCases().empty()) {
+        out.emplace_back("map_space_carry:not-found", [](owtest::T& t) { t.Fail("the frame cases did not load"); });
+        return out;
+    }
+    for (const OWJsonValue* c : FrameCases())
+        out.emplace_back("map_space_carry:" + Str(*c, "name"), [doc, c](owtest::T& t) { FrameCase(t, *c); });
+    return out;
+}
+
+OW_TEST(map_space_carry_every_answer_holds_its_four_keys_and_the_map_space_reading_carries_no_frame_key) {
+    for (const OWJsonValue* c : FrameCases()) {
+        const std::string name = Str(*c, "name");
+        const auto [x, y] = PointOf(*c);
+        for (const OWJsonValue* row : RowsRead(t, *c)) {
+            OWJsonValue answer = OWMapSpace::CarryOf(*row, x, y, ElementsOf(*c)).ToJson();
+            t.Ok(answer.Keys() == std::vector<std::string>{"parent_frame", "lint", "points", "stop"},
+                 name + ": the four keys, in order");
+            t.Eq(Bytes(OWMapSpace::CarryOf(*row, x, y, ElementsOf(*c)).ToJson()), Bytes(answer), name + ": read twice");
+        }
+        OWJsonValue space = OWMapSpace::MapSpaceOf(ElementsOf(*c)).ToJson();
+        for (const OWJsonValue& m : space.Find("maps")->Items())
+            t.Ok(!m.Has("parent_frame") && !m.Has("x_parent_frame"), name + ": a map-space entry carries a frame key");
+    }
+    t.Ok(OWMapSpace::CarryStops() == std::vector<std::string>{"top", "dangling", "cycle", "no_frame", "no_carry"},
+         "the five stops, in the page's order");
+    t.Ok(OWMapSpace::CarryLints() == std::vector<std::string>{"no_parent", "not_four_numbers", "not_a_box"},
+         "the three lints, in the page's order");
+}
+
+OW_TEST(map_space_carry_a_callers_mistake_reads_nothing) {
+    // npm's TypeErrors: a point that is not two finite numbers, a map that is not one element, maps that is no list.
+    OWJsonValue m = Parse("{\"type\":\"map\",\"id\":\"a\",\"width\":10,\"height\":10}");
+    OWJsonValue maps = OWJsonValue::Array();
+    maps.Push(m);
+    const std::vector<std::pair<double, double>> bad = {{1, NAN}, {NAN, 1}, {1, INFINITY}, {-INFINITY, 1}};
+    for (auto [x, y] : bad) {
+        OWMapCarry r = OWMapSpace::CarryOf(m, x, y, maps);
+        t.Ok(!r.error.empty() && r.points.empty() && !r.stop, "a point that is not finite is a mistake");
+    }
+    OWMapCarry no_map = OWMapSpace::CarryOf(OWJsonValue::Null(), 1, 2, OWJsonValue::Array());
+    t.Ok(!no_map.error.empty() && no_map.points.empty(), "a map that is no object");
+    OWMapCarry no_list = OWMapSpace::CarryOf(m, 1, 2, OWJsonValue::Null());
+    t.Ok(!no_list.error.empty() && no_list.points.empty(), "maps that is no list");
+    OWMapCarry fine = OWMapSpace::CarryOf(m, 1, 2, maps);
+    t.Eq(fine.error, std::string(), "a fine call");
+    t.Eq(fine.stop.value_or(""), std::string("top"), "a top Map");
+}
+
+OW_TEST(map_space_carry_numbers_at_their_edges) {
+    // A number too large for a double is none (JSON.parse reads Infinity); one below a double's least reads as 0.
+    t.Ok(!OWMapSpace::NumberOf(&Parse("[1E400]").Items()[0]), "1E400 is no number");
+    t.Ok(!OWMapSpace::NumberOf(&Parse("[-1E400]").Items()[0]), "-1E400 is no number");
+    t.Ok(OWMapSpace::NumberOf(&Parse("[1E-400]").Items()[0]).value_or(1) == 0, "1E-400 is 0");
+    t.Ok(OWMapSpace::NumberOf(&Parse("[\"1\"]").Items()[0]) == std::nullopt, "a string is no number");
+    t.Ok(OWMapSpace::NumberOf(&Parse("[true]").Items()[0]) == std::nullopt, "a boolean is no number");
+    auto carry = [](const char* frame, const char* width) {
+        std::string text = std::string("[{\"type\":\"map\",\"id\":\"p\"},{\"type\":\"map\",\"id\":\"c\",\"parent_map\":\"p\","
+                                       "\"width\":") + width + ",\"height\":50,\"x_parent_frame\":" + frame + "}]";
+        OWJsonValue maps = OWJson::Parse(text).value;
+        return OWMapSpace::CarryOf(maps.Items()[1], 20, 10, maps);
+    };
+    OWMapCarry huge = carry("[0,0,1E400,10]", "100");
+    t.Eq(huge.lint.value_or(""), std::string("not_four_numbers"), "a frame number past a double: not four numbers");
+    // A size is any whole double above 0, past 2^53 too (npm's isCarrySize, Number.isInteger); WholeOf, the map-space
+    // reading's, stops at 2^53, so the two readings part here (no fixture case reaches it).
+    OWMapCarry wide = carry("[0,0,100,100]", "1e20");
+    t.Eq(wide.stop.value_or(""), std::string("top"), "a width of 1e20 carries");
+    t.Ok(wide.points.size() == 2 && wide.points[1].x == (20 * 100.0) / 1e20, "carried by the written width");
+    t.Ok(!OWMapSpace::WholeOf(&Parse("[1e20]").Items()[0]), "the map-space reading calls 1e20 not whole");
+    t.Eq(carry("[0,0,100,100]", "1E400").stop.value_or(""), std::string("no_carry"), "a width past a double: no carry");
+    t.Eq(carry("[0,0,100,100]", "100.5").stop.value_or(""), std::string("no_carry"), "a width with a fraction: no carry");
+    t.Eq(carry("[0,0,100,100]", "1.0e2").stop.value_or(""), std::string("top"), "1.0e2 is 100 by value");
+}
+
+OW_TEST(map_space_carry_never_moves_its_input_and_a_served_row_never_replaces_the_map_read) {
+    OWJsonValue maps = Parse(
+        "[{\"type\":\"map\",\"id\":\"p\",\"width\":1000,\"height\":800},"
+        "{\"type\":\"map\",\"id\":\"c\",\"width\":100,\"height\":50,\"parent_map\":\"p\",\"x_parent_frame\":[100,200,300,300]},"
+        "{\"type\":\"map\",\"id\":\"c\",\"width\":100,\"height\":50}]");
+    const std::string before = Bytes(maps);
+    // The Map read is the row handed in, whatever row `maps` serves last under its id.
+    OWMapCarry r = OWMapSpace::CarryOf(maps.Items()[1], 20, 10, maps);
+    t.Eq(r.stop.value_or(""), std::string("top"), "carried by the row handed in");
+    t.Ok(r.points.size() == 2 && r.points[1].x == 140 && r.points[1].y == 220, "(140, 220) on the parent");
+    t.Eq(Bytes(maps), before, "the input is as it was");
 }

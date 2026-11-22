@@ -3,9 +3,12 @@
 #include "OWText.h"
 
 #include <algorithm>
+#include <array>
 #include <charconv>
 #include <cmath>
 #include <map>
+#include <set>
+#include <string_view>
 #include <utility>
 
 // The map-space profile's reader, as the npm SDK's mapSpace (src/mapspace.ts) and the Python package's map_space read
@@ -332,6 +335,181 @@ OWMapLayout LayoutOf(const OWJsonValue& map, const OWJsonValue& maps, const OWJs
         if (board || (mark && mark->IsBool() && mark->AsBool())) answer.hand.push_back(pid);
     }
     answer.layout = method;
+    return answer;
+}
+
+}  // namespace OWMapSpace
+
+// -- the frame reading (rules 13 and 14) ----------------------------------------------------------------------------
+
+namespace {
+
+// Whether a number's magnitude is 1 or more, from its text alone (for a number past a double's range either way).
+bool AtLeastOne(std::string_view text) {
+    if (!text.empty() && text[0] == '-') text.remove_prefix(1);
+    size_t e = text.find_first_of("eE");
+    long long exponent = 0;
+    if (e != std::string_view::npos) {
+        std::string_view x = text.substr(e + 1);
+        bool negative = !x.empty() && x[0] == '-';
+        if (!x.empty() && (x[0] == '-' || x[0] == '+')) x.remove_prefix(1);
+        for (char c : x) exponent = std::min(exponent * 10 + (c - '0'), 1000000000LL);
+        if (negative) exponent = -exponent;
+        text = text.substr(0, e);
+    }
+    size_t point = text.find('.');
+    std::string_view whole = text.substr(0, point);
+    std::string_view fraction = point == std::string_view::npos ? std::string_view() : text.substr(point + 1);
+    long long place;
+    if (size_t first = whole.find_first_not_of('0'); first != std::string_view::npos) {
+        place = static_cast<long long>(whole.size() - first) - 1;
+    } else if (size_t f = fraction.find_first_not_of('0'); f != std::string_view::npos) {
+        place = -static_cast<long long>(f) - 1;
+    } else {
+        return false;
+    }
+    return place + exponent >= 0;
+}
+
+// A Map row: `type` exactly `map` (reading K) and a non-empty string id (reading H).
+std::optional<std::string> MapIdOf(const OWJsonValue& v) {
+    if (!v.IsObject()) return std::nullopt;
+    const OWJsonValue* type = v.Find("type");
+    if (!type || !type->IsString() || type->Text() != "map") return std::nullopt;
+    return IdOf(v.Find("id"));
+}
+
+struct OwnFrame {
+    std::optional<std::array<double, 4>> frame;
+    std::optional<std::string> lint;
+};
+
+// A Map's own parent frame and lint (rule 13).
+OwnFrame FrameOf(const OWJsonValue& map) {
+    const OWJsonValue* key = map.Find("x_parent_frame");
+    const bool present = key && !key->IsNull();
+    // The key is read only on a Map with a parent_map, a link as reading H reads one.
+    if (!IdOf(map.Find("parent_map"))) return {std::nullopt, present ? std::optional<std::string>("no_parent") : std::nullopt};
+    if (!present) return {};
+    if (!key->IsArray() || key->Size() != 4) return {std::nullopt, "not_four_numbers"};
+    std::array<double, 4> box{};
+    for (size_t i = 0; i < 4; ++i) {
+        std::optional<double> n = OWMapSpace::NumberOf(&key->Items()[i]);
+        if (!n) return {std::nullopt, "not_four_numbers"};
+        box[i] = *n;
+    }
+    if (!(box[0] < box[2]) || !(box[1] < box[3])) return {std::nullopt, "not_a_box"};
+    return {box, std::nullopt};
+}
+
+// A size a carry may divide by: a whole number above 0, by value (reading K: 100.0 reads as 100), with no bound: the
+// npm SDK's isCarrySize (Number.isInteger and above 0).
+std::optional<double> CarrySizeOf(const OWJsonValue* v) {
+    std::optional<double> n = OWMapSpace::NumberOf(v);
+    if (!n || std::floor(*n) != *n || !(*n > 0)) return std::nullopt;
+    return n;
+}
+
+}  // namespace
+
+OWJsonValue OWMapCarry::ToJson() const {
+    OWJsonValue answer = OWJsonValue::Object();
+    if (parent_frame) {
+        OWJsonValue box = OWJsonValue::Array();
+        for (double d : *parent_frame) box.Push(OWJsonValue::Number(d));
+        answer.Set("parent_frame", std::move(box));
+    } else {
+        answer.Set("parent_frame", OWJsonValue::Null());
+    }
+    answer.Set("lint", TextOrNull(lint));
+    OWJsonValue ps = OWJsonValue::Array();
+    for (const OWMapCarryPoint& p : points) {
+        OWJsonValue row = OWJsonValue::Object();
+        row.Set("map", Text(p.map));
+        row.Set("x", OWJsonValue::Number(p.x));
+        row.Set("y", OWJsonValue::Number(p.y));
+        ps.Push(std::move(row));
+    }
+    answer.Set("points", std::move(ps));
+    answer.Set("stop", TextOrNull(stop));
+    return answer;
+}
+
+namespace OWMapSpace {
+
+const std::vector<std::string>& CarryStops() {
+    static const std::vector<std::string> stops = {"top", "dangling", "cycle", "no_frame", "no_carry"};
+    return stops;
+}
+
+const std::vector<std::string>& CarryLints() {
+    static const std::vector<std::string> lints = {"no_parent", "not_four_numbers", "not_a_box"};
+    return lints;
+}
+
+std::optional<double> NumberOf(const OWJsonValue* v) {
+    if (!v || !v->IsNumber()) return std::nullopt;
+    const std::string& text = v->Text();
+    double d = 0;
+    std::from_chars_result r = std::from_chars(text.data(), text.data() + text.size(), d);
+    if (r.ec == std::errc::result_out_of_range) {
+        // Past a double: one too large is no number (JSON.parse reads Infinity), one too small reads as 0, as it does.
+        if (AtLeastOne(text)) return std::nullopt;
+        return !text.empty() && text[0] == '-' ? -0.0 : 0.0;
+    }
+    if (r.ec != std::errc() || !std::isfinite(d)) return std::nullopt;
+    return d;
+}
+
+OWMapCarry CarryOf(const OWJsonValue& map, double x, double y, const OWJsonValue& maps) {
+    OWMapCarry answer;
+    if (!map.IsObject()) {
+        answer.error = "CarryOf: map is one Map element";
+        return answer;
+    }
+    if (!std::isfinite(x) || !std::isfinite(y)) {
+        answer.error = "CarryOf: the point is two finite numbers";
+        return answer;
+    }
+    if (!maps.IsArray()) {
+        answer.error = "CarryOf: maps is a list of Map elements";
+        return answer;
+    }
+    const std::optional<std::string> id = MapIdOf(map);
+    if (!id) return answer;
+
+    // The Maps served, one row per id, the last served (reading I).
+    std::map<std::string, const OWJsonValue*> served;
+    for (const OWJsonValue& m : maps.Items())
+        if (std::optional<std::string> mid = MapIdOf(m)) served[*mid] = &m;
+
+    const OwnFrame own = FrameOf(map);
+    answer.parent_frame = own.frame;
+    answer.lint = own.lint;
+    answer.points.push_back({*id, x, y});
+    std::set<std::string> reached = {*id};
+    const OWJsonValue* at = &map;
+    std::optional<std::array<double, 4>> frame = own.frame;
+    for (;;) {
+        // Served-ness before shape (reading A): top, dangling, cycle, then no_frame and no_carry.
+        const std::optional<std::string> parent_id = IdOf(at->Find("parent_map"));
+        if (!parent_id) { answer.stop = "top"; break; }
+        auto parent = served.find(*parent_id);
+        if (parent == served.end()) { answer.stop = "dangling"; break; }
+        if (reached.count(*parent_id)) { answer.stop = "cycle"; break; }
+        if (!frame) { answer.stop = "no_frame"; break; }
+        const std::optional<double> width = CarrySizeOf(at->Find("width"));
+        const std::optional<double> height = CarrySizeOf(at->Find("height"));
+        if (!width || !height) { answer.stop = "no_carry"; break; }
+        const auto [x0, y0, x1, y1] = *frame;
+        // Rule 14's order: the difference, then the product, then the quotient, then the sum.
+        x = x0 + ((x * (x1 - x0)) / *width);
+        y = y0 + ((y * (y1 - y0)) / *height);
+        answer.points.push_back({*parent_id, x, y});
+        reached.insert(*parent_id);
+        at = parent->second;
+        frame = FrameOf(*at).frame;
+    }
     return answer;
 }
 

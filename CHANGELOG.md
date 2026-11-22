@@ -7,6 +7,20 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- The map-space profile's frame reading (rules 13 and 14, serial 139), in the core: `OWMapSpace::CarryOf(map, x, y,
+  maps)` answers an `OWMapCarry`, `{parent_frame, lint, points, stop}`: where a point on a child Map lies on its
+  parent, by the child's `x_parent_frame` (`[x0, y0, x1, y1]` in the parent's pixels), and on each Map above it, one
+  level at a time, as `x0 + ((x * (x1 - x0)) / width)` and its y in 64-bit floats in that order. The Map's own frame
+  and lint (`no_parent`, `not_four_numbers`, `not_a_box`), the points carried, and why the walk stopped (`top`,
+  `dangling`, `cycle`, `no_frame`, `no_carry`); `OWMapSpace::CarryStops()` and `CarryLints()` name the words, and
+  `OWMapSpace::NumberOf` reads a number as the rule does (a finite double, the nearest to its text; one past a
+  double's range none). A carry size is any whole double above 0, with no bound at 2^53, as npm's `carryOf` reads it,
+  where `WholeOf` (the map-space reading's) stops at 2^53. A caller's mistake is named in `error`, nothing read. Parity
+  with the TypeScript SDK 4.183.0 (`carryOf`). Every one of the fixture's `frame_cases` (66 at this pin) passes, each
+  number compared exactly as a double; the fixture's 115 numbers with a fraction or an exponent are first held to
+  the bits Python reads (`tests/data/map-space-frames.bits.json`, written by the new
+  `codegen/generate_frame_bits.py`, `--check` its drift guard), and the core's reader reads every one exactly. The
+  `down_cases` (`downOf`) are still read by no test. No Blueprint layer.
 - The profiles' fold and order under public names, in the core: the new `OWText.h`, `OWText::TrimAndFold(text)` (a
   text trimmed of Unicode's White_Space at both ends, nothing inside touched, then simple case folding by Unicode
   15.1's C and S rows, with no normalization first: a byte order mark, a zero width space and U+001C to U+001F stay,
