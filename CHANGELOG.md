@@ -7,6 +7,15 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- `OWApiError::FieldsRefusal()`, in the core: on a 422 whose `param` is `fields` (a `List` or a `Get` whose `fields`
+  list named fields its type does not have), the three keys keel sends inside the envelope's `error` object, typed as
+  an `OWFieldsRefusal`: `unknown_fields` (every unknown name, in the order sent), `types_with_field` (for each unknown
+  name another type has, those types, in the order served; `TypesWith(name)` looks one up) and `allowed_fields` (the
+  names the type takes). Absent on any other error, when keel sends no `unknown_fields` list, when the keys are not
+  inside `error`, or when the body is not JSON; an entry that is not a string, or a `types_with_field` entry that is
+  not a list, is left out, and a key keel left out reads empty. Parity with the TypeScript SDK 4.179.0
+  (`fieldsRefusal`), its three tests ported. Core only: the Blueprint `FOWApiError` carries `Param` and `RawBody`,
+  not the three lists yet.
 - `OWBulkOptions::create_only`, in the core: `Bulk` with it true sends `create_only`, and every item with an id is
   created as `Create` creates it, never replaced. An id the world already holds answers that item's slot 409
   `id_conflict`, and the element stays as it was; the rest of the batch goes on as before, and the slot reads as any

@@ -4,6 +4,8 @@
 
 #include <cstdint>
 #include <limits>
+#include <string>
+#include <vector>
 
 namespace OnlyWorlds {
 
@@ -74,6 +76,15 @@ std::optional<int64_t> HttpDate(std::string_view v) {
     int last = Lengths[month - 1] + (month == 2 && leap ? 1 : 0);
     if (day < 1 || day > last || hour > 23 || minute > 59 || second > 60) return std::nullopt;
     return DaysFromCivil(year, month, day) * 86400 + hour * 3600 + minute * 60 + second;
+}
+
+// The strings of a JSON list in its order, anything that is not a string left out; a value that is no list reads empty.
+std::vector<std::string> Strings(const OWJsonValue* list) {
+    std::vector<std::string> out;
+    if (list && list->IsArray())
+        for (const OWJsonValue& v : list->Items())
+            if (v.IsString()) out.push_back(v.Text());
+    return out;
 }
 
 bool AsciiWhite(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v'; }
@@ -196,6 +207,44 @@ std::optional<OWJsonValue> OWApiError::Current() const {
     const OWJsonValue* now = parsed.ok ? parsed.value.Find("current") : nullptr;
     if (!now || !now->IsObject()) return std::nullopt;
     return *now;
+}
+
+std::optional<OWFieldsRefusal> OWApiError::FieldsRefusal() const {
+    if (status != 422 || param != "fields" || raw_body.empty()) return std::nullopt;
+    OWJsonParseResult parsed = OWJson::Parse(raw_body);
+    // Inside the envelope's `error` object only, as npm reads them: a body without the wrapper carries none.
+    const OWJsonValue* inner = parsed.ok && parsed.value.IsObject() ? parsed.value.Find("error") : nullptr;
+    if (!inner || !inner->IsObject()) return std::nullopt;
+    const OWJsonValue* unknown = inner->Find("unknown_fields");
+    if (!unknown || !unknown->IsArray()) return std::nullopt;
+    OWFieldsRefusal r;
+    r.unknown_fields = Strings(unknown);
+    if (const OWJsonValue* held = inner->Find("types_with_field"); held && held->IsObject())
+        for (size_t i = 0; i < held->Keys().size(); ++i)
+            if (held->Items()[i].IsArray()) r.types_with_field.emplace_back(held->Keys()[i], Strings(&held->Items()[i]));
+    r.allowed_fields = Strings(inner->Find("allowed_fields"));
+    return r;
+}
+
+const std::vector<std::string>* OWFieldsRefusal::TypesWith(std::string_view name) const {
+    for (const auto& [field, types] : types_with_field)
+        if (field == name) return &types;
+    return nullptr;
+}
+
+OWJsonValue OWFieldsRefusal::ToJson() const {
+    auto list = [](const std::vector<std::string>& items) {
+        OWJsonValue a = OWJsonValue::Array();
+        for (const std::string& s : items) a.Push(OWJsonValue::String(s));
+        return a;
+    };
+    OWJsonValue answer = OWJsonValue::Object();
+    answer.Set("unknown_fields", list(unknown_fields));
+    OWJsonValue by_name = OWJsonValue::Object();
+    for (const auto& [field, types] : types_with_field) by_name.Set(field, list(types));
+    answer.Set("types_with_field", std::move(by_name));
+    answer.Set("allowed_fields", list(allowed_fields));
+    return answer;
 }
 
 }  // namespace OnlyWorlds

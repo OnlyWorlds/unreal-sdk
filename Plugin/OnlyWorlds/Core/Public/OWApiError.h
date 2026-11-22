@@ -20,8 +20,29 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace OnlyWorlds {
+
+// What a 422 with `param` `fields` carries beside its message, when a read's `fields` list (a List or a Get) names
+// fields its type does not have: keel refuses the whole list once, with every unknown name, so a caller corrects it in
+// one try. Read from OWApiError::FieldsRefusal(). Mirrors the TypeScript SDK's `OwFieldsRefusal` (4.179.0).
+struct OWFieldsRefusal {
+    // Every name in the list that the type does not have, in the order sent.
+    std::vector<std::string> unknown_fields;
+    // For each unknown name another element type has, those types, in the order keel served the names. A name no type
+    // has is not here.
+    std::vector<std::pair<std::string, std::vector<std::string>>> types_with_field;
+    // The names this type's `fields` takes. An extension field name (`x_`, `atlas_`, `shadow_`) passes too and is not
+    // listed.
+    std::vector<std::string> allowed_fields;
+
+    // The types that have `name`, or nullptr when no type has it.
+    const std::vector<std::string>* TypesWith(std::string_view name) const;
+    // npm's shape: {unknown_fields, types_with_field, allowed_fields}, `types_with_field` an object of lists.
+    OWJsonValue ToJson() const;
+};
 
 struct OWApiError {
     enum class Kind : uint8_t { Api, Transport, Refused, Answer };
@@ -91,6 +112,12 @@ struct OWApiError {
     // element as keel holds it now. Absent on any other answer, when keel sent none, or when the body is not JSON.
     // Mirrors the TypeScript SDK's `OwPreconditionFailedError.current`.
     std::optional<OWJsonValue> Current() const;
+    // On a 422 whose `param` is `fields` (a List's or a Get's `fields` list named fields its type does not have): the
+    // three keys keel sends inside the envelope's `error` object, typed. Absent for any other error, when keel sends no
+    // `unknown_fields` list, or when the body is not JSON. An entry that is not a string is left out, a
+    // `types_with_field` entry that is not a list is left out, and a key keel left out reads empty. Mirrors the
+    // TypeScript SDK's `fieldsRefusal` (4.179.0), which reads the keys inside `error` only.
+    std::optional<OWFieldsRefusal> FieldsRefusal() const;
     // The id is taken (409 id_conflict): a create whose element carried its id and already landed (the element is
     // there), or a PUT whose id belongs to another world. Mirrors the TypeScript SDK's `isIdConflict`.
     bool IsIdConflict() const;
