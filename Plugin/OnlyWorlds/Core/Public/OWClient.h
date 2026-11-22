@@ -60,6 +60,9 @@
 
 namespace OnlyWorlds {
 
+// AcceptJoin's answer, in OWJoin.h (include it to call AcceptJoin).
+struct OWJoinedMembership;
+
 // What kind of credential a key is, by its prefix: None for no key; Unknown for a key of no known shape, sent as a
 // world key is.
 enum class OWKeyKind : uint8_t { None, Unknown, Write, Read, Account, Legacy };
@@ -366,6 +369,18 @@ public:
     // 304 while nothing is held is an error of kind Api with status 304: the client never makes up a head. Mirrors the
     // TypeScript SDK's `changesHead`.
     void ChangesHead(OWHandler<OWChangesPage> done);
+
+    // -- Joining by link --------------------------------------------------------------------------------------------
+
+    // POST /account/join: accept a person's invite link as the account this client's token belongs to, 201 with the
+    // new membership (OWJoinedMembership, in OWJoin.h). `code` is the link's ow_j_ code (OWJoin::ParseLink reads it
+    // out of a pasted link), sent as given in {"code"} alone, with the Bearer and never a PIN: accepting needs none, for
+    // any role. keel's refusals leave the code unspent: every bad code (unknown, used, revoked or expired), and a code
+    // made for an AI agent, is the one 404 not_found (OWApiError::IsNotFound); an account already in the world is 409
+    // already_member (IsAlreadyMember). Refused, nothing sent: any key but an account token (ow_a_; a player's or an
+    // agent's code is redeemed with no key, OWJoin::Redeem) and an empty code. Mirrors the TypeScript SDK's
+    // `acceptJoin` (4.12.0) and the Unity SDK's `AcceptJoinAsync`.
+    void AcceptJoin(const std::string& code, OWHandler<OWJoinedMembership> done);
 
     // -- Element writes ---------------------------------------------------------------------------------------------
     //

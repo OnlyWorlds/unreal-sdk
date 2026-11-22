@@ -198,6 +198,13 @@ bool OWApiError::IsPreconditionFailed() const { return status == 412 && code == 
 bool OWApiError::IsIdConflict() const { return status == 409 && code == "id_conflict"; }
 bool OWApiError::IsIdempotencyConflict() const { return status == 409 && code == "idempotency_error"; }
 bool OWApiError::IsKnownOfNotWritable() const { return status == 422 && code == "known_of_not_writable"; }
+bool OWApiError::IsCharacterTaken() const { return status == 422 && code == "character_taken"; }
+bool OWApiError::IsCharacterInvalid() const {
+    return status == 422 && code == "invalid_request" && param == "character";
+}
+bool OWApiError::IsWorldFull() const { return status == 422 && code == "world_full"; }
+bool OWApiError::IsAlreadyMember() const { return status == 409 && code == "already_member"; }
+bool OWApiError::IsPinRequired() const { return status == 409 && code == "pin_required"; }
 
 std::optional<OWJsonValue> OWApiError::Current() const {
     // The Unity SDK's Current: on any 412, and on a 409 stale_proposal.

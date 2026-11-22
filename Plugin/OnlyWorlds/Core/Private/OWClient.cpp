@@ -1,6 +1,7 @@
 #include "OWClient.h"
 
 #include "OWId.h"
+#include "OWJoin.h"
 #include "OWLens.h"
 #include "OWUnicode.h"
 
@@ -770,6 +771,38 @@ void OWClient::ChangesHead(OWHandler<OWChangesPage> done) {
             s->head_held = std::move(keep);
         }
         done(std::move(r));
+    });
+}
+
+// -- Joining by link -------------------------------------------------------------------------------------------------
+
+void OWClient::AcceptJoin(const std::string& code, OWHandler<OWJoinedMembership> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    if (state_->kind != OWKeyKind::Account) {
+        const char* held = "none";
+        switch (state_->kind) {
+            case OWKeyKind::Write: held = "a write key"; break;
+            case OWKeyKind::Read: held = "a read key"; break;
+            case OWKeyKind::Legacy: held = "a legacy key"; break;
+            case OWKeyKind::Unknown: held = "a key of no known shape"; break;
+            default: break;
+        }
+        return Refuse(done, std::string("AcceptJoin needs an account token (ow_a_); this client holds ") + held +
+                                ". A world key cannot join a world; a player's or an agent's code is redeemed with no "
+                                "key, OWJoin::Redeem." + NothingSent);
+    }
+    if (code.empty()) {
+        return Refuse(done, std::string("AcceptJoin: a join code is required (OWJoin::ParseLink reads it out of a pasted "
+                                        "link).") + NothingSent);
+    }
+    // An account route: the Bearer and the media type, never the PIN, no X-OW-* (no element is written), no world=.
+    How how;
+    how.body = "{\"code\":" + OWJson::Quote(code) + "}";
+    const std::string route = "POST /account/join";
+    Request(state_, "POST", "/account/join", {}, how, [route, done](OWReply<OWJsonValue> raw) {
+        done(Then<OWJoinedMembership>(Object(std::move(raw), route), [](OWJsonValue& body, OWReply<OWJoinedMembership>& r) {
+            r.value = OWJoin::MembershipOf(body);
+        }));
     });
 }
 

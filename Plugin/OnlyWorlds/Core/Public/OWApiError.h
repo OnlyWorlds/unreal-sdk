@@ -128,6 +128,24 @@ struct OWApiError {
     // sending and leaves the key out of every other body, so keel should never answer it this. Mirrors the TypeScript
     // SDK's `isKnownOfNotWritable`.
     bool IsKnownOfNotWritable() const;
+    // OWJoin::Redeem on a table: the picked Character is one a live seat in the world already plays (422
+    // character_taken, param character). Pick another from a fresh OWJoin::Preview, whose characters mark each taken.
+    // The code is not spent. Mirrors the TypeScript SDK's `isCharacterTaken`.
+    bool IsCharacterTaken() const;
+    // The character sent was refused (422 invalid_request, param character): on OWJoin::Redeem at a table, the pick is
+    // off the link's list, hidden or deleted since, missing, or sent to a table that lists none (send a name instead);
+    // one answer for all, so read the preview again. Never true for another param's 422, nor for IsCharacterTaken.
+    // Mirrors the TypeScript SDK's `isCharacterInvalid`.
+    bool IsCharacterInvalid() const;
+    // OWJoin::Redeem: the world already has its 50 live players (422 world_full), at any player link. Nothing is spent;
+    // a place frees when the owner removes a player. Mirrors the TypeScript SDK's `isWorldFull`.
+    bool IsWorldFull() const;
+    // OWClient::AcceptJoin: the account is already a member of that world (409 already_member). The code is not
+    // spent. Mirrors the TypeScript SDK's `isAlreadyMember`.
+    bool IsAlreadyMember() const;
+    // The account has no PIN yet, and a member writes with their own (409 pin_required); accepting a link needs none, a
+    // write key for the membership does. Mirrors the TypeScript SDK's `isPinRequired`.
+    bool IsPinRequired() const;
     // Worth sending again later: a 429 or a 5xx, and the three 409s that clear by themselves; never a used-up daily
     // allowance or a service turned off. Mirrors the Unity SDK's IsRetryable (the TypeScript SDK names each code:
     // `isBusy`, `isRateLimited`, `isIdempotencyInFlight`).
