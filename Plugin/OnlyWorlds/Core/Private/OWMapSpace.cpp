@@ -1,5 +1,7 @@
 #include "OWMapSpace.h"
 
+#include "OWText.h"
+
 #include <algorithm>
 #include <charconv>
 #include <cmath>
@@ -18,10 +20,8 @@ OWJsonValue Text(const std::string& s) { return OWJsonValue::String(s); }
 OWJsonValue IntOrNull(const std::optional<int64_t>& n) { return n ? Int(*n) : OWJsonValue::Null(); }
 OWJsonValue TextOrNull(const std::optional<std::string>& s) { return s ? Text(*s) : OWJsonValue::Null(); }
 
-// Ids in code point order: a UTF-8 string's bytes compared unsigned (std::string's own order) are its code points'.
-struct ByCodePoint {
-    bool operator()(const std::string& a, const std::string& b) const { return a < b; }
-};
+// Ids in code point order, the profiles' one order (OWText::ByCodePoint).
+using ByCodePoint = OWText::ByCodePoint;
 
 struct ByZoneThenMap {
     bool operator()(const std::pair<std::string, std::string>& a, const std::pair<std::string, std::string>& b) const {

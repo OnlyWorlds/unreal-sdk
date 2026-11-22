@@ -22,6 +22,7 @@ The plugin is two layers:
 |---|---|
 | `OWJson` | strict JSON (RFC 8259) whose value keeps key order and each number's source text; the folder spec's section 5 writer (`JSON.stringify(value, null, 2)`'s bytes) |
 | `OWUnicode` | NFC, the OW-18 fold (NFC, then CaseFolding's C and S rows), strict UTF-8, Python's `strip()` white space, the slug's NFKD: Unicode 15.1.0, generated from Unicode's own files |
+| `OWText` | the profiles' one comparison and one order, public: `TrimAndFold(text)` (Unicode's White_Space trimmed at both ends, then simple case folding with no NFC first: room.md's "trimmed and without regard to case", not OW-18's fold) and `CompareByCodePoint(a, b)` with `ByCodePoint` for `std::sort` and `std::map` (code point order, never UTF-16 units or a collation), the npm SDK's `trimAndFold` and `byCodePoint`. Names as the profiles order them: their folds by code point, ties by id. Every profile reader here matches and orders by these |
 | `OWZip` | the archive's own central-directory walk, each entry inflated by zlib and held to both sizes it declares, a writer with fixed stamps |
 | `OWWorldArchive` | reads an `.owworld` by every reader rule of section 4.7 (OW-1 to OW-22), refusing with one cause; packs a folder |
 | `OWWorld` | a world folder read and written back: an unedited file keeps its bytes, an edited one is written in section 5's form, a new element takes section 3.2's filename |

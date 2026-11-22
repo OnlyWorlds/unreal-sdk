@@ -7,6 +7,17 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Added
 
+- The profiles' fold and order under public names, in the core: the new `OWText.h`, `OWText::TrimAndFold(text)` (a
+  text trimmed of Unicode's White_Space at both ends, nothing inside touched, then simple case folding by Unicode
+  15.1's C and S rows, with no normalization first: a byte order mark, a zero width space and U+001C to U+001F stay,
+  the long s folds to s, the sharp s stays) and `OWText::CompareByCodePoint(a, b)` (negative, 0 or positive as `a`
+  sorts before, with or after `b` by code point, never by UTF-16 unit or a collation), with `OWText::ByCodePoint`, the
+  same order for `std::sort`, `std::map` and `std::set`. Every profile reader here already matched and ordered by
+  them: `TrimAndFold` is `OWMessage::Fold` under the profiles' name (both stay; `OWUnicode::Fold` is OW-18's, NFC
+  first, and is another fold), and the map-space reader's file-local order is now `OWText::ByCodePoint`. Parity with
+  the TypeScript SDK 4.180.0 (`trimAndFold`, `byCodePoint`): its test file ported case for case
+  (`tests/test_text.cpp`), but its refusal of a value that is not a string, which a `std::string_view` cannot be. No
+  Blueprint layer.
 - `OWApiError::FieldsRefusal()`, in the core: on a 422 whose `param` is `fields` (a `List` or a `Get` whose `fields`
   list named fields its type does not have), the three keys keel sends inside the envelope's `error` object, typed as
   an `OWFieldsRefusal`: `unknown_fields` (every unknown name, in the order sent), `types_with_field` (for each unknown
