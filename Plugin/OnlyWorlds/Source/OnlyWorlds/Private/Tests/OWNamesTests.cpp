@@ -74,6 +74,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWNamesWorldTest, "OnlyWorlds.Names.World", OW
 
 bool FOWNamesWorldTest::RunTest(const FString& Parameters)
 {
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_SIKELIA"))) return true;
 	UOWWorld* World = OWTestPaths::OpenWorld(*this, OWTestPaths::Sikelia(), TEXT("OW_SIKELIA"));
 	if (!World) return false;
 	if (!TestFalse(TEXT("Sikelia carries no x_names"), World->Native()->info.Has(OnlyWorlds::OWNames::Field))) return false;
@@ -158,6 +159,7 @@ bool FOWNamesFixtureTest::RunTest(const FString& Parameters)
 	}
 	const OWJsonValue* Cases = Doc.Find("cases");
 	if (!TestTrue(TEXT("the fixture holds cases"), Cases && Cases->IsArray())) return false;
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_MOPPETOPIA"))) return true;
 	UOWWorld* World = OWTestPaths::OpenWorld(*this, OWTestPaths::Moppetopia(), TEXT("OW_MOPPETOPIA"));
 	if (!World) return false;
 

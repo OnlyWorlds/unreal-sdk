@@ -171,7 +171,8 @@ namespace {
 void PackReal(owtest::T& t, const std::string& root, const std::string& label, bool from_folder) {
     owtest::LoadedWorld& lw = owtest::Loaded(root);
     if (!lw.missing.empty()) {
-        t.Skip(lw.missing + " (OW_SIKELIA / OW_MOPPETOPIA)");
+        const char* var = label == "Sikelia" ? "OW_SIKELIA" : "OW_MOPPETOPIA";
+        t.Skip(lw.missing + " (set " + var + " to a " + label + " world folder)");
         return;
     }
     OWWorld& w = *lw.world;

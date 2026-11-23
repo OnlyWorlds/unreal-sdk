@@ -1,8 +1,9 @@
 #pragma once
 // Where the automation tests find their inputs: the conformance set in the repository that holds the plugin (the
-// vendored schema-dist, two folders above the plugin's own; OW_FIXTURES for a plugin copied elsewhere; never a path of
-// this machine), the two real worlds by OW_SIKELIA and OW_MOPPETOPIA (with the defaults build.cmd's runner uses), and
-// a scratch folder under the project's Saved/.
+// vendored schema-dist, two folders above the plugin's own; OW_FIXTURES to point elsewhere), two optional real worlds
+// named by OW_SIKELIA and OW_MOPPETOPIA (no default: a test of a world not given warns and does not run, one given and
+// not there fails), and a scratch folder under the project's Saved/. The tests are compiled only when the repository
+// is around the plugin (OW_REPO_TESTS, set by OnlyWorlds.Build.cs).
 
 #include "CoreMinimal.h"
 #include "HAL/PlatformMisc.h"
@@ -59,12 +60,21 @@ namespace OWTestPaths
 
 	inline FString Sikelia()
 	{
-		return Env(TEXT("OW_SIKELIA"), TEXT("C:/Users/Titus/Development/OnlyWorlds/sikelia-world"));
+		return Env(TEXT("OW_SIKELIA"), FString());
 	}
 
 	inline FString Moppetopia()
 	{
-		return Env(TEXT("OW_MOPPETOPIA"), TEXT("C:/Users/Titus/Carrier/Armature/projects/moppetopia-world"));
+		return Env(TEXT("OW_MOPPETOPIA"), FString());
+	}
+
+	// Whether the environment names this world. When it does not, a warning says which variable to set and the caller
+	// runs nothing on that world (a test of that world alone returns true: not run, and not a failure).
+	inline bool WorldGiven(FAutomationTestBase& Test, const TCHAR* EnvName)
+	{
+		if (!FPlatformMisc::GetEnvironmentVariable(EnvName).IsEmpty()) return true;
+		Test.AddWarning(FString::Printf(TEXT("not run: set %s to a world folder to run this test on it"), EnvName));
+		return false;
 	}
 
 	// A real world folder opened through UOWLibrary. A missing world is a failure, never a pass (nullptr, an error logged).

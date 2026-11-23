@@ -4,8 +4,8 @@
     python tests/check_writer.py FILE [FILE ...] [--source private] [--run-py DIR]
     python tests/check_writer.py FILE --folder DIR       # a real world: the source is the folder on disk
 
-The checker is not vendored (it is the fixture set's workshop, Armature/tools/owworld-fixtures/run_py.py); this
-imports it from DIR. `source` (the files a conforming writer must carry byte-exact) comes from the pinned set's
+The checker (`run_py.py`, the reference reader and writer check the fixture set was made with) is not part of this
+repository; this imports it from DIR (--run-py, or the folder OW_RUN_PY names). `source` (the files a conforming writer must carry byte-exact) comes from the pinned set's
 verdicts.json, or, with --folder, from the world folder itself: the sha256 of every file under its parts (world.json,
 elements/, spatial/, media/, records/), read here and nowhere else, so a pack that dropped or changed a file is caught
 by a reading independent of the writer. Prints one line per file; exits 1 unless every file is accepted by the reader
@@ -21,7 +21,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 VERDICTS = os.path.join(HERE, "..", "codegen", "schema-dist", "fixtures", "owworld", "verdicts.json")
-DEFAULT_RUN_PY = "C:/Users/Titus/Carrier/Armature/tools/owworld-fixtures"
+DEFAULT_RUN_PY = os.environ.get("OW_RUN_PY", "")
 PARTS = ("elements", "spatial", "media", "records")
 
 
@@ -46,6 +46,8 @@ def main() -> int:
     ap.add_argument("--folder", help="a world folder: the source is its files on disk")
     ap.add_argument("--run-py", default=DEFAULT_RUN_PY, help="the folder holding run_py.py")
     a = ap.parse_args()
+    if not a.run_py:
+        ap.error("no checker: pass --run-py DIR or set OW_RUN_PY to the folder holding run_py.py")
     sys.dont_write_bytecode = True  # read the checker, never write beside it
     spec = importlib.util.spec_from_file_location("run_py", os.path.join(a.run_py, "run_py.py"))
     run_py = importlib.util.module_from_spec(spec)

@@ -186,6 +186,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWCalendarWorldCalendarsTest, "OnlyWorlds.Cale
 
 bool FOWCalendarWorldCalendarsTest::RunTest(const FString& Parameters)
 {
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_MOPPETOPIA"))) return true;
 	UOWWorld* World = OpenMoppetopia(*this);
 	if (!World) return false;
 
@@ -229,6 +230,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWCalendarFormatStepTest, "OnlyWorlds.Calendar
 
 bool FOWCalendarFormatStepTest::RunTest(const FString& Parameters)
 {
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_MOPPETOPIA"))) return true;
 	UOWWorld* World = OpenMoppetopia(*this);
 	if (!World) return false;
 
@@ -285,6 +287,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWCalendarBreakdownStepTest, "OnlyWorlds.Calen
 
 bool FOWCalendarBreakdownStepTest::RunTest(const FString& Parameters)
 {
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_MOPPETOPIA"))) return true;
 	UOWWorld* World = OpenMoppetopia(*this);
 	if (!World) return false;
 
@@ -333,6 +336,7 @@ bool FOWCalendarFixtureTest::RunTest(const FString& Parameters)
 	const OWJsonValue* Cases = Doc.ok ? Doc.value.Find("cases") : nullptr;
 	if (!TestTrue(TEXT("the fixture parses and holds cases"), Cases && Cases->IsArray())) return false;
 
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_MOPPETOPIA"))) return true;
 	UOWWorld* World = OpenMoppetopia(*this);
 	if (!World) return false;
 

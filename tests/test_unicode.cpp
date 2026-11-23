@@ -94,6 +94,11 @@ std::u32string Col(const std::string& col) {
 
 OW_TEST(unicode_nfc_on_normalization_test) {
     OWBytes bytes;
+    if (P().normalization_test.empty()) {
+        t.Skip("set OW_NORMALIZATION_TEST to Unicode's NormalizationTest.txt, version 15.1.0 "
+               "(https://www.unicode.org/Public/15.1.0/ucd/NormalizationTest.txt)");
+        return;
+    }
     if (!OWFiles::Read(P().normalization_test, bytes)) {
         t.Skip("no NormalizationTest-15.1.0.txt at " + P().normalization_test + " (OW_NORMALIZATION_TEST)");
         return;

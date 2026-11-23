@@ -81,6 +81,8 @@ void FOWWorldWriteBackTest::GetTests(TArray<FString>& OutBeautifiedNames, TArray
 
 bool FOWWorldWriteBackTest::RunTest(const FString& Parameters)
 {
+	const TCHAR* EnvName = Parameters == TEXT("Sikelia") ? TEXT("OW_SIKELIA") : TEXT("OW_MOPPETOPIA");
+	if (!OWTestPaths::WorldGiven(*this, EnvName)) return true;
 	UOWWorld* World = Open(*this, Parameters);
 	if (!World) return false;
 	const FString Root = WorldRoot(Parameters);
@@ -143,6 +145,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWModelsTest, "OnlyWorlds.World.Models", OWTes
 
 bool FOWModelsTest::RunTest(const FString& Parameters)
 {
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_MOPPETOPIA"))) return true;
 	UOWWorld* World = Open(*this, TEXT("Moppetopia"));
 	if (!World) return false;
 

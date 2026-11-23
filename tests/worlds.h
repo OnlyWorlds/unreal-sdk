@@ -26,6 +26,10 @@ inline LoadedWorld& Loaded(const std::string& root) {
     auto it = cache.find(root);
     if (it != cache.end()) return it->second;
     LoadedWorld& lw = cache[root];
+    if (root.empty()) {
+        lw.missing = "no world folder given";
+        return lw;
+    }
     if (!OnlyWorlds::OWFiles::IsFile(root + "/world.json")) {
         lw.missing = "no world at " + root;
         return lw;

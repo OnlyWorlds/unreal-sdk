@@ -585,6 +585,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWGraphRunTest, "OnlyWorlds.Graph.Run", OWTest
 
 bool FOWGraphRunTest::RunTest(const FString& Parameters)
 {
+	const bool bSikeliaGiven = OWTestPaths::WorldGiven(*this, TEXT("OW_SIKELIA"));
+	const bool bMoppetopiaGiven = OWTestPaths::WorldGiven(*this, TEXT("OW_MOPPETOPIA"));
+	if (!bSikeliaGiven || !bMoppetopiaGiven) return true;
 	UOWWorld* Sikelia = OWTestPaths::OpenWorld(*this, OWTestPaths::Sikelia(), TEXT("OW_SIKELIA"));
 	UOWWorld* Moppetopia = OWTestPaths::OpenWorld(*this, OWTestPaths::Moppetopia(), TEXT("OW_MOPPETOPIA"));
 	if (!Sikelia || !Moppetopia) return false;
@@ -759,6 +762,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWGraphIntegersTest, "OnlyWorlds.Graph.Integer
 
 bool FOWGraphIntegersTest::RunTest(const FString& Parameters)
 {
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_SIKELIA"))) return true;
 	UOWWorld* Sikelia = OWTestPaths::OpenWorld(*this, OWTestPaths::Sikelia(), TEXT("OW_SIKELIA"));
 	if (!Sikelia) return false;
 	TStrongObjectPtr<UOWWorld> KeepSikelia(Sikelia);

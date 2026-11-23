@@ -757,6 +757,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWWorldGraphSikeliaTest, "OnlyWorlds.WorldGrap
 
 bool FOWWorldGraphSikeliaTest::RunTest(const FString& Parameters)
 {
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_SIKELIA"))) return true;
 	UOWWorld* World = OWTestPaths::OpenWorld(*this, OWTestPaths::Sikelia(), TEXT("OW_SIKELIA"));
 	if (!World) return false;
 	// The core over the world as served, read here on its own: every element's body, with its folder's type when it

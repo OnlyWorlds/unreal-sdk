@@ -58,8 +58,8 @@ struct Registrar {
     explicit Registrar(Cases (*make)()) { RegisterCases(make); }
 };
 
-// Where the tests find their data: the repository's vendored set and example, and the two real worlds on this
-// machine (overridable by OW_SIKELIA and OW_MOPPETOPIA; a missing world is a skip, never a pass).
+// Where the tests find their data: the repository's vendored set and example, and two optional real worlds named by
+// OW_SIKELIA and OW_MOPPETOPIA ("" when not given; a world not given or not there is a skip, never a pass).
 struct Paths {
     std::string root;        // the repository
     std::string fixtures;    // codegen/schema-dist/fixtures/owworld

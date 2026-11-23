@@ -238,6 +238,7 @@ bool FOWModelsMergeRoundTripTest::RunTest(const FString& Parameters)
 	for (const TCHAR* WorldName : { TEXT("Sikelia"), TEXT("Moppetopia") })
 	{
 		const bool bSikelia = FCString::Strcmp(WorldName, TEXT("Sikelia")) == 0;
+		if (!OWTestPaths::WorldGiven(*this, bSikelia ? TEXT("OW_SIKELIA") : TEXT("OW_MOPPETOPIA"))) continue;
 		UOWWorld* World = OWTestPaths::OpenWorld(*this, bSikelia ? OWTestPaths::Sikelia() : OWTestPaths::Moppetopia(),
 			bSikelia ? TEXT("OW_SIKELIA") : TEXT("OW_MOPPETOPIA"));
 		if (!World) return false;

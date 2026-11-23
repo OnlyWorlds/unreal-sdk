@@ -223,6 +223,7 @@ bool FOWModelsWriteRoundTripTest::RunTest(const FString& Parameters)
 	for (const TCHAR* Name : { TEXT("Sikelia"), TEXT("Moppetopia") })
 	{
 		const bool bSikelia = FCString::Strcmp(Name, TEXT("Sikelia")) == 0;
+		if (!OWTestPaths::WorldGiven(*this, bSikelia ? TEXT("OW_SIKELIA") : TEXT("OW_MOPPETOPIA"))) continue;
 		UOWWorld* World = OWTestPaths::OpenWorld(*this, bSikelia ? OWTestPaths::Sikelia() : OWTestPaths::Moppetopia(),
 			bSikelia ? TEXT("OW_SIKELIA") : TEXT("OW_MOPPETOPIA"));
 		if (!World) return false;

@@ -89,6 +89,7 @@ bool FOWFrameTest::RunTest(const FString& Parameters)
 		AddError(TEXT("no renderer: run with -RenderOffscreen, not -nullrhi"));
 		return false;
 	}
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_MOPPETOPIA"))) return true;
 	const FString Root = OWTestPaths::Moppetopia();
 	FString Error;
 	UOWWorld* OW = UOWLibrary::OpenWorldFolder(Root, Error);

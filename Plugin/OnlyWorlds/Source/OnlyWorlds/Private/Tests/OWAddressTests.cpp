@@ -337,6 +337,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWAddressWorldTest, "OnlyWorlds.Address.World"
 
 bool FOWAddressWorldTest::RunTest(const FString& Parameters)
 {
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_SIKELIA"))) return true;
 	UOWWorld* World = OWTestPaths::OpenWorld(*this, OWTestPaths::Sikelia(), TEXT("OW_SIKELIA"));
 	if (!World) return false;
 	const FString Id = World->GetId();

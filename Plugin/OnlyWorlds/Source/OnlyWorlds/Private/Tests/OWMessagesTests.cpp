@@ -775,6 +775,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWMessagesSikeliaTest, "OnlyWorlds.Messages.Si
 
 bool FOWMessagesSikeliaTest::RunTest(const FString& Parameters)
 {
+	if (!OWTestPaths::WorldGiven(*this, TEXT("OW_SIKELIA"))) return true;
 	UOWWorld* World = OWTestPaths::OpenWorld(*this, OWTestPaths::Sikelia(), TEXT("OW_SIKELIA"));
 	if (!World) return false;
 	// Every element as the door asks it, against the core over the element as served (its folder's type when it names none).

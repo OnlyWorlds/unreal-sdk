@@ -3,7 +3,8 @@
 //   build\ow_tests.exe [--filter=<substring>] [--require-all]
 //
 // Prints one line per test (ok, FAIL with its failures, SKIP with its reason) and the counts. Exits 0 only when no
-// test failed; with --require-all, a skip fails the run too (a machine that should hold both worlds).
+// test failed; with --require-all, a skip fails the run too (a machine that is given both worlds and Unicode's
+// NormalizationTest file: OW_SIKELIA, OW_MOPPETOPIA, OW_NORMALIZATION_TEST).
 
 #include "ow_test.h"
 #include "OWFiles.h"
@@ -64,10 +65,11 @@ int main(int argc, char** argv) {
     g_paths.root = root;
     g_paths.fixtures = root + "/codegen/schema-dist/fixtures/owworld";
     g_paths.example = root + "/codegen/schema-dist/example/hyperion";
-    g_paths.sikelia = Env("OW_SIKELIA", "C:/Users/Titus/Development/OnlyWorlds/sikelia-world");
-    g_paths.moppetopia = Env("OW_MOPPETOPIA", "C:/Users/Titus/Carrier/Armature/projects/moppetopia-world");
-    g_paths.normalization_test = Env("OW_NORMALIZATION_TEST",
-                                     "C:/Users/Titus/Carrier/Armature/tools/owworld-fixtures/NormalizationTest-15.1.0.txt");
+    // Optional inputs that are not in the repository, each named by the environment only; a test whose input is not
+    // given skips and says which variable to set.
+    g_paths.sikelia = Env("OW_SIKELIA", "");
+    g_paths.moppetopia = Env("OW_MOPPETOPIA", "");
+    g_paths.normalization_test = Env("OW_NORMALIZATION_TEST", "");
     g_paths.tmp = root + "/build/tmp";
     g_paths.out = root + "/build/out";
     std::printf("ow_tests: zlib %s, Unicode %s, repository %s\n\n", OnlyWorlds::ZlibVersion(),

@@ -28,7 +28,8 @@ bool InParts(const std::string& rel) {
 void CheckWorld(owtest::T& t, const std::string& root, const std::string& label, size_t expect_min) {
     owtest::LoadedWorld& lw = owtest::Loaded(root);
     if (!lw.missing.empty()) {
-        t.Skip(lw.missing + " (OW_SIKELIA / OW_MOPPETOPIA)");
+        const char* var = label == "Sikelia" ? "OW_SIKELIA" : "OW_MOPPETOPIA";
+        t.Skip(lw.missing + " (set " + var + " to a " + label + " world folder)");
         return;
     }
     OWWorld& w = *lw.world;
@@ -107,6 +108,10 @@ OW_TEST(world_sikelia) { CheckWorld(t, P().sikelia, "Sikelia", 20000); }
 OW_TEST(world_moppetopia) { CheckWorld(t, P().moppetopia, "Moppetopia", 100); }
 
 OW_TEST(world_edit_writes_only_the_edited_file) {
+    if (P().moppetopia.empty()) {
+        t.Skip("no world folder given (set OW_MOPPETOPIA to a Moppetopia world folder)");
+        return;
+    }
     std::unique_ptr<OWWorld> w = OWWorld::ReadFolder(P().moppetopia);
     if (!w) {
         t.Skip("no Moppetopia at " + P().moppetopia);
