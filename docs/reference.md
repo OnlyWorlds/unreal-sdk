@@ -36,7 +36,10 @@ The plugin is two layers:
   Unreal header. It does all the work, and builds and tests on its own with `build.cmd` (no Unreal process).
 - **`Plugin/OnlyWorlds/Source/OnlyWorlds/`, the Runtime module**: compiles the core in place (its `Build.cs` adds
   `Core/` as a module directory, with no precompiled header and no unity build, so no Unreal header enters the core's
-  files) and puts UObject at the edges.
+  files) and puts UObject at the edges. A game module that depends on `OnlyWorlds` links against the core's classes,
+  functions and constants as well as the UObject ones: each carries `OW_API` (`Core/Public/OWApi.h`), exported from
+  the module's DLL in a modular build (the editor) and empty in a monolithic one and in `build.cmd`;
+  `tools/check_exports.py` fails when one that needs it lacks it.
 
 ## The core
 
@@ -139,6 +142,7 @@ python codegen/generate_models.py --check             # the generated structs ma
 python codegen/generate_tools.py --check              # the tools list's pin holds, OWTools.generated.cpp is current
 python codegen/generate_presentation.py --check       # the generated sidecar matches presentation.json
 python codegen/generate_frame_bits.py --check         # tests/data's frame bits match the map-space fixture
+python tools/check_exports.py                         # every core declaration a game module links against carries OW_API
 python tests/check_writer.py build/out/pass-good-repacked.owworld --run-py DIR   # the reference checker (not in
                            # this repository: DIR, or OW_RUN_PY, holds its run_py.py) on what pack wrote
 ```

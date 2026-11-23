@@ -8,6 +8,7 @@
 // OWLens::Resolve's, read through the lens reader's own view, so a reader means one thing in both. Held to the
 // profile's conformance fixture (profiles/strand.fixture.json).
 
+#include "OWApi.h"
 #include "OWJson.h"
 
 #include <optional>
@@ -27,7 +28,7 @@ struct OWStrandSlot {
 
 // What StrandOf answers: five slots, each absent when empty, and whether then and now are one place. An empty slot is
 // what there is to make next, never an error.
-struct OWWorldStrand {
+struct OW_API OWWorldStrand {
     std::optional<OWStrandSlot> narrative;  // the story: the Narrative the mark names
     std::optional<OWStrandSlot> event;      // the happening: the Event the mark names, when in the story's events
     std::optional<OWStrandSlot> location;   // the place, then: the Location the mark names, when in the event's locations
@@ -48,8 +49,8 @@ struct OWWorldStrand {
 namespace OWStrand {
 
 // The World's field that carries the mark, and the mark's three members in the profile's order (only the first required).
-extern const char* const Mark;  // "x_strand"
-const std::vector<std::string>& Members();  // narrative, event, location
+extern OW_API const char* const Mark;  // "x_strand"
+OW_API const std::vector<std::string>& Members();  // narrative, event, location
 
 // The world's strand as `reader` sees it (the profile's strandOf). Pure: nothing is stored or written.
 //
@@ -74,14 +75,14 @@ const std::vector<std::string>& Members();  // narrative, event, location
 // string, `event` or `location` an empty string, a number or an object. An id that names no element in the reader's
 // view is an empty slot: there is no id-format test here (a malformed id is the doctor's to name). A multi-link that is
 // not a list lists nothing, and a slot whose element has no name reads "", never null.
-OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader);
+OW_API OWWorldStrand StrandOf(const OWJsonValue& world, const OWJsonValue& reader);
 
 // The six slots as a server serves them (reading_aids.strand on GET /me and an agent's join reply, read by
 // OWCharter::Served): read as served, never recomputed. A slot is {id, type, name} or empty (one that is not an object
 // with a string id reads empty, a name that is not a string "", a type that is not a string, as a server from before
 // serial 133 serves it, the kind the slot holds), and same a bool or empty. Absent when `slots` is null or not
 // an object (the key absent).
-std::optional<OWWorldStrand> Served(const OWJsonValue* slots);
+OW_API std::optional<OWWorldStrand> Served(const OWJsonValue* slots);
 
 }  // namespace OWStrand
 }  // namespace OnlyWorlds

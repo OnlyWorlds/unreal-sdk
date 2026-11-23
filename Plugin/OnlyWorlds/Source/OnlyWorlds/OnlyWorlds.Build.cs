@@ -26,6 +26,16 @@ public class OnlyWorlds : ModuleRules
 		// the bit. Precise is /fp:precise under MSVC and -ffp-contract=off under clang.
 		FPSemantics = FPSemanticsMode.Precise;
 
+		// The core's exports (Core/Public/OWApi.h). In a modular build (the editor) this module is its own DLL, and a game
+		// module's C++ links against the core only through what the DLL exports: OW_API marks it, without engine headers,
+		// so the core's own files stay free of them. OW_CORE_DLL reaches this module and every module that depends on it,
+		// OW_CORE_EXPORTS this module alone. A monolithic build (a packaged game) links one binary and defines neither.
+		if (Target.LinkType == TargetLinkType.Modular)
+		{
+			PublicDefinitions.Add("OW_CORE_DLL=1");
+			PrivateDefinitions.Add("OW_CORE_EXPORTS=1");
+		}
+
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
 		// zlib: the engine's own (ThirdParty/zlib/1.3), the same one build.cmd links. Projects: IPluginManager, so
 		// the tests find the conformance set beside the plugin. RenderCore and ImageCore: the frame's capture and

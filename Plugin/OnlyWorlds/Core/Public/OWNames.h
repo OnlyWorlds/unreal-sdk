@@ -8,6 +8,7 @@
 // or one tool shows Employee where another shows Character. Trimming and folding are the room profile's
 // (OWMessage::Trim, OWMessage::Fold).
 
+#include "OWApi.h"
 #include "OWJson.h"
 
 #include <optional>
@@ -18,7 +19,7 @@ namespace OnlyWorlds {
 namespace OWNames {
 
 // The World's field that holds the names map.
-extern const char* const Field;  // "x_names"
+extern OW_API const char* const Field;  // "x_names"
 
 // The world's own word for a type, or absent for the standard's name (print your usual label). `world` is a
 // GET /world body or a folder's world.json; its x_names is read. `type` is a type slug, lowercase as the schema spells
@@ -31,7 +32,7 @@ extern const char* const Field;  // "x_names"
 // === 1 reads them), `types` or `supertypes` present and not objects (null included), or a `supertypes` value that is
 // not an object. A bad entry or a key that is not one of the 22 slugs is ignored. The word is printed as written,
 // never re-cased. Pure; never throws.
-std::optional<std::string> TypeWord(const OWJsonValue& world, std::string_view type,
+OW_API std::optional<std::string> TypeWord(const OWJsonValue& world, std::string_view type,
                                     std::optional<std::string_view> supertype = std::nullopt, bool many = false);
 
 }  // namespace OWNames

@@ -7,6 +7,7 @@
 // tool's, keyed by id. The npm SDK's landingOf and the Python package's landing_of give the same answer; held to the
 // profile's conformance fixture (profiles/landing.fixture.json).
 
+#include "OWApi.h"
 #include "OWGraph.h"
 #include "OWJson.h"
 
@@ -45,7 +46,7 @@ struct OWLandingGap {
 };
 
 // What LandingOf answers.
-struct OWWorldLanding {
+struct OW_API OWWorldLanding {
     // "gaps" when the graph has fewer nodes than `size`, "graph" otherwise: which part a door draws first. Both parts
     // are always read.
     std::string mode;
@@ -80,13 +81,13 @@ struct OWLandingOptions {
 namespace OWLanding {
 
 // The option keys, in the profile's order, and their defaults.
-const std::vector<std::string>& OptionKeys();
+OW_API const std::vector<std::string>& OptionKeys();
 constexpr int64_t DefaultHeads = 5;
 constexpr int64_t DefaultHops = 1;
 constexpr int64_t DefaultSize = 24;
 
 // The gap kinds, in the order the answer lists them.
-const std::vector<std::string>& GapKinds();
+OW_API const std::vector<std::string>& GapKinds();
 
 // landingOf(graph, options), over the graph WorldGraph answered for the visitor. Degree counts every edge, in or out,
 // once at each node it touches (a mirror pair is two edges, a link to itself counts once), as OWGraph::DegreeOf.
@@ -96,13 +97,13 @@ const std::vector<std::string>& GapKinds();
 // a known-of node is never one; no_place and nobody_here read only a Character's `location` edge to a Location node,
 // so a place the visitor may not see reads as none. Counted in integers, ids compared by code point (a UTF-8 id's
 // bytes), never by UTF-16 unit: the same graph and options give the same answer, byte for byte. Pure.
-OWWorldLanding LandingOf(const OWWorldGraph& graph, const OWLandingOptions& options = {});
+OW_API OWWorldLanding LandingOf(const OWWorldGraph& graph, const OWLandingOptions& options = {});
 
 // The same with the options as JSON, as the packages take them: an object or null. An unknown key is refused by name
 // before anything is read (the first in the object's order); a value given as null takes its default; any other value
 // that is not a whole number of 1 or more (a fraction, a string, a boolean) is refused by name, in the order heads,
 // hops, size. A whole float reads whole (2.0 as 2), as JavaScript reads it.
-OWWorldLanding LandingOf(const OWWorldGraph& graph, const OWJsonValue& options);
+OW_API OWWorldLanding LandingOf(const OWWorldGraph& graph, const OWJsonValue& options);
 
 }  // namespace OWLanding
 }  // namespace OnlyWorlds

@@ -12,6 +12,8 @@
 //
 // Strings are UTF-8 in std::string, as everywhere in the core. The fold is for comparing, never for showing or storing.
 
+#include "OWApi.h"
+
 #include <string>
 #include <string_view>
 
@@ -25,13 +27,13 @@ namespace OWText {
 // long s folds to s and the Kelvin sign to k; the sharp s, the dotted capital I and the st ligature, which have only a
 // full or a Turkic folding, stay. OWMessage::Trim and OWMessage::Fold are the same two steps under the message
 // profile's names; OWUnicode::Fold is OW-18's fold (NFC first, for a world file's names), not this one.
-std::string TrimAndFold(std::string_view utf8);
+OW_API std::string TrimAndFold(std::string_view utf8);
 
 // Two strings compared by code point, the order every profile names (never by UTF-16 unit, which puts a letter beyond
 // U+FFFF before U+FF5A, and never by a locale's collation): negative when `a` comes first, positive when `b` does, 0
 // when they are equal; a string that is a prefix of the other comes first. A UTF-8 string's bytes compared unsigned
 // are its code points' order, and so are a lone surrogate's in the WTF-8 a JSON escape may leave.
-int CompareByCodePoint(std::string_view a, std::string_view b);
+OW_API int CompareByCodePoint(std::string_view a, std::string_view b);
 
 // The same order as a strict weak ordering, for std::sort, std::map and std::set: true when `a` comes first.
 struct ByCodePoint {

@@ -13,6 +13,8 @@
 // Strings are UTF-8. A \u escape of a lone surrogate is kept as that code point in WTF-8 and written back escaped,
 // as JSON.stringify writes one.
 
+#include "OWApi.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -22,7 +24,7 @@
 
 namespace OnlyWorlds {
 
-class OWJsonValue {
+class OW_API OWJsonValue {
 public:
     enum class Kind : uint8_t { Null, Bool, Number, String, Array, Object };
 
@@ -94,23 +96,23 @@ namespace OWJson {
 // Parse UTF-8 JSON bytes strictly: RFC 8259's grammar, well-formed UTF-8, no raw control character in a string, one
 // value and only white space after it. A byte order mark at the start is read past. A key given twice keeps its first
 // position and takes the last value (JSON.parse and Python's json.loads do the same). Nesting deeper than 512 fails.
-OWJsonParseResult Parse(std::string_view bytes);
-OWJsonParseResult Parse(const std::vector<uint8_t>& bytes);
+OW_API OWJsonParseResult Parse(std::string_view bytes);
+OW_API OWJsonParseResult Parse(const std::vector<uint8_t>& bytes);
 
 // The value in section 5's form: 2-space indent, LF, key order kept, a trailing newline. With keep_number_text, each
 // number is written as it was spelled (the layout alone is section 5's).
-std::string Stringify(const OWJsonValue& value, bool keep_number_text = false);
-std::vector<uint8_t> ToBytes(const OWJsonValue& value, bool keep_number_text = false);
+OW_API std::string Stringify(const OWJsonValue& value, bool keep_number_text = false);
+OW_API std::vector<uint8_t> ToBytes(const OWJsonValue& value, bool keep_number_text = false);
 
 // A string as a JSON string literal, escaped as JSON.stringify escapes it.
-std::string Quote(std::string_view utf8);
+OW_API std::string Quote(std::string_view utf8);
 
 // A double as JavaScript writes a number (Number::toString): "1", "0.1", "1e+21", "1.5e-7"; "null" for NaN and the
 // infinities, "0" for -0.
-std::string NumberToString(double d);
+OW_API std::string NumberToString(double d);
 
 // A number's text in section 5's spelling (see the header comment).
-std::string CanonicalNumber(std::string_view text);
+OW_API std::string CanonicalNumber(std::string_view text);
 
 }  // namespace OWJson
 }  // namespace OnlyWorlds

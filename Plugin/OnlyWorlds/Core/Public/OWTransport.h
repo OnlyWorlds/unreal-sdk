@@ -26,6 +26,8 @@
 //       }
 //   };
 
+#include "OWApi.h"
+
 #include <functional>
 #include <optional>
 #include <string>
@@ -40,7 +42,7 @@ using OWHeaders = std::vector<std::pair<std::string, std::string>>;
 
 // A header's value by name, ignoring ASCII case (HTTP names are case-insensitive, and keel sends them lowercase), or
 // nullptr when it is absent. The first of two with one name.
-const std::string* OWHeader(const OWHeaders& headers, std::string_view name);
+OW_API const std::string* OWHeader(const OWHeaders& headers, std::string_view name);
 
 // A request the client wants sent.
 struct OWRequest {

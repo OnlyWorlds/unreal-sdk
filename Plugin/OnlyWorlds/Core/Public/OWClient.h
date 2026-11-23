@@ -44,6 +44,7 @@
 //       if (r.error && r.error->IsPreconditionFailed()) Show(*r.error->Current());   // someone wrote first
 //   });
 
+#include "OWApi.h"
 #include "OWApiError.h"
 #include "OWJson.h"
 #include "OWTransport.h"
@@ -156,7 +157,7 @@ struct OWBulkOptions {
 };
 
 // One item's outcome in an OWBulkResult. Mirrors the TypeScript SDK's `OwBulkItemResult`.
-struct OWBulkSlot {
+struct OW_API OWBulkSlot {
     int status = 0;  // the item's own HTTP status: 201 created, 200 updated, 202 a proposal, else its failure
     // The element's id as served; nullopt when the slot answers none (a failure before the item was identified), as
     // the API document types it (a string or null).
@@ -184,7 +185,7 @@ struct OWBulkSlot {
 // What Bulk answers. keel answers 200 even when slots failed: each slot's status is where the truth lives, so check
 // Failed (or AllSucceeded) before trusting the write. Slots come back in the order of the items sent. Mirrors the
 // TypeScript SDK's `OwBulkResponse`.
-struct OWBulkResult {
+struct OW_API OWBulkResult {
     bool errors = false;  // keel's own flag: some slot failed
     std::vector<OWBulkSlot> items;
     // keel replayed the first answer for this Idempotency-Key and wrote nothing (its Idempotent-Replay header, by any
@@ -243,7 +244,7 @@ struct OWChangesOptions {
 
 // One cursor page of a type: {data, has_more, next_cursor}. A page shorter than asked is no end: keel clamps the limit
 // at 1000 silently, so walk by has_more (as ListAll does).
-struct OWPage {
+struct OW_API OWPage {
     std::vector<OWJsonValue> data;  // the rows, each the element's body as served
     bool has_more = false;
     std::string next_cursor;        // opaque; "" when there is none
@@ -254,7 +255,7 @@ struct OWPage {
 
 // One row of the change feed: an upsert carries the element whole, a delete its type and id. A text keel serves as
 // null, or leaves out, is absent.
-struct OWChange {
+struct OW_API OWChange {
     std::string op;    // upsert or delete
     std::string type;
     std::string id;
@@ -277,7 +278,7 @@ struct OWChange {
 
 // A page of the change feed, or its tip (ChangesHead). World-settings edits are not in the feed: poll GetWorld's
 // updated_at for them.
-struct OWChangesPage {
+struct OW_API OWChangesPage {
     // Where the next page starts: pass it back as `since`. Opaque: never parse or build one. keel sends a bare number
     // on a tip read; it is its text here ("17").
     std::string cursor;
@@ -293,7 +294,7 @@ struct OWChangesPage {
     static const std::vector<std::string>& Keys();
 };
 
-class OWClient {
+class OW_API OWClient {
 public:
     // Production's API root, the config's default.
     static const char* const DefaultBaseUrl;  // "https://www.onlyworlds.com/api/v2"

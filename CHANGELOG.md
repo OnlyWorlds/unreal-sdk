@@ -1115,6 +1115,14 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
 
 ### Fixed
 
+- A game module's C++ links against the core. In the editor's build each module is its own DLL, and none of the core's
+  classes, functions or constants was exported from the plugin's, so a module calling them (the README's first run
+  among them) failed to link. Every declaration in `Core/Public` that has a definition out of line now carries
+  `OW_API` (`Core/Public/OWApi.h`, 298 marks): exported from the plugin's module and imported by its dependents when
+  `OnlyWorlds.Build.cs` builds them modular, empty in a monolithic build and in `build.cmd`. No engine header enters
+  the core for it. `tools/check_exports.py` fails when a declaration that needs the mark lacks it (run with the drift
+  checks). Held at the engine by the host's two C++ consumers, `OWFirstRun.cpp` and `OWNativeRead.cpp` (the
+  console command `OnlyWorlds.NativeRead <world folder>`: `UOWWorld::Native()` and the core's calendar reader).
 - `OWFrame::RootMap` (the frame test's scene and the host's `-OWFrame`) never takes a layout map as the root: among
   the Maps with no `parent_map` it skips any whose `x_layout` is an object with a non-empty string `method` (the
   map-space profile's rule 8, read through `OWMapSpace::LayoutOf`). A parentless layout map read after the ground

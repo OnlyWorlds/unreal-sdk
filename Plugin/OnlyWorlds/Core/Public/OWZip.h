@@ -6,6 +6,7 @@
 // names; libzip is desktop-only and misses both OW-14 deflate cases; FCompression accepts an early end. Here every
 // field comes from the directory as written, and zlib's own inflate says where a stream ended.
 
+#include "OWApi.h"
 #include "OWFiles.h"
 
 #include <cstddef>
@@ -48,22 +49,22 @@ constexpr uint16_t FlagStrong = 0x0040;
 constexpr uint16_t FlagUtf8 = 0x0800;
 
 // Walk the central directory. Never inflates anything.
-OWZipWalk Walk(const uint8_t* bytes, size_t size);
+OW_API OWZipWalk Walk(const uint8_t* bytes, size_t size);
 
 // An entry's bytes, checked: never more than one byte past its declared size, its deflate stream ended exactly at its
 // declared compressed size, its length and CRC-32 right. On a refusal, `reason` (too_big or not_openable) and
 // `message` are set and false comes back. `largest` grows to the largest output buffer allocated.
-bool Inflate(const uint8_t* zip, size_t size, const OWZipEntry& e, OWBytes& out, std::string& reason,
+OW_API bool Inflate(const uint8_t* zip, size_t size, const OWZipEntry& e, OWBytes& out, std::string& reason,
              std::string& message, uint64_t* largest = nullptr);
 
 // CRC-32 (zlib's).
-uint32_t Crc32(const uint8_t* data, size_t size);
+OW_API uint32_t Crc32(const uint8_t* data, size_t size);
 
 // A zip writer: each entry whole, so its sizes and CRC-32 go in its local header (no data descriptor); every entry
 // stamped 1980-01-01 00:00 by fixed numbers; method 0 or 8 (zlib, raw deflate, level 6); the UTF-8 flag on a
 // non-ASCII name; made by MS-DOS, so no Unix mode is claimed. The zip64 end record when the entries reach 65,535 or an
 // offset reaches 4 GiB.
-class Writer {
+class OW_API Writer {
 public:
     // Add one entry, deflated when `compress` (an empty file is stored). False when zlib fails.
     bool Add(const std::string& name, const OWBytes& bytes, bool compress);

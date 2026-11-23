@@ -7,6 +7,7 @@
 // follows, with the profile itself where they differ; held to the fixture's graph kind (profiles/lens.fixture.json).
 // A node's family and icon are OWPresentation's (the vendored presentation.json); colour stays the tool's.
 
+#include "OWApi.h"
 #include "OWJson.h"
 #include "OWLens.h"
 
@@ -42,7 +43,7 @@ struct OWGraphEdge {
 };
 
 // What WorldGraph answers.
-struct OWWorldGraph {
+struct OW_API OWWorldGraph {
     // By id, compared by code point (a UTF-8 id's bytes).
     std::vector<OWGraphNode> nodes;
     // By source id, then field name, both by code point, then index.
@@ -87,21 +88,21 @@ namespace OWGraph {
 
 // The profile's tables, as its fixture writes them.
 // The extension fields a published profile declares a link, each a list of ids: the lens profile's and the spine's.
-const std::vector<std::string>& DeclaredLinks();
+OW_API const std::vector<std::string>& DeclaredLinks();
 // Map space, out by default for size: map, pin, marker (type slugs, folded). A Zone is content (serial 92).
-const std::vector<std::string>& MapSpaceTypes();
+OW_API const std::vector<std::string>& MapSpaceTypes();
 // The flags (rooms, hidden, proposed, map_space, reading_aids), and a keeper's two (the owner's or a co-builder's; the
 // name is the fixture's key, older than the co-builder). A refusal names the first unmet one in the order hidden,
 // proposed, rooms, map_space, reading_aids.
-const std::vector<std::string>& Flags();
-const std::vector<std::string>& OwnerOnlyFlags();
+OW_API const std::vector<std::string>& Flags();
+OW_API const std::vector<std::string>& OwnerOnlyFlags();
 // Every reason a link is cut, one closed list (the graph's out-by-default reasons, not_visible, outside_lens, then the
 // lens's own); the owner's two (not_visible, anchor_not_visible: the owner reading as another keeps them); and a
 // keeper's two (hidden, proposed: the owner's or a co-builder's, serial 140). A reader carries neither list's reasons,
 // not even as zero, where it is not that list's reader.
-const std::vector<std::string>& EdgeReasons();
-const std::vector<std::string>& OwnerOnlyEdgeReasons();
-const std::vector<std::string>& KeeperOnlyEdgeReasons();
+OW_API const std::vector<std::string>& EdgeReasons();
+OW_API const std::vector<std::string>& OwnerOnlyEdgeReasons();
+OW_API const std::vector<std::string>& KeeperOnlyEdgeReasons();
 
 // worldGraph(world, reader, options): `world` and `reader` are what OWLens::Resolve takes. Without a lens, the nodes
 // are every element the reader sees less what is out by default: room elements, hidden ones and (for a keeper, the
@@ -111,14 +112,14 @@ const std::vector<std::string>& KeeperOnlyEdgeReasons();
 // (or not of the field's type) is dropped and not counted. A list names each element once: one that names a target
 // twice is one edge, or one link counted, in its first place, and its index stays that place in the list as served
 // (serial 128). Pure: it never writes.
-OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, const OWGraphOptions& options = {});
+OW_API OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, const OWGraphOptions& options = {});
 
 // Each node's degree: its edges, in or out, each edge counted once for every node it touches (a mirror pair is two
 // edges, so each end counts 2; a link to itself counts once). Every node, 0 included, in the graph's node order.
-std::vector<std::pair<std::string, int64_t>> DegreeOf(const OWWorldGraph& graph);
+OW_API std::vector<std::pair<std::string, int64_t>> DegreeOf(const OWWorldGraph& graph);
 // Each node's out-degree: the distinct nodes its own links point at (a target in two fields counts once, a link to
 // itself not at all). Every node, 0 included, in the graph's node order.
-std::vector<std::pair<std::string, int64_t>> OutDegreeOf(const OWWorldGraph& graph);
+OW_API std::vector<std::pair<std::string, int64_t>> OutDegreeOf(const OWWorldGraph& graph);
 
 }  // namespace OWGraph
 }  // namespace OnlyWorlds

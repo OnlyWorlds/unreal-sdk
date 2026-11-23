@@ -11,6 +11,7 @@
 // proposed), the page and both packages, ahead of keel. Held to the profile's conformance fixture
 // (profiles/record.fixture.json).
 
+#include "OWApi.h"
 #include "OWJson.h"
 
 #include <cstdint>
@@ -24,7 +25,7 @@ namespace OnlyWorlds {
 
 // A record's mark as read: the two required members as written, each optional member absent when unset (null or
 // missing), the seats in the order written.
-struct OWRecordMark {
+struct OW_API OWRecordMark {
     std::string tool;       // the game's id, the tools list's form: [a-z0-9-], 1 to 32
     std::string played_at;  // when the run was played, real time, in the message page's grammar, as written
     std::optional<std::string> version;  // the engine's version; with seed, the replay
@@ -46,7 +47,7 @@ struct OWRecordStory {
 };
 
 // One record of a Character, as RecordsOf reads it.
-struct OWCharacterRecord {
+struct OW_API OWCharacterRecord {
     std::string event_id;
     std::string event_name;  // as served, "" when it has none
     std::string tool;
@@ -62,7 +63,7 @@ struct OWCharacterRecord {
 };
 
 // What RecordsOf answers: the records, newest first, and a caller's mistake when there was one.
-struct OWCharacterRecords {
+struct OW_API OWCharacterRecords {
     std::vector<OWCharacterRecord> records;
     // Empty unless the call was a mistake (elements that are not a list): it names the mistake and nothing is read.
     std::string error;
@@ -75,8 +76,8 @@ namespace OWRecord {
 
 // The Event's field that carries the mark (the packages' RECORD_FIELD), and the mark's six members in the profile's
 // order (the first two required).
-extern const char* const Mark;  // "x_record"
-const std::vector<std::string>& Members();  // tool, played_at, version, seed, outcome, seats
+extern OW_API const char* const Mark;  // "x_record"
+OW_API const std::vector<std::string>& Members();  // tool, played_at, version, seed, outcome, seats
 
 // The mark on an element, read (the packages' recordMarkOf): the mark when the element is an Event (`type` "event")
 // whose x_record has the profile's shape, else absent. A broken writer never shows as a record: the value is no mark
@@ -89,11 +90,11 @@ const std::vector<std::string>& Members();  // tool, played_at, version, seed, o
 // (read as UTC), T and Z in either case, ASCII digits, every part in its range (month 1 to 12, the day within its month,
 // leap years Gregorian, hour 0 to 23, minute and second 0 to 59, an offset's hours to 23); checked by its parts and
 // never by a date parser. A time without its seconds is no mark.
-std::optional<OWRecordMark> MarkOf(const OWJsonValue& element);
+OW_API std::optional<OWRecordMark> MarkOf(const OWJsonValue& element);
 
 // `played_at` as an instant: whole milliseconds from 0001-01-01T00:00Z, its offset applied (a fraction truncated past
 // three digits; negative before year 0001), or absent when it is not in MarkOf's form. The order RecordsOf reads.
-std::optional<int64_t> InstantOf(std::string_view played_at);
+OW_API std::optional<int64_t> InstantOf(std::string_view played_at);
 
 // A Character's records in a world (the packages' recordsOf), `elements` the world's elements as this reader is served
 // them, a JSON list. Pure: nothing is stored or written.
@@ -106,7 +107,7 @@ std::optional<int64_t> InstantOf(std::string_view played_at);
 // order of their ids. A seat is the mark's seat for `character`, never a fallback for `characters`: a seat for a
 // Character the Event does not list makes no record. A multi-link that is not a list lists nothing; an element whose id
 // is not a string is never read (it cannot be named). An id no record names, or one in no element, reads an empty list.
-OWCharacterRecords RecordsOf(const std::string& character, const OWJsonValue& elements);
+OW_API OWCharacterRecords RecordsOf(const std::string& character, const OWJsonValue& elements);
 
 }  // namespace OWRecord
 }  // namespace OnlyWorlds

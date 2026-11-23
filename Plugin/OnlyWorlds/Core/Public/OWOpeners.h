@@ -47,6 +47,7 @@
 // with no rows, given only after every other check (a surface draws its mark with an empty menu).
 
 #include "OWAddress.h"
+#include "OWApi.h"
 #include "OWJson.h"
 
 #include <optional>
@@ -121,36 +122,36 @@ struct OWOpenersResult {
 
 namespace OWOpeners {
 
-extern const char* const World;    // "world"
-extern const char* const Element;  // "element"
-extern const char* const Member;   // "member"
-extern const char* const Public;   // "public"
+extern OW_API const char* const World;    // "world"
+extern OW_API const char* const Element;  // "element"
+extern OW_API const char* const Member;   // "member"
+extern OW_API const char* const Public;   // "public"
 
 // The words a row says, sentence case, exactly.
-extern const char* const YouAreHere;             // "You are here"
-extern const char* const OpensInYourBrowser;     // "Opens in your browser"
-extern const char* const NeedsTheWorldOnThisPhone;  // "Needs the world on this phone"
-extern const char* const OpensTheWorld;          // "Opens the world"
-extern const char* const NeedsAConnection;       // "Needs a connection"
-extern const char* const NeedsAnAccount;         // "Needs an account"
-std::string SignInFirst(std::string_view name);  // "Sign in to <name> first"
+extern OW_API const char* const YouAreHere;             // "You are here"
+extern OW_API const char* const OpensInYourBrowser;     // "Opens in your browser"
+extern OW_API const char* const NeedsTheWorldOnThisPhone;  // "Needs the world on this phone"
+extern OW_API const char* const OpensTheWorld;          // "Opens the world"
+extern OW_API const char* const NeedsAConnection;       // "Needs a connection"
+extern OW_API const char* const NeedsAnAccount;         // "Needs an account"
+OW_API std::string SignInFirst(std::string_view name);  // "Sign in to <name> first"
 
 // The marks an element door may skip, the lens profile's graph section's words for what a lore view leaves an element
 // out by, in its order: room, hidden, proposed, map_space (a Map, Pin or Marker; a Zone is content), reading_aid.
-const std::vector<std::string>& ElementMarks();
+OW_API const std::vector<std::string>& ElementMarks();
 
 // The marks an element carries, in ElementMarks()' order, each read by the reader OWGraph::WorldGraph uses:
 // OWLens::IsRoomElement, OWLens::IsHidden, OWLens::IsProposed, the type folded (OWMessage::Fold) among
 // OWGraph::MapSpaceTypes(), OWLens::IsReadingAid. Empty for one a lore view keeps.
-std::vector<std::string> MarksOf(const OWJsonValue& element);
+OW_API std::vector<std::string> MarksOf(const OWJsonValue& element);
 
 // The rows for a world ("world") or one element of it ("element") at these parts (their form is not read: the site's
 // row is always the human form). tools is OWTools::All(), or the list as served through OpenersForJson.
-OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view kind, const OWAddressParts& address,
+OW_API OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view kind, const OWAddressParts& address,
                            const OWOpenerSurface& surface, const OWOpenersOptions& options = {});
 
 // The rows for a reading from OWAddress::Parse (a reading by slug refuses as bad_world, one with no world as no_world).
-OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view kind, const OWAddressReading& address,
+OW_API OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view kind, const OWAddressReading& address,
                            const OWOpenerSurface& surface, const OWOpenersOptions& options = {});
 
 // The rows with every argument as JSON, the shape the npm and Python packages take and the fixture writes: tools an
@@ -158,20 +159,20 @@ OWOpenersResult OpenersFor(const std::vector<OWTool>& tools, std::string_view ki
 // keys (OWAddress::WriteJson's), the surface an object with snake_case keys (tool, audience, signed_in, browser,
 // phone, online), the options an object ({element}: the element as served, or null) or nullptr for none. Checks in the
 // npm SDK's order.
-OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, const OWJsonValue& address,
+OW_API OWOpenersResult OpenersForJson(const OWJsonValue& tools, std::string_view kind, const OWJsonValue& address,
                                const OWJsonValue& surface, const OWJsonValue* options = nullptr);
 
 }  // namespace OWOpeners
 
 namespace OWTools {
 
-extern const char* const Repository;  // "https://github.com/OnlyWorlds/tools"
-extern const char* const Commit;      // the list's commit these rows came from
-extern const char* const Sha256;      // tools.json's sha256 at Commit
+extern OW_API const char* const Repository;  // "https://github.com/OnlyWorlds/tools"
+extern OW_API const char* const Commit;      // the list's commit these rows came from
+extern OW_API const char* const Sha256;      // tools.json's sha256 at Commit
 
 // The OnlyWorlds tools list's rows (format 1), in the list's order, as of this release: the keys OpenersFor reads. A
 // tool listed after a release is offered from the next one.
-const std::vector<OWTool>& All();
+OW_API const std::vector<OWTool>& All();
 
 }  // namespace OWTools
 }  // namespace OnlyWorlds

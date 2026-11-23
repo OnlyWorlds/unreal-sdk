@@ -5,6 +5,7 @@
 // refuses with one cause from the spec's list. Pack writes a folder as a portable .owworld: the marker stored first,
 // only the folder's parts, entries in UTF-8 byte order, every one stamped 1980-01-01 00:00, methods 0 and 8.
 
+#include "OWApi.h"
 #include "OWFiles.h"
 #include "OWJson.h"
 #include "OWZip.h"
@@ -55,47 +56,47 @@ struct OWPacked {
 
 namespace OWWorldArchive {
 
-extern const char* const MediaType;  // application/vnd.onlyworlds.world+zip
-extern const char* const Marker;     // mimetype
-extern const char* const Extension;  // owworld
+extern OW_API const char* const MediaType;  // application/vnd.onlyworlds.world+zip
+extern OW_API const char* const Marker;     // mimetype
+extern OW_API const char* const Extension;  // owworld
 
 // The one list of refusal causes (section 4.7).
-extern const char* const Reasons[12];
+extern OW_API const char* const Reasons[12];
 
 // Read an archive's bytes as a conforming reader does. Nothing is extracted; an entry is never inflated more than one
 // byte past what it declares.
-OWArchiveRead Read(const OWBytes& raw, const OWArchiveBudget& budget = OWArchiveBudget());
-OWArchiveRead ReadFile(const std::string& path, const OWArchiveBudget& budget = OWArchiveBudget());
+OW_API OWArchiveRead Read(const OWBytes& raw, const OWArchiveBudget& budget = OWArchiveBudget());
+OW_API OWArchiveRead ReadFile(const std::string& path, const OWArchiveBudget& budget = OWArchiveBudget());
 
 // OW-16, strict: a plain relative path, '/'-separated, no empty, '.' or '..' segment, no drive, no backslash. "" when
 // the name is one, else what is wrong with it.
-std::string PathFault(const std::string& name);
+OW_API std::string PathFault(const std::string& name);
 // OW-22: every segment lands on any disk. "" when it does.
-std::string NameFault(const std::string& name);
+OW_API std::string NameFault(const std::string& name);
 
 // What PackFolder selects from a folder, part by part. CollectContent: every file of a content folder (elements/,
 // spatial/, media/) but dot-names and .meta files, recursively, keyed `rel/...`. CollectRecords: records/ whole but for
 // Unity's own .meta files (private producers included: PackWorld decides what travels).
-void CollectContent(const std::string& dir, const std::string& rel, OWFileMap& into);
-void CollectRecords(const std::string& folder, OWFileMap& into);
+OW_API void CollectContent(const std::string& dir, const std::string& rel, OWFileMap& into);
+OW_API void CollectRecords(const std::string& folder, OWFileMap& into);
 
 // Pack exactly the files given under the top folder `top`: the marker first, then every file in UTF-8 byte order,
 // deflated (an empty one stored). Nothing is filtered: what a caller hands in is what it asked for.
-OWPacked PackFiles(const OWFileMap& files, const std::string& top);
+OW_API OWPacked PackFiles(const OWFileMap& files, const std::string& top);
 
 // Pack a world's files as a portable .owworld under `top`: world.json's api block stripped unless keep_api (then the
 // file is a private copy, OW-10), and, unless include_private, every producer directory records/RECORDS.json marks
 // private left out whole (section 4.5 rule 11; named in left_out). Refused when world.json is not an object with an
 // id, or when the manifest cannot say which producers are private.
-OWPacked PackWorld(const OWFileMap& files, const std::string& top, bool keep_api = false, bool include_private = false);
+OW_API OWPacked PackWorld(const OWFileMap& files, const std::string& top, bool keep_api = false, bool include_private = false);
 
 // Pack a world folder as a portable .owworld: world.json (its api block stripped unless keep_api: a private copy),
 // elements/, spatial/ and media/ without dot-names and .meta files, and records/ whole but for Unity's own .meta
 // files and, unless include_private, the producers records/RECORDS.json marks private.
-OWPacked PackFolder(const std::string& folder, bool keep_api = false, bool include_private = false);
+OW_API OWPacked PackFolder(const std::string& folder, bool keep_api = false, bool include_private = false);
 
 // PackFolder, written to `archive_path` (refused when that lies inside the folder).
-OWPacked Pack(const std::string& folder, const std::string& archive_path, bool keep_api = false,
+OW_API OWPacked Pack(const std::string& folder, const std::string& archive_path, bool keep_api = false,
               bool include_private = false);
 
 }  // namespace OWWorldArchive
