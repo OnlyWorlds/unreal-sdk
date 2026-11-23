@@ -507,12 +507,13 @@ void UOWClientWrite::Answer(OnlyWorlds::OWReply<OWJsonValue> Reply)
 // -- UOWClientBulk ----------------------------------------------------------------------------------------------------
 
 UOWClientBulk* UOWClientBulk::BulkWrite(const FOWClientConfig& Config, const TArray<FOWBulkItem>& Items, bool bAtomic,
-	const FString& IdempotencyKey)
+	const FString& IdempotencyKey, bool bCreateOnly)
 {
 	UOWClientBulk* Node = NewObject<UOWClientBulk>();
 	Node->Settings = Config;
 	Node->BulkItems = Items;
 	Node->bAllOrNothing = bAtomic;
+	Node->bNeverReplace = bCreateOnly;
 	Node->KeyText = IdempotencyKey;
 	return Node;
 }
@@ -540,6 +541,7 @@ void UOWClientBulk::Activate()
 	}
 	OnlyWorlds::OWBulkOptions O;
 	O.atomic = bAllOrNothing;
+	O.create_only = bNeverReplace;
 	O.idempotency_key = Utf8(KeyText);
 	C->Bulk(Writes, O, [Self](OnlyWorlds::OWReply<OnlyWorlds::OWBulkResult> Reply)
 	{

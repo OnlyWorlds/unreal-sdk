@@ -628,9 +628,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "OnlyWorlds|Client")
 	FOWBulkAnswer OnFailure;
 
-	/** POST /bulk/: write Items in one request; bAtomic all or nothing. Each element is cleaned as a single write's is; one without an id gets one by its position (under IdempotencyKey the key's, so a retry replays: Outcome.bWasReplay). Refused, nothing sent: no items, an item without a type, an element that is not a JSON object, a known-of stub. The core's Bulk. */
+	/** POST /bulk/: write Items in one request; bAtomic all or nothing. Each element is cleaned as a single write's is; one without an id gets one by its position (under IdempotencyKey the key's, so a retry replays: Outcome.bWasReplay). bCreateOnly (sent as create_only): every item with an id is created, never replaced; an id the world already holds answers that item's slot 409, its Error.Code id_conflict, and the element stays as it was while the rest go on. Off, an item with an id held replaces it whole. Refused, nothing sent: no items, an item without a type, an element that is not a JSON object, a known-of stub. The core's Bulk. */
 	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true", AutoCreateRefTerm = "Items"))
-	static UOWClientBulk* BulkWrite(const FOWClientConfig& Config, const TArray<FOWBulkItem>& Items, bool bAtomic, const FString& IdempotencyKey);
+	static UOWClientBulk* BulkWrite(const FOWClientConfig& Config, const TArray<FOWBulkItem>& Items, bool bAtomic, const FString& IdempotencyKey,
+		bool bCreateOnly = false);
 
 	virtual void Activate() override;
 
@@ -639,5 +640,6 @@ private:
 
 	TArray<FOWBulkItem> BulkItems;
 	bool bAllOrNothing = false;
+	bool bNeverReplace = false;
 	FString KeyText;
 };

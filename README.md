@@ -148,7 +148,9 @@ An AI agent that writes to your world takes a seat of its own instead, an
 which the world's owner can remove at any time.
 
 **A world on disk.** `UOWLibrary::OpenWorldFolder` reads a world folder, `OpenWorldFile` an `.owworld` file (one zip
-that holds a folder), and `GetAll<Types>` (`GetAllCharacters`, …) gives its elements as structs. This repository
+that holds a folder), and `GetAll<Types>` (`GetAllCharacters`, …) gives its elements as structs. `PackWorldFolder` and
+`UOWWorld::PackToFile` make an `.owworld` file, and a pack is a copy: it carries every element, hidden ones included,
+since the plugin has no share yet (a pack that leaves out what a reader may not see). This repository
 carries a small example world, Hyperion, at `codegen/schema-dist/example/hyperion`.
 
 **A player link** (`https://www.onlyworlds.com/join#ow_j_…`, made by a world's owner for one Character) needs no

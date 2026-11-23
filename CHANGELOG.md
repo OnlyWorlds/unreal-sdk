@@ -22,6 +22,14 @@ it, in one zip.
 
 ### Added
 
+- `EOWLensRung::CoBuilder`, the fifth rung the core reads (`co-builder`): a keeper beside the owner, who reads the whole
+  world but what is proposed, hidden elements included and marked, with none of the owner's two counts. Last in the
+  enum, so no earlier rung's value moves. `UOWLens`, `UOWGraph` and `UOWCharter` take it as every other rung.
+
+- `BulkWrite` gains `bCreateOnly` (off by default), the core's `OWBulkOptions::create_only`: sent as `create_only`, every
+  item with an id is created and never replaced; an id the world already holds answers that item's slot 409, its
+  `Error.Code` `id_conflict`, and the rest of the batch goes on. Off, the body is the one sent before.
+
 - The release zip, `onlyworlds-unreal-<version>.zip`: one `OnlyWorlds/` folder to drop into a project's `Plugins/`,
   `Plugin/OnlyWorlds/` as the tagged commit holds it, with a copy of the licence inside. It leaves out the automation
   tests (`Source/OnlyWorlds/Private/Tests/`): they need the repository's fixtures and run from a clone.
@@ -1114,6 +1122,21 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
   names.
 
 ### Fixed
+
+- The Blueprint charter structs carry the type the core serves: `FOWCharterLaw::Type` (`"law"`), `FOWCharterGuide::Type`
+  and `FOWCharterDomain::Type` (`"construct"`), from `CharterOf`, `DomainsOf` and `ReadingAidsOf` (a packet served with
+  no type reads the aid's own, as the core reads it). A reader handed the packet alone fetches an aid by its type.
+
+- A contributor's `FOWLensReader::Whole` reaches the core: the hidden elements it made are in its view, whole and
+  marked hidden, as the lens profile reads a contributor. Before, `Whole` was read only for a guest, so a contributor's
+  own hidden creations were left out.
+
+- The plugin's automation tests follow the vendored fixtures (schema-dist serial 145): the charter fixture's 6 element
+  and 55 charter cases, the lens fixture's 185 lens and 66 graph and 5 degree cases (its co-builder cases among them),
+  and the message fixture's 120 cases, of which 118 are carried. A body that is no object is asked by an id the world
+  does not hold, which the door hands the core as the same nothing; the two cases left out are `SenderStatus` and
+  `EditedBy` on such a body, since those nodes refuse an id no element holds. A front door's strand is compared as
+  the core reads it, each slot's type the kind it holds.
 
 - A game module's C++ links against the core. In the editor's build each module is its own DLL, and none of the core's
   classes, functions or constants was exported from the plugin's, so a module calling them (the README's first run

@@ -28,6 +28,10 @@ struct ONLYWORLDS_API FOWCharterLaw
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Charter")
 	FString Id;
 
+	/** The element's type in the standard's lowercase word, "law": a reader handed the packet alone fetches the id by its type. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Charter")
+	FString Type;
+
 	/** As stored; "" when it has none. */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Charter")
 	FString Name;
@@ -49,6 +53,10 @@ struct ONLYWORLDS_API FOWCharterGuide
 
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Charter")
 	FString Id;
+
+	/** "construct", the standard's word for the element's type. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Charter")
+	FString Type;
 
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Charter")
 	FString Name;
@@ -75,6 +83,10 @@ struct ONLYWORLDS_API FOWCharterDomain
 
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Charter")
 	FString Id;
+
+	/** "construct", the standard's word for the element's type, as a hub writes one. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Charter")
+	FString Type;
 
 	/** As served, untrimmed; "" when it has none. */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Charter")

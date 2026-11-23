@@ -252,12 +252,13 @@ namespace
 			return true;
 		}
 		if (Rung == "owner") Out.Rung = EOWLensRung::Owner;
+		else if (Rung == "co-builder") Out.Rung = EOWLensRung::CoBuilder;
 		else if (Rung == "contributor") Out.Rung = EOWLensRung::Contributor;
 		else if (Rung == "guest") Out.Rung = EOWLensRung::Guest;
 		else if (Rung == "public") Out.Rung = EOWLensRung::Public;
 		else
 		{
-			Why = TEXT("a rung outside the four");
+			Why = TEXT("a rung outside the five");
 			return false;
 		}
 		const OWJsonValue* C = R.Find("character");
@@ -681,7 +682,8 @@ bool FOWWorldGraphFixtureTest::RunTest(const FString& Parameters)
 		}
 		if (!bHeld) ++Failed;
 	}
-	TestEqual(TEXT("the 56 graph cases carried"), Graphs, 56);
+	// The fixture as vendored at serial 145: 66 graph and 5 degree cases.
+	TestEqual(TEXT("the 66 graph cases carried"), Graphs, 66);
 	TestEqual(TEXT("the 5 degree cases carried"), Degrees, 5);
 	TestTrue(TEXT("none left out: ") + FString::Join(Left, TEXT("; ")), Left.Num() == 0);
 	TestEqual(TEXT("cases failed"), Failed, 0);

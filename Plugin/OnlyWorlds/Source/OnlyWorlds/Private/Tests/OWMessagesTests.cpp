@@ -363,13 +363,24 @@ namespace
 			|| Kind == TEXT("recipients");
 		if (bSingle)
 		{
-			if (!Single || !Single->IsObject()) return NotCarried(TEXT("its body is not an object, so no element holds it"));
 			// None of these kinds reads the id: a body without one is given one to be asked by.
-			OWJsonValue Body = *Single;
-			if (!HasId(Body)) Body.Set("id", OWJsonValue::String("019a3b10-0000-7000-8000-00000000f001"));
-			const FString Id = TextOf(Body.Find("id"));
+			FString Id = TEXT("019a3b10-0000-7000-8000-00000000f001");
 			std::vector<std::pair<std::string, OWJsonValue>> Bodies;
-			Bodies.emplace_back(FolderOf(Body), std::move(Body));
+			if (Single && Single->IsObject())
+			{
+				OWJsonValue Body = *Single;
+				if (!HasId(Body)) Body.Set("id", OWJsonValue::String(Utf8(Id)));
+				Id = TextOf(Body.Find("id"));
+				Bodies.emplace_back(FolderOf(Body), std::move(Body));
+			}
+			else if (Kind == TEXT("sender") || Kind == TEXT("edited"))
+			{
+				// The core answers a body that is no object as one that is not a message; these two nodes refuse an id
+				// no element holds instead ("no element <id> in this world"), so the case has no Blueprint form.
+				return NotCarried(TEXT("its body is not an object, and the node refuses an id no element holds"));
+			}
+			// A body that is no object is no element: asked by an id the world does not hold, the door hands the core
+			// the same nothing (a null value), and the answer is the core's for a body that is no object.
 			const UOWWorld* World = MakeWorld(std::move(Bodies));
 			const FString Who = TextOf(Case.Find("character"));
 			if (Kind == TEXT("pair"))
@@ -435,9 +446,13 @@ namespace
 				const OWJsonValue* Mark = Case.Find("read_mark");
 				if (Mark && !Mark->IsNull())
 				{
-					if (!HasId(*Mark)) return NotCarried(TEXT("its read mark is not a body with an id, so no element holds it"));
-					ReadMarkId = TextOf(Mark->Find("id"));
-					Bodies.emplace_back(FolderOf(*Mark), *Mark);
+					// A read mark that is no object is no mark: the node's no mark, ReadMarkId "".
+					if (Mark->IsObject())
+					{
+						if (!HasId(*Mark)) return NotCarried(TEXT("its read mark is a body with no id, so no id names it"));
+						ReadMarkId = TextOf(Mark->Find("id"));
+						Bodies.emplace_back(FolderOf(*Mark), *Mark);
+					}
 				}
 			}
 			TArray<FString> WantIds;
@@ -690,8 +705,13 @@ bool FOWMessagesFixtureTest::RunTest(const FString& Parameters)
 	if (!TestTrue(TEXT("the fixture holds cases"), Cases && Cases->IsArray())) return false;
 	FTally Tally;
 	for (const OWJsonValue& Case : Cases->Items()) RunCase(*this, Case, Fixture, Tally);
-	TestEqual(TEXT("every one of the 103 cases carried"), Tally.Carried, 103);
-	TestEqual(TEXT("none left out"), Tally.NotCarried.Num(), 0);
+	// The fixture as vendored at serial 145: 120 cases. Two hold a body that is no object for a node that refuses an id
+	// no element holds; every other body that is no object is carried, asked by an id the world does not hold.
+	const TArray<FString> Left = Ids({
+		TEXT("sender/unverifiable-a-body-that-is-no-object (its body is not an object, and the node refuses an id no element holds)"),
+		TEXT("edited/edited-a-body-that-is-no-object-says-nothing (its body is not an object, and the node refuses an id no element holds)") });
+	TestEqual(TEXT("118 of the 120 cases carried"), Tally.Carried, 118);
+	TestTrue(TEXT("the two left out: ") + FString::Join(Tally.NotCarried, TEXT("; ")), Tally.NotCarried == Left);
 	TestEqual(TEXT("cases failed"), Tally.Failed, 0);
 	AddInfo(FString::Printf(TEXT("message fixture: %d cases through the Blueprint path, %d failed"), Tally.Carried, Tally.Failed));
 	return true;
@@ -708,13 +728,12 @@ bool FOWMessagesBesideTest::RunTest(const FString& Parameters)
 	if (!TestTrue(TEXT("the readings beside the fixture hold cases"), Cases && Cases->IsArray())) return false;
 	FTally Tally;
 	for (const OWJsonValue& Case : Cases->Items()) RunCase(*this, Case, Fixture, Tally);
-	// Three cases no world can hold: a body that is a list, a message whose id is a number, a read mark that is a list.
+	// One case no world can hold: a message whose id is a number. A body that is a list and a read mark that is a list
+	// are carried as no element and no mark.
 	const TArray<FString> Left = Ids({
-		TEXT("pair/pair-a-list-is-not-a-body (its body is not an object, so no element holds it)"),
-		TEXT("unread/unread-message-id-a-number (it expects an id that is not a string, which no world holds)"),
-		TEXT("unread/unread-read-mark-not-a-body (its read mark is not a body with an id, so no element holds it)") });
-	TestEqual(TEXT("76 of the 79 cases carried"), Tally.Carried, 76);
-	TestTrue(TEXT("the three left out: ") + FString::Join(Tally.NotCarried, TEXT("; ")), Tally.NotCarried == Left);
+		TEXT("unread/unread-message-id-a-number (it expects an id that is not a string, which no world holds)") });
+	TestEqual(TEXT("78 of the 79 cases carried"), Tally.Carried, 78);
+	TestTrue(TEXT("the one left out: ") + FString::Join(Tally.NotCarried, TEXT("; ")), Tally.NotCarried == Left);
 	TestEqual(TEXT("cases failed"), Tally.Failed, 0);
 
 	// recipientsOf: the non-empty string ids as written, a repeat once in its first place (serial 128); none for a Note.

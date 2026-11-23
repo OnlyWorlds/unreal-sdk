@@ -25,12 +25,14 @@ enum class EOWLensRung : uint8
 {
 	/** The whole world but what is proposed. */
 	Owner,
-	/** The world less what is hidden and what is proposed. */
+	/** The world less what is hidden and what is proposed, plus the hidden elements it made, listed in Whole. */
 	Contributor,
 	/** Exactly the ids it is given whole (Whole) and those it knows of as stubs (KnownOf); never what is proposed. */
 	Guest,
 	/** The world less what is hidden, what is proposed, and every room element. */
 	Public,
+	/** A keeper beside the owner: the whole world but what is proposed, hidden elements included and bodies as stored, and none of the owner's two counts. Last, so no earlier rung's value moves. */
+	CoBuilder,
 };
 
 /** Who reads: the view it reads through, its Character (for the mail rule), and whose counts it sees. The core's reader object. */
@@ -47,7 +49,7 @@ struct ONLYWORLDS_API FOWLensReader
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Lens")
 	FString Character;
 
-	/** A guest's ids it is served whole; read only for Guest. */
+	/** A guest's ids it is served whole; a contributor's, the hidden elements it made (the hidden mark does not keep them from it). Read only for Guest and Contributor. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Lens")
 	TArray<FString> Whole;
 

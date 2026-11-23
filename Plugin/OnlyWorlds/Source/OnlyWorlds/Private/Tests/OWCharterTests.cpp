@@ -105,6 +105,7 @@ namespace
 		{
 			OWJsonValue Domain = OWJsonValue::Object();
 			Domain.Set("id", OWJsonValue::String(Utf8(D.Id)));
+			Domain.Set("type", OWJsonValue::String(Utf8(D.Type)));
 			Domain.Set("name", OWJsonValue::String(Utf8(D.Name)));
 			Domain.Set("sentence", OWJsonValue::String(Utf8(D.Sentence)));
 			OWJsonValue Hubs = OWJsonValue::Array();
@@ -122,7 +123,7 @@ namespace
 	}
 
 	// The packet read back to the profile's shape: {charter, guide, domains}, an absent aid null, the rules through
-	// their JSON text.
+	// their JSON text, each aid's type as the struct carries it.
 	OWJsonValue ChAidsJson(const FOWReadingAids& A)
 	{
 		OWJsonValue Out = OWJsonValue::Object();
@@ -130,6 +131,7 @@ namespace
 		{
 			OWJsonValue Law = OWJsonValue::Object();
 			Law.Set("id", OWJsonValue::String(Utf8(A.Charter.Id)));
+			Law.Set("type", OWJsonValue::String(Utf8(A.Charter.Type)));
 			Law.Set("name", OWJsonValue::String(Utf8(A.Charter.Name)));
 			Law.Set("rules", ChParse(Utf8(A.Charter.RulesJson)));
 			Law.Set("skill", ChStrings(A.Charter.Skill));
@@ -143,6 +145,7 @@ namespace
 		{
 			OWJsonValue Guide = OWJsonValue::Object();
 			Guide.Set("id", OWJsonValue::String(Utf8(A.Guide.Id)));
+			Guide.Set("type", OWJsonValue::String(Utf8(A.Guide.Type)));
 			Guide.Set("name", OWJsonValue::String(Utf8(A.Guide.Name)));
 			Out.Set("guide", std::move(Guide));
 		}
@@ -232,12 +235,13 @@ namespace
 			return true;
 		}
 		if (Rung == "owner") Out.Rung = EOWLensRung::Owner;
+		else if (Rung == "co-builder") Out.Rung = EOWLensRung::CoBuilder;
 		else if (Rung == "contributor") Out.Rung = EOWLensRung::Contributor;
 		else if (Rung == "guest") Out.Rung = EOWLensRung::Guest;
 		else if (Rung == "public") Out.Rung = EOWLensRung::Public;
 		else
 		{
-			Why = TEXT("a rung outside the four");
+			Why = TEXT("a rung outside the five");
 			return false;
 		}
 		const OWJsonValue* C = R.Find("character");
@@ -325,6 +329,12 @@ namespace
 		"location": {"id": "loc-1", "name": "The River"}, "character": {"id": "c-1", "name": "The Judge"},
 		"now": {"id": "loc-1", "name": "The River"}, "same": true})";
 
+	// That strand as read: a slot served with no type (a server from before the slots carried one) takes the kind the
+	// slot holds, as the core's OWStrand::Served reads it.
+	const char* const ChStrandRead = R"({"narrative": {"id": "n-1", "type": "narrative", "name": "The Crossing"}, "event": null,
+		"location": {"id": "loc-1", "type": "location", "name": "The River"}, "character": {"id": "c-1", "type": "character", "name": "The Judge"},
+		"now": {"id": "loc-1", "type": "location", "name": "The River"}, "same": true})";
+
 	// -- the calls, each as a graph makes it ------------------------------------------------------------------------
 
 	void ChMakeReader(FAutomationTestBase& Test, void* Data, const FOWLensReader& R)
@@ -383,6 +393,9 @@ bool FOWCharterWorldTest::RunTest(const FString& Parameters)
 		FOWReadingAids A;
 		Read(TEXT("the owner"), ChReader(EOWLensRung::Owner), false, A);
 		TestTrue(TEXT("the Charter: g2, House rules"), A.bHasCharter && A.Charter.Id == TEXT("g2") && A.Charter.Name == TEXT("House rules"));
+		TestEqual(TEXT("the Charter's type"), A.Charter.Type, FString(TEXT("law")));
+		TestEqual(TEXT("the Guide's type"), A.Guide.Type, FString(TEXT("construct")));
+		if (A.Domains.Num() > 0) TestEqual(TEXT("a Domain's type"), A.Domains[0].Type, FString(TEXT("construct")));
 		TestTrue(TEXT("its skill: the Ledger once"), A.Charter.Skill.Num() == 1 && A.Charter.Skill[0].Equals(ChLedger, ESearchCase::CaseSensitive));
 		TestTrue(TEXT("its rules as stored"), ChEqual(ChParse(Utf8(A.Charter.RulesJson)), ChParse(R"([{"rule": "every Character has a name"}])")));
 		TestTrue(TEXT("the Guide: u1"), A.bHasGuide && A.Guide.Id == TEXT("u1") && A.Guide.Name == TEXT("Start here"));
@@ -440,7 +453,9 @@ bool FOWCharterWorldTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("the Guide as served"), A.bHasGuide && A.Guide.Id == TEXT("con-g"));
 		TestTrue(TEXT("the Domain as served"), A.Domains.Num() == 1 && A.Domains[0].Sentence == TEXT("Where the ships come in.")
 			&& A.Domains[0].Hubs.Num() == 1 && A.Domains[0].Hubs[0].Id == TEXT("loc-1"));
-		TestTrue(TEXT("the strand as served"), A.bHasStrand && ChEqual(ChParse(Utf8(A.StrandJson)), ChParse(ChStrand)));
+		TestTrue(TEXT("the Charter and the Guide served with no type: the aid's own"), A.Charter.Type == TEXT("law") && A.Guide.Type == TEXT("construct")
+			&& A.Domains.Num() == 1 && A.Domains[0].Type == TEXT("construct"));
+		TestTrue(TEXT("the strand as served, each slot's type the kind it holds"), A.bHasStrand && ChEqual(ChParse(Utf8(A.StrandJson)), ChParse(ChStrandRead)));
 		TestTrue(TEXT("ReadingAidsOf a packet from before the strand"), UOWCharter::ReadingAidsOf(ChMe(nullptr), A, Reason) && A.bHasCharter && !A.bHasStrand
 			&& A.StrandJson.IsEmpty());
 		TestTrue(TEXT("ReadingAidsOf a Charter served with rules null"), UOWCharter::ReadingAidsOf(TEXT("{\"reading_aids\": {\"charter\": {\"id\": \"law-1\", "
@@ -524,9 +539,10 @@ bool FOWCharterFixtureTest::RunTest(const FString& Parameters)
 		}
 		if (!bHeld) ++Failed;
 	}
-	// The fixture as vendored at dist.126: 6 element cases and 35 charter cases.
+	// The fixture as vendored at serial 145: 6 element cases and 55 charter cases (its design_cases are the core's
+	// DesignPartsOf, which has no Blueprint node).
 	TestEqual(TEXT("the 6 element cases carried"), Elements, 6);
-	TestEqual(TEXT("the 35 charter cases carried"), Packets, 35);
+	TestEqual(TEXT("the 55 charter cases carried"), Packets, 55);
 	TestTrue(TEXT("none left out: ") + FString::Join(Left, TEXT("; ")), Left.Num() == 0);
 	TestEqual(TEXT("cases failed"), Failed, 0);
 	AddInfo(FString::Printf(TEXT("charter fixture: %d cases through UOWCharter, %d failed"), Elements + Packets, Failed));

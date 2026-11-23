@@ -40,6 +40,7 @@ namespace OWLensDoor
 		switch (Reader.Rung)
 		{
 		case EOWLensRung::Owner: Rung = "owner"; break;
+		case EOWLensRung::CoBuilder: Rung = "co-builder"; break;
 		case EOWLensRung::Contributor: Rung = "contributor"; break;
 		case EOWLensRung::Guest: Rung = "guest"; break;
 		case EOWLensRung::Public: Rung = "public"; break;
@@ -47,13 +48,17 @@ namespace OWLensDoor
 		OWJsonValue Seen = OWJsonValue::Object();
 		Seen.Set("rung", OWJsonValue::String(Rung));
 		Seen.Set("character", Reader.Character.IsEmpty() ? OWJsonValue::Null() : OWJsonValue::String(OWConvert::Utf8(Reader.Character)));
-		if (Reader.Rung == EOWLensRung::Guest)
+		// A guest's whole is what it is served whole; a contributor's, the hidden elements it made.
+		if (Reader.Rung == EOWLensRung::Guest || Reader.Rung == EOWLensRung::Contributor)
 		{
 			OWJsonValue WholeIds = OWJsonValue::Array();
 			for (const FString& Id : Reader.Whole) WholeIds.Push(OWJsonValue::String(OWConvert::Utf8(Id)));
+			Seen.Set("whole", std::move(WholeIds));
+		}
+		if (Reader.Rung == EOWLensRung::Guest)
+		{
 			OWJsonValue KnownIds = OWJsonValue::Array();
 			for (const FString& Id : Reader.KnownOf) KnownIds.Push(OWJsonValue::String(OWConvert::Utf8(Id)));
-			Seen.Set("whole", std::move(WholeIds));
 			Seen.Set("known_of", std::move(KnownIds));
 		}
 		if (!Reader.bOwnerCounts || Reader.Rung == EOWLensRung::Owner) return Seen;

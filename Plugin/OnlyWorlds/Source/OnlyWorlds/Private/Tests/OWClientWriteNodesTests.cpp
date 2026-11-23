@@ -440,6 +440,18 @@ bool FOWClientWriteNodesBodiesTest::RunTest(const FString& Parameters)
 				OWW::KeyedId("bk", 2) + "\"}}],\"atomic\":true}"));
 	}
 
+	// A bulk with bCreateOnly: create_only true after atomic; off (above and in every credential's case), not sent.
+	{
+		auto Run = std::make_shared<OWW::FWriteRun>();
+		Run->Fake->Fallback = OWW::Respond(200, R"({"errors": false, "items": []})");
+		UOWClientBulk* Node = UOWClientBulk::BulkWrite(OWW::WriterConfig(),
+			{ OWW::BulkItem(TEXT("location"), TEXT("{\"id\": \"l1\", \"name\": \"Port\"}")) }, false, TEXT(""), true);
+		Run->Probe->Watch(Node);
+		OWW::Activated(Node, Run);
+		Only(TEXT("BulkWrite, create only"), Run, TEXT("/bulk/|") + Writer + TEXT("; Content-Type=application/json; X-OW-Client=unreal-sdk"),
+			TEXT("{\"items\":[{\"type\":\"location\",\"element\":{\"id\":\"l1\",\"name\":\"Port\"}}],\"atomic\":false,\"create_only\":true}"));
+	}
+
 	// The config's new members, by default: the core's own name, no agent mark.
 	TestEqual(TEXT("FOWClientConfig's Client: \"\" (the core's unreal-sdk)"), FOWClientConfig().Client, FString());
 	TestFalse(TEXT("FOWClientConfig's bAgent: off"), FOWClientConfig().bAgent);
@@ -973,7 +985,8 @@ bool FOWClientWriteNodesPinsTest::RunTest(const FString& Parameters)
 			  { TEXT("Remove"), PinString, nullptr, true }, HasIfMatchPin, IfMatchPin },
 			{ JsonPin, ErrorPin } },
 		{ UOWClientBulk::StaticClass(), TEXT("BulkWrite"),
-			{ ConfigPin, { TEXT("Items"), PinStruct, FOWBulkItem::StaticStruct(), true }, { TEXT("bAtomic"), PinBool, nullptr, false }, KeyPin },
+			{ ConfigPin, { TEXT("Items"), PinStruct, FOWBulkItem::StaticStruct(), true }, { TEXT("bAtomic"), PinBool, nullptr, false }, KeyPin,
+			  { TEXT("bCreateOnly"), PinBool, nullptr, false } },
 			{ { TEXT("Outcome"), PinStruct, FOWBulkResult::StaticStruct(), false }, ErrorPin } },
 	};
 

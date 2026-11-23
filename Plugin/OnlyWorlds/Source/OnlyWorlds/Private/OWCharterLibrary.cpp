@@ -21,6 +21,7 @@ namespace
 	{
 		FOWCharterDomain Out;
 		Out.Id = OWConvert::Str(Got.id);
+		Out.Type = OWConvert::Str(Got.type);
 		Out.Name = OWConvert::Str(Got.name);
 		Out.Sentence = OWConvert::Str(Got.sentence);
 		for (const OnlyWorlds::OWCharterHub& H : Got.hubs)
@@ -39,6 +40,7 @@ namespace
 		{
 			Out.bHasCharter = true;
 			Out.Charter.Id = OWConvert::Str(Got.charter->id);
+			Out.Charter.Type = OWConvert::Str(Got.charter->type);
 			Out.Charter.Name = OWConvert::Str(Got.charter->name);
 			Out.Charter.RulesJson = OWLensDoor::TextOf(Got.charter->rules);
 			Out.Charter.Skill = OWLensDoor::IdsOf(Got.charter->skill);
@@ -47,6 +49,7 @@ namespace
 		{
 			Out.bHasGuide = true;
 			Out.Guide.Id = OWConvert::Str(Got.guide->id);
+			Out.Guide.Type = OWConvert::Str(Got.guide->type);
 			Out.Guide.Name = OWConvert::Str(Got.guide->name);
 		}
 		for (const OnlyWorlds::OWCharterDomain& D : Got.domains) Out.Domains.Add(DomainOfCore(D));

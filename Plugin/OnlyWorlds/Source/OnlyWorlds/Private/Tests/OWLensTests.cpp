@@ -242,12 +242,13 @@ namespace
 			return true;
 		}
 		if (Rung == "owner") Out.Rung = EOWLensRung::Owner;
+		else if (Rung == "co-builder") Out.Rung = EOWLensRung::CoBuilder;
 		else if (Rung == "contributor") Out.Rung = EOWLensRung::Contributor;
 		else if (Rung == "guest") Out.Rung = EOWLensRung::Guest;
 		else if (Rung == "public") Out.Rung = EOWLensRung::Public;
 		else
 		{
-			Why = TEXT("a rung outside the four");
+			Why = TEXT("a rung outside the five");
 			return false;
 		}
 		const OWJsonValue* C = R.Find("character");
@@ -522,6 +523,28 @@ bool FOWLensWorldTest::RunTest(const FString& Parameters)
 		const OWJsonValue Ada = R.Rows.Num() ? LensParse(Utf8(R.Rows[0])) : OWJsonValue();
 		TestTrue(TEXT("Ada's friends as a contributor is served them: Cass left out"),
 			LensEqual(Ada.Find("friends") ? *Ada.Find("friends") : OWJsonValue(), LensParse(R"(["c2"])")));
+	}
+	{
+		// A co-builder, a keeper: the owner's view, the hidden Cass included and marked.
+		FOWLensReading R;
+		Read(TEXT("Resolve k1, a co-builder"), TEXT("k1"), LensReader(EOWLensRung::CoBuilder), R);
+		SameIds(TEXT("its kept, the owner's"), R.Kept, LensIds({ TEXT("c1"), TEXT("c2"), TEXT("c3"), TEXT("k2"), TEXT("e1"), TEXT("l1") }));
+		TestEqual(TEXT("its cut"), LensCutText(R.Cut), FString(TEXT("{\"types\": 1}")));
+		const OWJsonValue Cass = R.Rows.Num() == 6 ? LensParse(Utf8(R.Rows[2])) : OWJsonValue();
+		const OWJsonValue* Mark = Cass.Find("hidden");
+		TestTrue(TEXT("Cass's row carries hidden: true for a co-builder"), Mark && Mark->IsBool() && Mark->AsBool());
+	}
+	{
+		// The contributor who made the hidden Cass, listed in its Whole: Cass in its view, marked.
+		FOWLensReader Maker = LensReader(EOWLensRung::Contributor);
+		Maker.Whole = LensIds({ TEXT("c3") });
+		FOWLensReading R;
+		Read(TEXT("Resolve k1, the contributor who made Cass"), TEXT("k1"), Maker, R);
+		TestTrue(TEXT("Cass kept for the one who made her"), R.Kept.ContainsByPredicate([](const FString& Id) { return Id.Equals(TEXT("c3"), ESearchCase::CaseSensitive); }));
+		const int32 At = R.Kept.IndexOfByPredicate([](const FString& Id) { return Id.Equals(TEXT("c3"), ESearchCase::CaseSensitive); });
+		const OWJsonValue Cass = R.Rows.IsValidIndex(At) ? LensParse(Utf8(R.Rows[At])) : OWJsonValue();
+		const OWJsonValue* Mark = Cass.Find("hidden");
+		TestTrue(TEXT("and her row carries hidden: true"), Mark && Mark->IsBool() && Mark->AsBool());
 	}
 	{
 		FOWLensReading R;
@@ -857,10 +880,10 @@ bool FOWLensFixtureTest::RunTest(const FString& Parameters)
 		++Carried;
 		if (!bHeld) ++Failed;
 	}
-	// The fixture as vendored at dist.128: 6 shape, 25 keys, 5 uses, 134 resolve, 4 invariant, every case of these
-	// kinds; the 56 graph and 5 degree cases are the graph's.
-	TestEqual(TEXT("the 174 shape, keys, uses, resolve and invariant cases carried"), Carried, 174);
-	TestEqual(TEXT("the graph's 61 left to OWWorldGraphTests.cpp"), Others, 61);
+	// The fixture as vendored at serial 145: 6 shape, 25 keys, 5 uses, 145 resolve, 4 invariant, every case of these
+	// kinds; the 66 graph and 5 degree cases are the graph's.
+	TestEqual(TEXT("the 185 shape, keys, uses, resolve and invariant cases carried"), Carried, 185);
+	TestEqual(TEXT("the graph's 71 left to OWWorldGraphTests.cpp"), Others, 71);
 	TestTrue(TEXT("none left out: ") + FString::Join(Left, TEXT("; ")), Left.Num() == 0);
 	TestEqual(TEXT("cases failed"), Failed, 0);
 	AddInfo(FString::Printf(TEXT("lens fixture: %d cases through UOWLens, %d failed"), Carried, Failed));
