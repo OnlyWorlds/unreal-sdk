@@ -15,7 +15,7 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
-## [0.1.0] - RELEASE-DATE
+## [0.1.0] - 2026-11-23
 
 The first numbered release: the plugin as built so far, every call as [docs/reference.md](docs/reference.md) describes
 it, in one zip.
