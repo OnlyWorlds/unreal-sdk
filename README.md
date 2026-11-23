@@ -81,7 +81,8 @@ Output Log shows `LogTemp: Display: Moppetopia`, then `LogTemp: Display: Admiral
 same file is `Host/Source/OWHost/OWFirstRun.cpp`.
 
 On Blueprints the same read is the **Read World** node: give it a config whose `ApiKey` is `0000000001`, and
-`OnSuccess` hands you the world as JSON text. Every API call has its node, with `OnSuccess` and `OnFailure`.
+`OnSuccess` hands you the world as JSON text. The API's reads and element writes each have a node like it, with
+`OnSuccess` and `OnFailure`.
 
 ## Your own world
 
@@ -111,7 +112,7 @@ carries a small example world, Hyperion, at `codegen/schema-dist/example/hyperio
 | Part | Where | What it does |
 |---|---|---|
 | **Core** | `Plugin/OnlyWorlds/Core/` | Plain C++17 with zlib and no Unreal header: the API client (`OWClient`, `OWJoin`), world folders and `.owworld` files (`OWWorld`, `OWWorldArchive`, `OWJson`), and the standard's readers (`OWLens`, `OWGraph`, `OWLanding`, `OWMapSpace`, `OWCharter`, `OWStrand`, `OWRecord`, `OWReport`, `OWMessage`, `OWNames`, `OWCalendar`, `OWAddress`, `OWOpeners`). It does all the work and is tested on its own. |
-| **Blueprints** | `Plugin/OnlyWorlds/Source/OnlyWorlds/` | The Runtime module: the core compiled in place, with UObject at the edges. `UOWLibrary` and `UOWWorld` (open, read, edit, write back, pack), one `USTRUCT` per element type with `UOWElements` to find them, async nodes for every API read and write, and Blueprint libraries over the readers. `FOWHttpTransport` is the client's transport on Unreal's HTTP. |
+| **Blueprints** | `Plugin/OnlyWorlds/Source/OnlyWorlds/` | The Runtime module: the core compiled in place, with UObject at the edges. `UOWLibrary` and `UOWWorld` (open, read, edit, write back, pack), one `USTRUCT` per element type with `UOWElements` to find them, async nodes for the API's reads and element writes, and Blueprint libraries over most of the readers. `FOWHttpTransport` is the client's transport on Unreal's HTTP. |
 
 Every call, with what it answers and what it refuses, and what is not built yet:
 [docs/reference.md](docs/reference.md).
@@ -121,7 +122,7 @@ Every call, with what it answers and what it refuses, and what is not built yet:
 The 22 structs are generated from one pinned release of the
 [schema distribution](https://github.com/OnlyWorlds/schema-dist) (`codegen/PIN`), vendored unchanged in
 `codegen/schema-dist/`. Each reader answers every case of its profile's shared fixture, the same cases the other
-OnlyWorlds SDKs answer; the `.owworld` reader gives the conformance set's verdict on every one of its files; and every
+OnlyWorlds SDKs answer; the `.owworld` reader gives the conformance set's verdicts on its files; and every
 request the client makes is checked against the API's own document (`tests/data/keel-wire.json`; keel is the server
 behind onlyworlds.com). The reference explains the standard's words used in this repository (keel, serial, rung).
 
