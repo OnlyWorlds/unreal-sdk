@@ -1,11 +1,20 @@
 # OnlyWorlds SDK for Unreal
 
-Your [OnlyWorlds](https://www.onlyworlds.com) world, its characters, locations and laws, in your Unreal game: as
-Blueprint structs and nodes, and as plain C++.
+[OnlyWorlds](https://www.onlyworlds.com) is an open standard for world data: a world's characters, places, events
+and lore as elements of 22 types, linked by id, that any tool can read. This plugin brings such a world into your
+Unreal game: written outside the engine, then read at run time over the onlyworlds.com API, or shipped with the game
+as a folder.
 
-An Unreal Engine code plugin. It reads and writes worlds through the OnlyWorlds API, and reads and writes them on disk
-as world folders and `.owworld` files, with a struct for each of the 22 element types. A world read from disk and
-written back unedited is byte-equal.
+It has two roads, and they give different things:
+
+- **A world on disk** (a world folder, or one `.owworld` file): `OpenWorldFolder` or `OpenWorldFile`, then
+  `GetAll<Types>` (`GetAllCharacters`, …), gives every element as a Blueprint struct (`FOWCharacter`, …), with no
+  server. This is the road for a Blueprint graph.
+- **The onlyworlds.com API**: the client's Blueprint nodes (**Read World**, **List Elements**, the writes) answer each
+  element as JSON text, and no Blueprint call turns that text into a struct yet; in C++, `OWFromJson` does.
+
+An Unreal Engine code plugin, with a struct for each of the 22 element types. It writes worlds back too, over the API
+and on disk; a world read from disk and written back unedited is byte-equal.
 
 ## Install
 
@@ -21,7 +30,11 @@ platforms are untested.
 
 ## First run
 
-This reads Moppetopia, a public sample world, with its demo key. No account needed.
+One for each road. Neither needs an account.
+
+### In C++, over the API
+
+This reads Moppetopia, a public sample world, with its demo key.
 
 ```cpp
 // A first run: Moppetopia, a public sample world, read with its demo key. Put this file in any C++ module that
@@ -80,9 +93,31 @@ Type `OnlyWorlds.FirstRun` in the editor's console (the `` ` `` key, or the comm
 Output Log shows `LogTemp: Display: Moppetopia`, then `LogTemp: Display: Admiral Fluffington`. In this repository the
 same file is `Host/Source/OWHost/OWFirstRun.cpp`.
 
+The client is the plugin's core, plain C++17 with no Unreal header, so its types are the standard library's
+(`std::make_shared`, snake_case members) and `OWConvert` turns its text into an `FString`. The first callback holds
+`Client`, so the client is still there for the second call.
+
 On Blueprints the same read is the **Read World** node: give it a config whose `ApiKey` is `0000000001`, and
-`OnSuccess` hands you the world as JSON text. The API's reads and element writes each have a node like it, with
-`OnSuccess` and `OnFailure`.
+`OnSuccess` hands you the world as JSON text, not a struct. The API's reads and element writes each have a node like
+it, with `OnSuccess` and `OnFailure`.
+
+### On Blueprints, from a world on disk
+
+**Not yet run in the editor**: these steps are read from the plugin's declarations, and no test runs this graph as
+written. The plugin's own Blueprint tests build their graphs in code.
+
+1. Copy the example world `codegen/schema-dist/example/hyperion` of this repository into your project as
+   `Worlds/hyperion` (beside the `.uproject`).
+2. In a Blueprint's event graph (the Level Blueprint will do), from **Event BeginPlay** place **Open World Folder**
+   (category OnlyWorlds) and type `Worlds/hyperion` in its **Path**. A relative path is taken from the project's
+   folder.
+3. From its **Return Value** (the opened world), place **Get All Characters**: an array of `OWCharacter` structs.
+4. Place a **For Each Loop** on that array, a **Break OWCharacter** on its **Array Element**, and from **Loop Body** a
+   **Print String** whose **In String** is the struct's **Name**.
+5. Play in the editor. The screen and the Output Log show the world's three Characters: Mr. Steinway, Rachmaninov and
+   The Consul.
+
+When **Return Value** is empty, **Error** says why (`no world.json in Worlds/hyperion`).
 
 ## Your own world
 
@@ -90,28 +125,29 @@ Create a world at [onlyworlds.com](https://www.onlyworlds.com); its keys are on 
 once, so copy it then.
 
 - **`ow_r_`** reads, with no PIN. This is the key to ship in a game.
-- **`ow_w_`** reads and writes. Writes also send a secret as the PIN (`ApiPin` on Blueprints, `api_pin` in C++). For
-  code, use an [agent seat](https://onlyworlds.github.io/docs/development/agents): it has its own key and secret
-  (`ow_s_…`), works in one world, and the world's owner can remove it at any time. The account PIN works too, but it
-  opens every world on the account.
+- **`ow_w_`** reads and writes. Writes also send your PIN (`ApiPin` on Blueprints, `api_pin` in C++).
 
 The write nodes (`CreateElement`, `UpsertElement`, `PatchElement`, `DeleteElement`, `EditElementLinks`, `BulkWrite`)
 take an element as JSON text; `Get<Type>Json` turns a struct (`FOWCharacter`, …) into that text. Keep write keys out
 of games you ship: a key in an asset, a config file or a Blueprint default is cooked into the package, where anyone
 with the build can read it, so read write credentials at run time.
 
-**A player link** (`https://www.onlyworlds.com/join#ow_j_…`, made by a world's owner for one Character) needs no
-account: `OnlyWorlds::OWJoin::ParseLink` and `Redeem` turn it into that player's read key (in C++ only, for now).
+An AI agent that writes to your world takes a seat of its own instead, an
+[agent seat](https://onlyworlds.github.io/docs/development/agents): its own key and secret (`ow_s_…`), for one world,
+which the world's owner can remove at any time.
 
 **A world on disk.** `UOWLibrary::OpenWorldFolder` reads a world folder, `OpenWorldFile` an `.owworld` file (one zip
 that holds a folder), and `GetAll<Types>` (`GetAllCharacters`, …) gives its elements as structs. This repository
 carries a small example world, Hyperion, at `codegen/schema-dist/example/hyperion`.
 
+**A player link** (`https://www.onlyworlds.com/join#ow_j_…`, made by a world's owner for one Character) needs no
+account: `OnlyWorlds::OWJoin::ParseLink` and `Redeem` turn it into that player's read key (in C++ only, for now).
+
 ## What's in it
 
 | Part | Where | What it does |
 |---|---|---|
-| **Core** | `Plugin/OnlyWorlds/Core/` | Plain C++17 with zlib and no Unreal header: the API client (`OWClient`, `OWJoin`), world folders and `.owworld` files (`OWWorld`, `OWWorldArchive`, `OWJson`), and the standard's readers (`OWLens`, `OWGraph`, `OWLanding`, `OWMapSpace`, `OWCharter`, `OWStrand`, `OWRecord`, `OWReport`, `OWMessage`, `OWNames`, `OWCalendar`, `OWAddress`, `OWOpeners`). It does all the work and is tested on its own. |
+| **Core** | `Plugin/OnlyWorlds/Core/` | Plain C++17 with zlib and no Unreal header: the API client (`OWClient`, `OWJoin`), world folders and `.owworld` files (`OWWorld`, `OWWorldArchive`, `OWJson`), and readers over a world it holds, with no request of their own (`OWLens`, `OWGraph`, `OWLanding`, `OWMapSpace`, `OWCharter`, `OWStrand`, `OWRecord`, `OWReport`, `OWMessage`, `OWNames`, `OWCalendar`, `OWAddress`, `OWOpeners`: what one reader may see of a world, the world as nodes and edges, its maps as points and outlines, its calendar, in-world messages and more). It does all the work and is tested on its own. |
 | **Blueprints** | `Plugin/OnlyWorlds/Source/OnlyWorlds/` | The Runtime module: the core compiled in place, with UObject at the edges. `UOWLibrary` and `UOWWorld` (open, read, edit, write back, pack), one `USTRUCT` per element type with `UOWElements` to find them, async nodes for the API's reads and element writes, and Blueprint libraries over most of the readers. `FOWHttpTransport` is the client's transport on Unreal's HTTP. |
 
 Every call, with what it answers and what it refuses, and what is not built yet:
@@ -120,11 +156,11 @@ Every call, with what it answers and what it refuses, and what is not built yet:
 ## How it follows the standard
 
 The 22 structs are generated from one pinned release of the
-[schema distribution](https://github.com/OnlyWorlds/schema-dist) (`codegen/PIN`), vendored unchanged in
-`codegen/schema-dist/`. Each reader answers every case of its profile's shared fixture, the same cases the other
-OnlyWorlds SDKs answer; the `.owworld` reader gives the conformance set's verdicts on its files; and every
-request the client makes is checked against the API's own document (`tests/data/keel-wire.json`; keel is the server
-behind onlyworlds.com). The reference explains the standard's words used in this repository (keel, serial, rung).
+[schema distribution](https://github.com/OnlyWorlds/schema-dist), the standard's published form (`codegen/PIN`),
+vendored unchanged in `codegen/schema-dist/`. Each reader gives the same answers as the other OnlyWorlds SDKs on a
+shared set of test cases; the `.owworld` reader accepts and refuses the standard's own test files as they expect; and
+every request the client makes is checked against the API's own description of itself (`tests/data/keel-wire.json`).
+The reference opens with the few words of the standard it uses.
 
 ## Working on the SDK
 
@@ -149,10 +185,9 @@ plugin's tests are compiled only inside this repository, so a copy of the plugin
 
 ## OnlyWorlds
 
-An open standard for world data: 22 element types, linked by id, usable by any tool. The schema lives at
-[OnlyWorlds/OnlyWorlds](https://github.com/OnlyWorlds/OnlyWorlds). Other clients: the
-[TypeScript SDK](https://github.com/OnlyWorlds/sdk), the [Python SDK](https://github.com/OnlyWorlds/python-sdk) and
-the [Unity SDK](https://github.com/OnlyWorlds/unity-sdk).
+The schema lives at [OnlyWorlds/OnlyWorlds](https://github.com/OnlyWorlds/OnlyWorlds). Other clients: the
+[TypeScript SDK](https://github.com/OnlyWorlds/sdk), the [Python SDK](https://github.com/OnlyWorlds/python-sdk), the
+[Unity SDK](https://github.com/OnlyWorlds/unity-sdk) and the [Godot SDK](https://github.com/OnlyWorlds/godot-sdk).
 
 ## Licence and contributions
 

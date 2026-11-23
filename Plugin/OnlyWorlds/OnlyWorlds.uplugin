@@ -3,7 +3,7 @@
 	"Version": 1,
 	"VersionName": "0.1.0",
 	"FriendlyName": "OnlyWorlds",
-	"Description": "Open OnlyWorlds world folders and .owworld world files: the elements as Blueprint structs, a world written back byte-equal.",
+	"Description": "OnlyWorlds worlds in your game: a world folder or .owworld file on disk as Blueprint structs, and the onlyworlds.com API as JSON text through Blueprint nodes and C++. Win64, Unreal Engine 5.8.",
 	"Category": "OnlyWorlds",
 	"CreatedBy": "OnlyWorlds",
 	"CreatedByURL": "https://onlyworlds.com",
