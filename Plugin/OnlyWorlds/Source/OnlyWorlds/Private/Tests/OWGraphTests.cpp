@@ -8,7 +8,7 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS && OW_REPO_TESTS
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
@@ -807,4 +807,4 @@ bool FOWGraphIntegersTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-#endif  // WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#endif  // WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS && OW_REPO_TESTS

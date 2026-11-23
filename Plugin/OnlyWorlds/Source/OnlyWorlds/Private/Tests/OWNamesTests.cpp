@@ -17,7 +17,7 @@
 
 #include <string>
 
-#if WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS && OW_REPO_TESTS
 
 namespace
 {
@@ -192,4 +192,4 @@ bool FOWNamesFixtureTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-#endif  // WITH_DEV_AUTOMATION_TESTS
+#endif  // WITH_DEV_AUTOMATION_TESTS && OW_REPO_TESTS

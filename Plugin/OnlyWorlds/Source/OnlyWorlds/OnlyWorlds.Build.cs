@@ -39,5 +39,11 @@ public class OnlyWorlds : ModuleRules
 		{
 			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "BlueprintGraph" });
 		}
+
+		// The automation tests (Private/Tests/) read the repository around the plugin: the vendored schema-dist and
+		// tests/data, two folders above the plugin's own. They are compiled only there (OW_REPO_TESTS 1), so the plugin
+		// copied into another project lists no OnlyWorlds test that cannot find its inputs.
+		bool bInRepository = Directory.Exists(Path.Combine(PluginDirectory, "..", "..", "codegen", "schema-dist"));
+		PrivateDefinitions.Add("OW_REPO_TESTS=" + (bInRepository ? "1" : "0"));
 	}
 }

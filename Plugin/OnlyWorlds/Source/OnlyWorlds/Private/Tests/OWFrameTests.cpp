@@ -8,7 +8,7 @@
 #include "CoreMinimal.h"
 #include "Misc/AutomationTest.h"
 
-#if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
+#if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR && OW_REPO_TESTS
 
 #include "AssetCompilingManager.h"
 #include "Engine/StaticMesh.h"
@@ -275,4 +275,4 @@ bool FOWFramePinMapTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-#endif  // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
+#endif  // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR && OW_REPO_TESTS

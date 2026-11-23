@@ -46,7 +46,7 @@
 #include <utility>
 #include <vector>
 
-#if WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS && OW_REPO_TESTS
 
 namespace
 {
@@ -1041,4 +1041,4 @@ bool FOWClientNodesPinsTest::RunTest(const FString& Parameters)
 
 #endif  // WITH_EDITOR
 
-#endif  // WITH_DEV_AUTOMATION_TESTS
+#endif  // WITH_DEV_AUTOMATION_TESTS && OW_REPO_TESTS
