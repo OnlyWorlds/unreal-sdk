@@ -1123,6 +1123,18 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
 
 ### Fixed
 
+- A writer never writes over a file it holds. A new element whose short name (section 3.2) and full-id name are both
+  held, by an element or by a file the reader could not read, is refused: `WriteRefusal` names both paths, so
+  `WriteFolder` and `Pack` write nothing, and `ToFiles` leaves the element out. Before, it took the full-id name over
+  the file there. A `world.json` that could not be read (not UTF-8, cut short, a value after the value, not an
+  object) is never written over either, even once the caller sets an id: `WriteRefusal` says why it could not be read,
+  and `ToFiles` gives its bytes as read. Before, `SetInfo("id", …)`, as the no-id refusal advised, wrote a new
+  `world.json` over the person's. Tests in `tests/test_held_files.cpp`, beside guards that pass on the code as it was:
+  one JSON value and nothing after it at every reader (a folder, an `.owworld`, `world.json`, `RECORDS.json`, a
+  client's and a join's answer), a new element taking its full id beside a held file, an element file that is not
+  UTF-8 carried as its bytes through every write and pack, and a number past a double written as its text after an
+  edit elsewhere in the element.
+
 - The Blueprint charter structs carry the type the core serves: `FOWCharterLaw::Type` (`"law"`), `FOWCharterGuide::Type`
   and `FOWCharterDomain::Type` (`"construct"`), from `CharterOf`, `DomainsOf` and `ReadingAidsOf` (a packet served with
   no type reads the aid's own, as the core reads it). A reader handed the packet alone fetches an aid by its type.

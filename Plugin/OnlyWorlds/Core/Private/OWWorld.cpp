@@ -120,7 +120,10 @@ std::unique_ptr<OWWorld> OWWorld::FromFiles(const OWFileMap& files) {
             w->other_files[rel] = kv.second;
         }
     }
-    if (!have_world) w->SetWorldJson(OWBytes());
+    if (!have_world) {
+        w->SetWorldJson(OWBytes());
+        w->world_unread_.clear();  // no file to write over: a draft takes the caller's id
+    }
     return w;
 }
 
@@ -128,10 +131,12 @@ void OWWorld::SetWorldJson(OWBytes bytes) {
     world_bytes = std::move(bytes);
     OWJsonParseResult r = OWJson::Parse(world_bytes);
     if (!r.ok || !r.value.IsObject()) {
-        errors.push_back(std::string("world.json: ") + (r.ok ? "not a JSON object" : "not JSON (" + r.error + ")"));
+        world_unread_ = std::string("world.json: ") + (r.ok ? "not a JSON object" : "not JSON (" + r.error + ")");
+        errors.push_back(world_unread_);
         info = OWJsonValue::Object();
         return;
     }
+    world_unread_.clear();
     info = std::move(r.value);
 }
 
@@ -228,35 +233,43 @@ std::string OWWorld::ElementFilename(const std::string& id, const std::string& n
     return slug + "--" + (full_id ? id : IdTail(id)) + ".json";
 }
 
-void OWWorld::AssignPaths() {
-    std::vector<OWElement*> fresh;
+std::vector<std::pair<size_t, std::string>> OWWorld::NewPaths() const {
+    std::vector<size_t> fresh;
     std::unordered_set<std::string> taken;  // case-folded as ASCII: on NTFS and APFS two spellings are one file
-    for (OWElement& e : elements) {
-        if (e.source_path.empty()) fresh.push_back(&e);
-        else taken.insert(AsciiLower(e.source_path));
+    for (size_t i = 0; i < elements.size(); ++i) {
+        if (elements[i].source_path.empty()) fresh.push_back(i);
+        else taken.insert(AsciiLower(elements[i].source_path));
     }
+    // A file the reader could not read lives here too, so a new element never takes its name.
     for (const auto& kv : other_files) taken.insert(AsciiLower(kv.first));
     // The writer collision rule (section 3.2): a taken short path falls back to the full id, lowest id first.
-    std::sort(fresh.begin(), fresh.end(), [](OWElement* a, OWElement* b) { return a->Id() < b->Id(); });
-    for (OWElement* e : fresh) {
-        std::string id = e->Id();
-        if (id.empty()) {
-            errors.push_back("a new " + e->folder_type + " has no id; not written");
-            continue;
-        }
-        std::string dir = std::string("elements/") + e->folder_type + "/";
-        std::string path = dir + ElementFilename(id, e->Name());
-        if (taken.count(AsciiLower(path))) path = dir + ElementFilename(id, e->Name(), true);
-        taken.insert(AsciiLower(path));
-        e->source_path = path;
+    std::sort(fresh.begin(), fresh.end(), [this](size_t a, size_t b) { return elements[a].Id() < elements[b].Id(); });
+    std::vector<std::pair<size_t, std::string>> out;
+    for (size_t i : fresh) {
+        const OWElement& e = elements[i];
+        std::string id = e.Id();
+        if (id.empty()) continue;  // WriteRefusal names it
+        std::string dir = std::string("elements/") + e.folder_type + "/";
+        std::string path = dir + ElementFilename(id, e.Name());
+        if (taken.count(AsciiLower(path))) path = dir + ElementFilename(id, e.Name(), true);
+        if (!taken.insert(AsciiLower(path)).second) path.clear();  // both names held: never written over
+        out.emplace_back(i, path);
     }
+    return out;
+}
+
+void OWWorld::AssignPaths() {
+    for (const OWElement& e : elements)
+        if (e.source_path.empty() && e.Id().empty()) errors.push_back("a new " + e.folder_type + " has no id; not written");
+    for (const auto& [i, path] : NewPaths())
+        if (!path.empty()) elements[i].source_path = path;
 }
 
 OWFileMap OWWorld::ToFiles(bool only_edited) {
     AssignPaths();
     OWFileMap out;
     if (!only_edited) out = other_files;
-    if (info_edited) out[World] = OWJson::ToBytes(info);
+    if (info_edited && world_unread_.empty()) out[World] = OWJson::ToBytes(info);
     else if (!only_edited) out[World] = world_bytes;
     for (const OWElement& e : elements) {
         if (e.source_path.empty() || (only_edited && !e.edited)) continue;
@@ -266,6 +279,9 @@ OWFileMap OWWorld::ToFiles(bool only_edited) {
 }
 
 std::string OWWorld::WriteRefusal(bool only_edited) const {
+    if (!world_unread_.empty() && (info_edited || !only_edited))
+        return world_unread_ + ", so it could not be read, and a writer never writes over a file it could not read: "
+               "mend the file and read the world again";
     if (info_edited || !only_edited) {
         const OWJsonValue* id = info.IsObject() ? info.Find("id") : nullptr;
         if (!id || !id->IsString() || OWUnicode::StripWhite(id->Text()).empty())
@@ -276,6 +292,14 @@ std::string OWWorld::WriteRefusal(bool only_edited) const {
         const OWJsonValue* id = e.body.Find("id");
         if ((e.edited || e.source_path.empty()) && !(id && id->IsString() && !id->Text().empty()))
             return "a new or edited " + e.folder_type + " has no id (a non-empty string), and a writer mints none: set it first";
+    }
+    for (const auto& [i, path] : NewPaths()) {
+        if (!path.empty()) continue;
+        const OWElement& e = elements[i];
+        std::string dir = std::string("elements/") + e.folder_type + "/";
+        return "a new " + e.folder_type + " (" + e.Id() + ") would be written at " + dir + ElementFilename(e.Id(), e.Name()) +
+               " or " + dir + ElementFilename(e.Id(), e.Name(), true) +
+               ", and the world holds both: a writer never writes over a file it holds; rename it, or move one of those files";
     }
     return "";
 }

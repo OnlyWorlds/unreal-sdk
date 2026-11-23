@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace OnlyWorlds {
@@ -76,10 +77,14 @@ public:
     OWElement& Add(const std::string& type, OWJsonValue body);
 
     // Every file of the world by its path inside it: world.json, each element, and other_files. `only_edited` gives
-    // just the files an edit changed (to write back into the folder read).
+    // just the files an edit changed (to write back into the folder read). A held path never gets other bytes: an
+    // edit to a world.json that could not be read is left out (its bytes as read), and so is a new element whose two
+    // names are both held (WriteRefusal names each).
     OWFileMap ToFiles(bool only_edited = false);
     // Why WriteFolder and Pack would refuse to write this world, or "" when they would not: a world.json to be written
-    // whose id is no non-empty string, or a new or edited element with no id. A writer mints no id (folder spec 4.1;
+    // that could not be read (a writer never writes over such a file, the caller's id or not), or whose id is no
+    // non-empty string; a new or edited element with no id; a new element whose short name and full-id name (section
+    // 3.2) are both held, by an element or by a file the reader could not read. A writer mints no id (folder spec 4.1;
     // 3.4, format 0.3.22: a draft world conforms as any other, its id the tool's own until a host gives one), so the
     // caller sets it.
     std::string WriteRefusal(bool only_edited = false) const;
@@ -97,8 +102,12 @@ public:
 
 private:
     std::unordered_map<std::string, size_t> by_id_;
+    // Why world.json could not be read ("" when it was, or when there was none).
+    std::string world_unread_;
     void SetWorldJson(OWBytes bytes);
     void AddParsed(const std::string& rel, const std::string& type, OWBytes bytes);
+    // Each new element with an id, by its index, and the path section 3.2 gives it ("" when both its names are held).
+    std::vector<std::pair<size_t, std::string>> NewPaths() const;
     void AssignPaths();
 };
 
