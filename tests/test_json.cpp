@@ -40,7 +40,11 @@ OW_TEST(json_number_text_in_section_5_spelling) {
         // An integer literal keeps its value past 2^53 (JavaScript would round it): the Unity writer's choice.
         {"9007199254740993", "9007199254740993"}, {"12345678901234567890", "12345678901234567890"},
         // Past a double: too large keeps its text (JSON.stringify would write null), too small is 0.
-        {"1E400", "1E400"}, {"-1e400", "-1e400"}, {"1e-400", "0"}, {"-1e-400", "0"}, {"0.0e999", "0"}};
+        {"1E400", "1E400"}, {"-1e400", "-1e400"}, {"1e-400", "0"}, {"-1e-400", "0"}, {"0.0e999", "0"},
+        // An exponent past a 32-bit long is still too large, not 0 (it overflowed the sum once).
+        {"7e2147483647", "7e2147483647"}, {"7e99999999999999999999", "7e99999999999999999999"},
+        {"-77.7e2147483646", "-77.7e2147483646"}, {"7e+99999999999999999999", "7e+99999999999999999999"},
+        {"7e-99999999999999999999", "0"}};
     for (const C& c : cases) t.Eq(OWJson::CanonicalNumber(c.in), std::string(c.out), std::string("number text ") + c.in);
     OWJsonValue v = ParseOk(t, "{\"a\": 1.0, \"b\": 9007199254740993}");
     t.Eq(OWJson::Stringify(v), std::string("{\n  \"a\": 1,\n  \"b\": 9007199254740993\n}\n"), "section 5 spelling");

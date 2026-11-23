@@ -1,6 +1,7 @@
 #include "OWJson.h"
 #include "OWUnicode.h"
 
+#include <algorithm>
 #include <charconv>
 #include <cmath>
 #include <cstdio>
@@ -381,7 +382,16 @@ std::string CanonicalNumber(std::string_view text) {
             if (first < 0 && text[i] != '0') first = pos;
             ++pos;
         }
-        long exp = i < text.size() ? std::strtol(std::string(text.substr(i + 1)).c_str(), nullptr, 10) : 0;
+        // The exponent read with a cap: strtol saturates at a 32-bit long, and the sum below then overflowed, so a
+        // number too large was written 0.
+        long long exp = 0;
+        if (i < text.size()) {
+            std::string_view x = text.substr(i + 1);
+            bool negative = !x.empty() && x[0] == '-';
+            if (!x.empty() && (x[0] == '-' || x[0] == '+')) x.remove_prefix(1);
+            for (char c : x) exp = std::min(exp * 10 + (c - '0'), 1000000000LL);
+            if (negative) exp = -exp;
+        }
         if (first < 0) return "0";
         return point - first + exp > 0 ? std::string(text) : std::string("0");
     }
