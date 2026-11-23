@@ -1,0 +1,85 @@
+# The core's checks on Windows with no Unreal install: the generated files against their sources, then the core
+# (Plugin/OnlyWorlds/Core) and its test runner built by build.cmd with MSVC and run. The engine's zlib is 1.3; here
+# zlib 1.3 is built from its release, checked by its sha256, and handed to build.cmd as ZLIB and ZLIB_LIB. The
+# plugin's own automation tests need the Unreal Editor and do not run here.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    runs-on: windows-2022
+    env:
+      ZLIB_SHA256: ff0ba4c292013dbc27530b3a81e1f9a813cd39de01ca5e0f8bf355702efa593e
+      # Unicode's NormalizationTest.txt, 15.1.0, by its git blob id: the core's NFC test reads every line of it.
+      NORMALIZATION_BLOB: 2e88574243dbb5dd4109f54bd25d43588e78226f
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Drift checks
+        shell: bash
+        run: |
+          python codegen/generate.py --check
+          python codegen/generate_models.py --check
+          python codegen/generate_tools.py --check
+          python codegen/generate_presentation.py --check
+          python codegen/generate_frame_bits.py --check
+          python codegen/test_generate_presentation.py
+          python codegen/test_generate_tools.py
+
+      - name: Find Visual Studio
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw "no Visual Studio with the C++ tools" }
+          "VCVARS=$vs\VC\Auxiliary\Build\vcvars64.bat" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Fetch zlib 1.3
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'zlib'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          $tgz = Join-Path $dir 'zlib-1.3.tar.gz'
+          Invoke-WebRequest -Uri 'https://github.com/madler/zlib/releases/download/v1.3/zlib-1.3.tar.gz' -OutFile $tgz
+          if ((Get-FileHash -Algorithm SHA256 $tgz).Hash -ne $env:ZLIB_SHA256) { throw "zlib-1.3.tar.gz: sha256 differs" }
+          & "$env:SystemRoot\System32\tar.exe" -xzf $tgz -C $dir
+          if ($LASTEXITCODE -ne 0) { throw "tar failed" }
+          $src = Join-Path $dir 'zlib-1.3'
+          New-Item -ItemType Directory -Force (Join-Path $src 'include') | Out-Null
+          Copy-Item (Join-Path $src 'zlib.h'), (Join-Path $src 'zconf.h') (Join-Path $src 'include')
+          "ZLIB=$src" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ZLIB_LIB=$src\zlib.lib" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build zlib (static, /MD)
+        shell: cmd
+        run: |
+          call "%VCVARS%" || exit /b 2
+          cd /d "%ZLIB%" || exit /b 2
+          nmake /nologo -f win32\Makefile.msc zlib.lib || exit /b 1
+
+      - name: Fetch Unicode's NormalizationTest.txt
+        shell: pwsh
+        run: |
+          $file = Join-Path $env:RUNNER_TEMP 'NormalizationTest-15.1.0.txt'
+          Invoke-WebRequest -Uri 'https://www.unicode.org/Public/15.1.0/ucd/NormalizationTest.txt' -OutFile $file
+          $blob = git hash-object --no-filters $file
+          if ($blob -ne $env:NORMALIZATION_BLOB) { throw "NormalizationTest.txt: blob $blob, not 15.1.0's" }
+          "OW_NORMALIZATION_TEST=$file" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build the core and its tests
+        shell: cmd
+        run: build.cmd
+
+      - name: Run the core's tests
+        shell: cmd
+        run: build\ow_tests.exe
