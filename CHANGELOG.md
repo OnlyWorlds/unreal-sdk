@@ -1,11 +1,24 @@
 # Changelog
 
-Notable changes to OnlyWorlds for Unreal. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Nothing is released yet; the history before this file is in the git log.
+Notable changes to the OnlyWorlds SDK for Unreal. Format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+**Where it stands.** Version 0.1.0 (`Plugin/OnlyWorlds/OnlyWorlds.uplugin`), not yet tagged: nothing is released, and
+`main` is the plugin as it is. It reads and writes OnlyWorlds worlds over the API and on disk (world folders and
+`.owworld` files), as Blueprint structs of all 22 types and as the core's JSON in C++, and carries the schema
+distribution's profile readers (lenses, the graph, map space, calendars, charters, messages and more), each held to
+its profile's shared fixture. Built and tested on Unreal Engine 5.8, Win64. Everything so far is under [Unreleased]
+below; the history before this file is in the git log. The [README](README.md) has the install and a first run.
 
 ## [Unreleased]
 
 ### Added
+
+- A front door for a first-time reader: `LICENSE` (MIT), `SECURITY.md`, a README with an install and a first run on
+  the public sample world Moppetopia with its demo key (`Host/Source/OWHost/OWFirstRun.cpp`, the console command
+  `OnlyWorlds.FirstRun`), the full reference moved to `docs/reference.md`, and two workflows on every push and pull
+  request (the commit messages' words; the drift checks and the core's suite built with MSVC on Windows, against zlib
+  1.3 built from its release). `build.cmd` takes zlib's folder and library from `ZLIB` and `ZLIB_LIB` when set.
 
 - Joining a world by invite link, in the core (`OWJoin.h`): `OWJoin::ParseLink(text)` reads the `ow_j_` code out of a
   pasted link or a bare code (`""` when the text holds none; trimmed of Unicode's White_Space, read after the last
@@ -133,6 +146,14 @@ Nothing is released yet; the history before this file is in the git log.
 
 ### Changed
 
+- The tests read their optional inputs only from the environment: `OW_SIKELIA` and `OW_MOPPETOPIA` (two large real
+  worlds) and `OW_NORMALIZATION_TEST` (Unicode's NormalizationTest.txt, 15.1.0), with no default. In the core's runner
+  an input not given is a skip that names its variable; an automation test of a world not given adds a warning and
+  does not run, and a world named but not there still fails. `tests/check_writer.py` takes the reference checker's
+  folder from `--run-py` or `OW_RUN_PY`.
+- The plugin's automation tests are compiled only inside this repository (`OW_REPO_TESTS`, set by
+  `OnlyWorlds.Build.cs` when `codegen/schema-dist/` is two folders above the plugin): a copy of the plugin in another
+  project lists none, where before each one failed for want of its files.
 - `OWClient::Me`'s comment, in the core, and the Blueprint node `ReadMe`'s tooltip: the PIN is sent on `GET /me`, so
   a wrong PIN shows on this call first, which makes it the connection test for a key that can write; beside a key
   that cannot (a read key, a player's), onlyworlds.com never reads a PIN. The TypeScript SDK 4.185.0's sentence on
