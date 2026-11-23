@@ -3,6 +3,7 @@
 #include "OWId.h"
 #include "OWJoin.h"
 #include "OWLens.h"
+#include "OWMessage.h"
 #include "OWUnicode.h"
 
 #include <algorithm>
@@ -791,7 +792,7 @@ void OWClient::AcceptJoin(const std::string& code, OWHandler<OWJoinedMembership>
                                 ". A world key cannot join a world; a player's or an agent's code is redeemed with no "
                                 "key, OWJoin::Redeem." + NothingSent);
     }
-    if (code.empty()) {
+    if (OWMessage::Trim(code).empty()) {
         return Refuse(done, std::string("AcceptJoin: a join code is required (OWJoin::ParseLink reads it out of a pasted "
                                         "link).") + NothingSent);
     }
@@ -814,7 +815,7 @@ namespace {
 
 // "" when the call may be sent; else the refusal.
 std::string JoinWhy(const char* call, const std::string& code, const OWJoinConfig& where) {
-    if (code.empty()) {
+    if (OWMessage::Trim(code).empty()) {
         return std::string(call) + ": a join code is required (the part of the link after #: OWJoin::ParseLink reads it "
                                    "out of a pasted link)." + NothingSent;
     }

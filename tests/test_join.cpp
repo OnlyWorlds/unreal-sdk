@@ -614,15 +614,17 @@ OW_TEST(join_the_seam_may_answer_later) {
 
 OW_TEST(join_no_code_or_no_transport_is_the_callers_error_nothing_sent) {
     auto fake = std::make_shared<FakeTransport>();
-    {
-        Got<OWJoined> got;
-        OWJoin::Redeem("", {}, Where(fake), got.H());
-        Refused(t, got.reply, got.calls, *fake, "OWJoin::Redeem: a join code is required", "redeem, no code");
-    }
-    {
-        Got<OWJoinPreview> got;
-        OWJoin::Preview("", Where(fake), got.H());
-        Refused(t, got.reply, got.calls, *fake, "OWJoin::Preview: a join code is required", "preview, no code");
+    for (const char* code : {"", " ", "\t\n", "\xC2\xA0"}) {
+        {
+            Got<OWJoined> got;
+            OWJoin::Redeem(code, {}, Where(fake), got.H());
+            Refused(t, got.reply, got.calls, *fake, "OWJoin::Redeem: a join code is required", "redeem, no code");
+        }
+        {
+            Got<OWJoinPreview> got;
+            OWJoin::Preview(code, Where(fake), got.H());
+            Refused(t, got.reply, got.calls, *fake, "OWJoin::Preview: a join code is required", "preview, no code");
+        }
     }
     OWJoinConfig none;
     none.base_url = Base;
@@ -700,9 +702,11 @@ OW_TEST(join_accept_join_posts_account_join_the_code_alone_the_bearer_and_answer
 // Kills: an empty code reaching the transport (keel's 404 would read as a bad code, not a missing one).
 OW_TEST(join_accept_join_no_code_is_refused_nothing_sent) {
     auto fake = std::make_shared<FakeTransport>();
-    Got<OWJoinedMembership> got;
-    Account(fake).AcceptJoin("", got.H());
-    Refused(t, got.reply, got.calls, *fake, "AcceptJoin: a join code is required", "no code");
+    for (const char* code : {"", " ", "\t\n", "\xC2\xA0"}) {
+        Got<OWJoinedMembership> got;
+        Account(fake).AcceptJoin(code, got.H());
+        Refused(t, got.reply, got.calls, *fake, "AcceptJoin: a join code is required", "no code");
+    }
 }
 
 // Kills: a world key, a read key, a legacy key or no key reaching /account/join, which keel answers 401 (a world key
