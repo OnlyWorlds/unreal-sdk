@@ -4,11 +4,13 @@ Notable changes to the OnlyWorlds SDK for Unreal. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 **Where it stands.** Version 0.1.0 (`Plugin/OnlyWorlds/OnlyWorlds.uplugin`), not yet tagged: nothing is released, and
-`main` is the plugin as it is. It reads and writes OnlyWorlds worlds over the API and on disk (world folders and
-`.owworld` files), as Blueprint structs of all 22 types and as the core's JSON in C++, and carries the schema
-distribution's profile readers (lenses, the graph, map space, calendars, charters, messages and more), each held to
-its profile's shared fixture. Built and tested on Unreal Engine 5.8, Win64. Everything so far is under [Unreleased]
-below; the history before this file is in the git log. The [README](README.md) has the install and a first run.
+`main` is the plugin as it is. What a game can do with it today: open a world on disk (a world folder or an
+`.owworld` file) and read its elements of all 22 types as Blueprint structs; read and write a world over the
+onlyworlds.com API from Blueprint nodes, which answer JSON text, and from C++; and read a world it holds without a
+server (as a graph, as map geometry, by its own calendar, as one reader may see it), each reader giving the same
+answers as the other OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine 5.8, Win64.
+Everything so far is under [Unreleased] below, in the detail a maintainer needs; the history before this file is in
+the git log. The [README](README.md) has the install and a first run.
 
 ## [Unreleased]
 
