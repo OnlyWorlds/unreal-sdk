@@ -1,7 +1,7 @@
 #pragma once
 // A struct's JSON merged into its element as read, so a write keeps what a struct cannot hold: the extension keys
 // (x_*, atlas_*, shadow_*), the keys a newer schema adds, the server's stamps. schema-dist's extension-passthrough
-// ruling: extensions are merged back on write, never dropped. Hand-written, one function for every type, beside
+// rule: extensions are merged back on write, never dropped. Hand-written, one function for every type, beside
 // UOWElements (OWModels.h, generated), whose doors Get<Type>Json give a struct's JSON. The merge itself is
 // OWModelWrite::Merge, on the core's OWJsonValue.
 

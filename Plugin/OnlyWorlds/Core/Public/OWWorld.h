@@ -1,12 +1,12 @@
 #pragma once
 // One world: world.json and its elements, read from a world folder or an .owworld's files.
 //
-// Writing follows the Godot SDK's rule (gaming/DECISIONS.md #2): an element nobody edited is written back as the bytes
-// it was read with; an edited one (and world.json, once edited) in the folder spec's section 5 form (OWJson).
+// Writing follows the Godot SDK's rule: an element nobody edited is written back as the bytes it was read with, so a
+// world read and written unedited is byte-equal; an edited one (and world.json, once edited) in the folder spec's section 5 form (OWJson).
 //
-//   auto w = OnlyWorlds::OWWorld::ReadFolder("C:/worlds/moppetopia");
+//   auto w = OnlyWorlds::OWWorld::ReadFolder("worlds/moppetopia");
 //   for (OWElement* pin : w->OfType("pin")) pin->Set("x", OWJsonValue::Number(int64_t(12)));
-//   w->WriteFolder("C:/worlds/moppetopia", /*only_edited=*/true);
+//   w->WriteFolder("worlds/moppetopia", /*only_edited=*/true);
 
 #include "OWFiles.h"
 #include "OWJson.h"

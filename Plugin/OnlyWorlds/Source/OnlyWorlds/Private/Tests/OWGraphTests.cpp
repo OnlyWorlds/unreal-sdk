@@ -173,7 +173,7 @@ bool FOWGraphPinsTest::RunTest(const FString& Parameters)
 					TestNotNull(Struct->GetName() + TEXT(".") + P->GetName() + TEXT(": a Make pin"), In);
 				else TestNull(Struct->GetName() + TEXT(".") + P->GetName() + TEXT(": read-only, no Make pin"), In);
 			}
-			// A generated integer: an int64 beside its bool bHas<Member> (gaming/DECISIONS.md 14), each with both pins. A
+			// A generated integer: an int64 beside its bool bHas<Member> (not a TOptional), each with both pins. A
 			// generated struct is one UOWElements finds (FOWAddress's Moment has the same shape, and is the door's own).
 			const bool bGenerated = UOWElements::StaticClass()->FindFunctionByName(*(TEXT("Find") + Struct->GetName().Mid(2))) != nullptr;
 			const FBoolProperty* Flag = bGenerated && CastField<FInt64Property>(P)
@@ -201,8 +201,8 @@ bool FOWGraphPinsTest::RunTest(const FString& Parameters)
 	AddInfo(FString::Printf(TEXT("PINS integers: %d bHas<Field> + int64 <Field> pairs, %d with a bool and an Integer64 pin on both nodes"),
 		Pairs, PairsWithPins));
 	// In 5.8 a TOptional member gets no pin on a Break or a Make (the K2 schema converts no FOptionalProperty, 70
-	// members measured at unreal-sdk 94d56a6), so the generator writes each integer as a flag and a value
-	// (gaming/DECISIONS.md 14): the 70 are pairs now, every one with both pins, and no TOptional is left.
+	// members measured at unreal-sdk 94d56a6), so the generator writes each integer as a flag and a value: the 70 are
+	// pairs now, every one with both pins, and no TOptional is left.
 	TestEqual(TEXT("the generated structs' TOptional members"), Optionals, 0);
 	TestEqual(TEXT("the generated structs' integers as bHas<Field> + int64 <Field>"), Pairs, 70);
 	TestEqual(TEXT("the integer pairs with a bool and an Integer64 pin on a Break and on a Make"), PairsWithPins, 70);

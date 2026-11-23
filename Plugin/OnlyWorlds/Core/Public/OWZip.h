@@ -2,7 +2,7 @@
 // The zip layer under OWWorldArchive: a walk of the archive's own central directory, one entry's bytes inflated
 // through zlib and checked against every size it declares, and a writer that lays down its own bytes.
 //
-// Why our own (the recon, lane-unreal-recon.md section 4): the engine's FZipArchiveReader is editor-only and folds
+// Why our own (each measured on UE 5.8 before this was written): the engine's FZipArchiveReader is editor-only and folds
 // names; libzip is desktop-only and misses both OW-14 deflate cases; FCompression accepts an early end. Here every
 // field comes from the directory as written, and zlib's own inflate says where a stream ended.
 

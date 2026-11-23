@@ -423,7 +423,7 @@ OW_TEST(calendar_edges_where_npm_throws) {
 
 OW_TEST(calendar_restart_false_reads_the_absolute_year) {
     // The fixture's restart false sits where the era's year equals the absolute year, so a reader ignoring it passed
-    // there (the Godot lane's gap 4). An era from step 45 (year 2): restart false reads year 2, a restart reads 1.
+    // there (a gap the Godot SDK's tests found). An era from step 45 (year 2): restart false reads year 2, a restart reads 1.
     std::optional<OWCalendarConfig> label = Read(Plain(R"(,"eras":[{"name":"Late","abbrev":"L","start":45,"restart":false}])"));
     std::optional<OWCalendarConfig> count = Read(Plain(R"(,"eras":[{"name":"Late","abbrev":"L","start":45}])"));
     t.Ok(label && count, "both read");

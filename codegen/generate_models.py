@@ -15,14 +15,14 @@ written). What it reads and writes:
   -> Public/OWModelsJson.h               OWFromJson(body, struct) and OWToJson(struct) per type, for C++ callers
   -> Private/OWModels.cpp                all of them, on the core's OWJsonValue (helpers: OWModelRead.h, OWModelWrite.h)
 
-The mapping (the recon's gen_ue.py, with the Unity generator's names), read and written back:
+The mapping (the first Unreal generator's, with the Unity generator's names), read and written back:
 
   scalar_str   FString                ("" when the key is missing or not a string); written as its text, "" the unset
                                       (string-empty-is-unset). The id is left out when it is "" (keel refuses an
                                       empty id; the client mints one for an element without)
   scalar_int   bool bHas<Field> and int64 <Field>  (false and 0 for null or a missing key; an integral number written
                                       N.0 reads as N). Not a TOptional<int64>: the editor gives one no pin on a Break or
-                                      a Make node (gaming/DECISIONS.md 14). Written as its digits, or null when not
+                                      a Make node in 5.8. Written as its digits, or null when not
                                       bHas<Field> (nullable-by-default)
   scalar_bool  bool                   written as itself
   single       FString                (the linked element's id; "" for null); written null for ""

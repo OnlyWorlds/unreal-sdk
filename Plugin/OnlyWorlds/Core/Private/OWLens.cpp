@@ -723,7 +723,7 @@ std::set<std::string> AnchorIds(const OWJsonValue& body) {
 // the trimmed mark naming a Message's addressing or a lens's anchors that lost an id (never on the public rung), and a
 // known-of element as its stub. A stored x_served_trimmed is never served. For every reader, `hidden: true` on what the
 // hidden mark keeps (the world's list or the element's own key, one mark), and no `hidden` key on any other body, a
-// stored false included (keel #537): below a keeper only a contributor's or a guest's own creation carries it, a body
+// stored false included (as keel serves it): below a keeper only a contributor's or a guest's own creation carries it, a body
 // it sees whole.
 const OWJsonValue& View::Served(size_t i) {
     auto hit = served.find(i);

@@ -33,7 +33,7 @@
 //
 //   OWClientConfig config;
 //   config.api_key = "ow_w_...";
-//   config.api_pin = "1234";
+//   config.api_pin = "your-pin";
 //   config.client = "my-game";
 //   config.transport = my_transport;
 //   OWClient writer(config);
