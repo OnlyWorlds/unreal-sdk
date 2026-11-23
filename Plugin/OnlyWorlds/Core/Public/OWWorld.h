@@ -8,6 +8,7 @@
 //   for (OWElement* pin : w->OfType("pin")) pin->Set("x", OWJsonValue::Number(int64_t(12)));
 //   w->WriteFolder("worlds/moppetopia", /*only_edited=*/true);
 
+#include "OWApi.h"
 #include "OWFiles.h"
 #include "OWJson.h"
 #include "OWWorldArchive.h"
@@ -20,7 +21,7 @@
 
 namespace OnlyWorlds {
 
-struct OWElement {
+struct OW_API OWElement {
     // The type folder the element was read from ("character"), or the type it was added as.
     std::string folder_type;
     // Its path inside the world ("elements/character/ana--0000ab01.json"); "" for an element not yet written.
@@ -38,7 +39,7 @@ struct OWElement {
     void Set(const std::string& key, OWJsonValue value);
 };
 
-class OWWorld {
+class OW_API OWWorld {
 public:
     // The element folders: elements/, and spatial/, the format's dated layout for the spatial types (section 4).
     static const char* const ElementFolders[2];

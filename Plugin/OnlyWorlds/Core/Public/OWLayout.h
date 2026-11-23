@@ -25,6 +25,7 @@
 // without text source and target, a field there and not text (null too), an index there and not a finite number (null
 // too). The kinds' colour groups are the presentation sidecar's defaults (OWPresentation::FamilyOf, Order).
 
+#include "OWApi.h"
 #include "OWGraph.h"
 #include "OWJson.h"
 
@@ -122,17 +123,17 @@ namespace OWLayout {
 // kind's anchor, and no element moves further in one step than a cap that shrinks as the steps run out. Last, the points
 // are fitted into a frame of -1 to 1 on the longer axis, centred, proportions kept. An empty graph answers no points, one
 // element answers 0, 0. Self-links pull nothing; a link to an id that is not a node is passed over.
-OWLayoutByKind LayoutByKind(const OWJsonValue& graph);
+OW_API OWLayoutByKind LayoutByKind(const OWJsonValue& graph);
 // The same on a graph WorldGraph answered, read in its own words (OWWorldGraph::ToJson).
-OWLayoutByKind LayoutByKind(const OWWorldGraph& graph);
+OW_API OWLayoutByKind LayoutByKind(const OWWorldGraph& graph);
 
 // Lay out one element and what is linked to it. The focus stands at 0, 0. Its neighbours (one link away, either
 // direction) stand on a ring round it, in colour group order, then by type word, then by name (code point order), up to
 // 60 on the first ring and further rings beyond it. With steps 2, each neighbour's own neighbours stand on an outer ring,
 // fanned out near the neighbour that reached them. An error on steps that is not 1 or 2 (checked first), a graph it
 // cannot read, or a focus that is not one of the graph's nodes.
-OWLayoutAround LayoutAround(const OWJsonValue& graph, std::string_view focus, int steps = 1);
-OWLayoutAround LayoutAround(const OWWorldGraph& graph, std::string_view focus, int steps = 1);
+OW_API OWLayoutAround LayoutAround(const OWJsonValue& graph, std::string_view focus, int steps = 1);
+OW_API OWLayoutAround LayoutAround(const OWWorldGraph& graph, std::string_view focus, int steps = 1);
 
 // Lay out a whole graph in three dimensions by its links (the default layouts page, `by-links-3d`). The largest part of
 // the graph that no single element's removal parts (its body) is cut into groups round its most linked elements, the
@@ -157,9 +158,9 @@ OWLayoutAround LayoutAround(const OWWorldGraph& graph, std::string_view focus, i
 // (held-unit). As each piece is laid out, the main one first: the held points it holds wider apart than 768 rests on an
 // axis (held-box). An `error` without a code: a graph that is not {nodes, edges}, a node without a text id, two nodes
 // with one id, elements that are not a list.
-OWLayoutByLinks3d LayoutByLinks3d(const OWJsonValue& graph, const OWJsonValue* elements = nullptr, const OWJsonValue* held = nullptr,
+OW_API OWLayoutByLinks3d LayoutByLinks3d(const OWJsonValue& graph, const OWJsonValue* elements = nullptr, const OWJsonValue* held = nullptr,
                                   const OWJsonValue* heldUnit = nullptr);
-OWLayoutByLinks3d LayoutByLinks3d(const OWWorldGraph& graph, const OWJsonValue* elements = nullptr, const OWJsonValue* held = nullptr,
+OW_API OWLayoutByLinks3d LayoutByLinks3d(const OWWorldGraph& graph, const OWJsonValue* elements = nullptr, const OWJsonValue* held = nullptr,
                                   const OWJsonValue* heldUnit = nullptr);
 
 // The by-links-3d directions table, bit patterns of float64s (generated from the shared table by
@@ -167,7 +168,7 @@ OWLayoutByLinks3d LayoutByLinks3d(const OWWorldGraph& graph, const OWJsonValue* 
 // index 3 * K * (K - 1) / 2.
 constexpr int DirectionsMax = 37;
 constexpr std::size_t DirectionCount = 2109;
-extern const uint64_t DirectionBits[DirectionCount];
+extern OW_API const uint64_t DirectionBits[DirectionCount];
 
 // What a saved layout Map does not place (the page's `unplaced`): the ids of the nodes the method's reading counts that
 // are not in `placed`, by id in code point order. `placed` is the element ids of the Map's Pins (OWMapSpace's pins on
@@ -176,25 +177,25 @@ extern const uint64_t DirectionBits[DirectionCount];
 // string or anything but an array is an error. The answer does not say why an element has no Pin.
 //
 // by-kind places every node, so every node counts; the graph is read as LayoutByKind reads it.
-OWLayoutUnplaced UnplacedByKind(const OWJsonValue& graph, const OWJsonValue& placed);
-OWLayoutUnplaced UnplacedByKind(const OWWorldGraph& graph, const OWJsonValue& placed);
+OW_API OWLayoutUnplaced UnplacedByKind(const OWJsonValue& graph, const OWJsonValue& placed);
+OW_API OWLayoutUnplaced UnplacedByKind(const OWWorldGraph& graph, const OWJsonValue& placed);
 // around counts the focus and every node within its steps; an error as LayoutAround's (steps, graph, focus).
-OWLayoutUnplaced UnplacedAround(const OWJsonValue& graph, std::string_view focus, const OWJsonValue& placed, int steps = 1);
-OWLayoutUnplaced UnplacedAround(const OWWorldGraph& graph, std::string_view focus, const OWJsonValue& placed, int steps = 1);
+OW_API OWLayoutUnplaced UnplacedAround(const OWJsonValue& graph, std::string_view focus, const OWJsonValue& placed, int steps = 1);
+OW_API OWLayoutUnplaced UnplacedAround(const OWWorldGraph& graph, std::string_view focus, const OWJsonValue& placed, int steps = 1);
 // by-links-3d counts every node of the graph, of any type, also one it would not place (linked to no other and pinned on
 // no map), so for the Map an answer makes this is that answer's own `unplaced`; its Maps, Pins and held points are not
 // read. An error when the graph is not {nodes, edges}, a node has no text id, or two nodes share an id.
-OWLayoutUnplaced UnplacedByLinks3d(const OWJsonValue& graph, const OWJsonValue& placed);
-OWLayoutUnplaced UnplacedByLinks3d(const OWWorldGraph& graph, const OWJsonValue& placed);
+OW_API OWLayoutUnplaced UnplacedByLinks3d(const OWJsonValue& graph, const OWJsonValue& placed);
+OW_API OWLayoutUnplaced UnplacedByLinks3d(const OWWorldGraph& graph, const OWJsonValue& placed);
 
 // The anchor table, bit patterns of float64s (generated from the shared fixture; its test holds it to the fixture).
 constexpr std::size_t AnchorCount = 506;
-extern const uint64_t AnchorBits[AnchorCount];
+extern OW_API const uint64_t AnchorBits[AnchorCount];
 
 // JavaScript's Math.min and Math.max of two: NaN if either is, -0 below +0 (std::min and std::max answer the first on a
 // tie).
-double MinJs(double a, double b);
-double MaxJs(double a, double b);
+OW_API double MinJs(double a, double b);
+OW_API double MaxJs(double a, double b);
 
 }  // namespace OWLayout
 }  // namespace OnlyWorlds

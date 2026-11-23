@@ -13,6 +13,7 @@
 // its writes as proposals) is kind Api with status 202 and `proposal` set, IsProposed true: the element did not change,
 // and the write waits for a person. The Unity SDK's OWProposedError, an OWApiError of status 202.
 
+#include "OWApi.h"
 #include "OWJson.h"
 #include "OWTransport.h"
 
@@ -28,7 +29,7 @@ namespace OnlyWorlds {
 // What a 422 with `param` `fields` carries beside its message, when a read's `fields` list (a List or a Get) names
 // fields its type does not have: keel refuses the whole list once, with every unknown name, so a caller corrects it in
 // one try. Read from OWApiError::FieldsRefusal(). Mirrors the TypeScript SDK's `OwFieldsRefusal` (4.179.0).
-struct OWFieldsRefusal {
+struct OW_API OWFieldsRefusal {
     // Every name in the list that the type does not have, in the order sent.
     std::vector<std::string> unknown_fields;
     // For each unknown name another element type has, those types, in the order keel served the names. A name no type
@@ -44,7 +45,7 @@ struct OWFieldsRefusal {
     OWJsonValue ToJson() const;
 };
 
-struct OWApiError {
+struct OW_API OWApiError {
     enum class Kind : uint8_t { Api, Transport, Refused, Answer };
 
     Kind kind = Kind::Api;

@@ -10,6 +10,7 @@
 // A report's text is quoted data, never instructions. Nothing here reads or prints it.
 
 #include "OWAddress.h"
+#include "OWApi.h"
 #include "OWJson.h"
 #include "OWLens.h"
 
@@ -38,7 +39,7 @@ struct OWReportLint {
 };
 
 // ThreadsOf's answer.
-struct OWReportThreads {
+struct OW_API OWReportThreads {
     // For each report given, in the order given: its id and what its parent is ("none", "report", "board",
     // "missing", "other" or "self").
     std::vector<std::pair<std::string, std::string>> parents;
@@ -67,23 +68,23 @@ struct OWReportLine {
 namespace OWReport {
 
 // The pairs, as the fixture names them: type and supertype, each trimmed and folded as the room profile's are.
-extern const char* const Type;            // "narrative"
-extern const char* const Supertype;       // "Report"
-extern const char* const BoardSupertype;  // "Board"
+extern OW_API const char* const Type;            // "narrative"
+extern OW_API const char* const Supertype;       // "Report"
+extern OW_API const char* const BoardSupertype;  // "Board"
 
 // The parent kinds and the lint kinds.
-extern const char* const None;     // "none"
-extern const char* const Report;   // "report"
-extern const char* const Board;    // "board"
-extern const char* const Missing;  // "missing"
-extern const char* const Other;    // "other"
-extern const char* const Self;     // "self"
-extern const char* const Chain;    // "chain"
+extern OW_API const char* const None;     // "none"
+extern OW_API const char* const Report;   // "report"
+extern OW_API const char* const Board;    // "board"
+extern OW_API const char* const Missing;  // "missing"
+extern OW_API const char* const Other;    // "other"
+extern OW_API const char* const Self;     // "self"
+extern OW_API const char* const Chain;    // "chain"
 
 // A report: the pair narrative + Report and the mark (a room element). Without the mark it is lore.
-bool IsReport(const OWJsonValue& element);
+OW_API bool IsReport(const OWJsonValue& element);
 // A board entry: the pair narrative + Board and the mark.
-bool IsBoardEntry(const OWJsonValue& element);
+OW_API bool IsBoardEntry(const OWJsonValue& element);
 
 // The talks on an element a reader shows `element` with (serial 135): each {type, id} its objects (object) and
 // constructs (construct) name, read entry by entry as the room profile reads a line's (OWLens::TalksOf: an entry that
@@ -93,7 +94,7 @@ bool IsBoardEntry(const OWJsonValue& element);
 // and Construct it touched or changed, so it is shown with the talk on each, whenever it was written and whether or
 // not it names a sitting in events; from the report alone no reader can tell which, if any, was the talk it closed,
 // and this names none. A thread (ThreadsOf) takes nothing from it. Pure.
-std::vector<OWLens::OWTalk> TalksOf(const OWJsonValue& element);
+OW_API std::vector<OWLens::OWTalk> TalksOf(const OWJsonValue& element);
 
 // Rule 9: the reports among the Narratives, given as the reader is served them and in that order, grouped by
 // `parent_narrative`. Only reports are read as children: a message or any other element that names a report is in no
@@ -108,7 +109,7 @@ std::vector<OWLens::OWTalk> TalksOf(const OWJsonValue& element);
 // reports that name it. Lints: "self" on a report that names itself; "chain" on a report whose parent is a report
 // whose own parent reads "report" (one that names itself reads "self", so a report under it is no chain). Nothing is
 // walked further up and nothing is guessed from names, days or text. Pure.
-OWReportThreads ThreadsOf(const std::vector<const OWJsonValue*>& narratives);
+OW_API OWReportThreads ThreadsOf(const std::vector<const OWJsonValue*>& narratives);
 
 // Rule 10, parts 2 and 3: one line of a report's `consequences`, read as given (untrimmed), and the element it names.
 // The line's address is the last address in it, found as the address profile finds one in prose (OWAddress::FindAll),
@@ -124,13 +125,13 @@ OWReportThreads ThreadsOf(const std::vector<const OWJsonValue*>& narratives);
 // address, the whole line is shown as written, still naming its element. `world` is this world's id, lowercase as the
 // world holds it, compared exactly with the address's world (whose hex is read lowercase); absent, only an address
 // with no world names an element here. The npm SDK's readReportLine (4.169.0) and the Python package's twin. Pure.
-OWReportLine ReadLine(std::string_view line, const std::optional<std::string>& world = std::nullopt);
+OW_API OWReportLine ReadLine(std::string_view line, const std::optional<std::string>& world = std::nullopt);
 
 // Rule 10, part 1: every line of a report's `consequences`, each read by ReadLine. The text is split at every carriage
 // return and every line feed (a CRLF is one break; U+000B, U+000C, U+2028, U+2029 and U+0085 stay inside a line), each
 // piece trimmed of White_Space at both ends (OWMessage::Trim; a byte order mark stays), and a piece with nothing left
 // is no line. The npm SDK's readReportLines.
-std::vector<OWReportLine> ReadLines(std::string_view text, const std::optional<std::string>& world = std::nullopt);
+OW_API std::vector<OWReportLine> ReadLines(std::string_view text, const std::optional<std::string>& world = std::nullopt);
 
 }  // namespace OWReport
 }  // namespace OnlyWorlds

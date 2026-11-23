@@ -13,6 +13,7 @@
 // after the read is on int64: exact, and the same as the SDK's doubles while every step and year sum stays within
 // 2^53. Strings are UTF-8.
 
+#include "OWApi.h"
 #include "OWJson.h"
 
 #include <cstdint>
@@ -95,54 +96,54 @@ struct OWWorldCalendar {
 
 namespace OWCalendar {
 
-extern const char* const Field;      // "atlas_calendar": the field a reader finds a calendar by
-extern const char* const Supertype;  // "calendar": the supertype Atlas gives a calendar Construct (convention only)
+extern OW_API const char* const Field;      // "atlas_calendar": the field a reader finds a calendar by
+extern OW_API const char* const Supertype;  // "calendar": the supertype Atlas gives a calendar Construct (convention only)
 
 // The field's value: an object, or the same object as a JSON string (strict JSON: JSON.parse's grammar, no byte order
 // mark). std::nullopt for a JSON null, any other kind, or a value the profile refuses.
-std::optional<OWCalendarConfig> ReadValue(const OWJsonValue& raw);
+OW_API std::optional<OWCalendarConfig> ReadValue(const OWJsonValue& raw);
 
 // The object half: every "Not a calendar" rule (the SDK's readCalendarConfig).
-std::optional<OWCalendarConfig> ReadConfig(const OWJsonValue& value);
+OW_API std::optional<OWCalendarConfig> ReadConfig(const OWJsonValue& value);
 
 // Every element (each a JSON object) with a valid `atlas_calendar`, in order: found by the field, never by type or
 // supertype. A value that does not read is skipped.
-std::vector<OWWorldCalendar> WorldCalendars(const std::vector<OWJsonValue>& elements);
+OW_API std::vector<OWWorldCalendar> WorldCalendars(const std::vector<OWJsonValue>& elements);
 
 // Euclidean floor division and its modulo (b > 0).
-int64_t FloorDiv(int64_t a, int64_t b);
-int64_t FloorMod(int64_t a, int64_t b);
+OW_API int64_t FloorDiv(int64_t a, int64_t b);
+OW_API int64_t FloorMod(int64_t a, int64_t b);
 
 // The year arithmetic (steps 1 and 3): step 0 opens year 0; a year is the months' lengths, each yearly day outside the
 // months, and one step for each leap day its year index earns.
-bool IntercalaryInYear(const OWCalendarConfig& cal, const OWCalendarIntercalary& ic, int64_t year);
-int64_t YearStartStep(const OWCalendarConfig& cal, int64_t year);
-int64_t YearLength(const OWCalendarConfig& cal, int64_t year);
-int64_t AbsoluteYear(const OWCalendarConfig& cal, int64_t step);
+OW_API bool IntercalaryInYear(const OWCalendarConfig& cal, const OWCalendarIntercalary& ic, int64_t year);
+OW_API int64_t YearStartStep(const OWCalendarConfig& cal, int64_t year);
+OW_API int64_t YearLength(const OWCalendarConfig& cal, int64_t year);
+OW_API int64_t AbsoluteYear(const OWCalendarConfig& cal, int64_t step);
 
 // The era holding a step (step 4): its index, or -1. The latest start wins, then an up era over a down one, then the
 // later in the list; an open up era ends at the next up era's start.
-int EraForStep(const OWCalendarConfig& cal, int64_t step);
+OW_API int EraForStep(const OWCalendarConfig& cal, int64_t step);
 // The year a step reads in an era (or the absolute year for era -1 or a restart false).
-int64_t DisplayYear(const OWCalendarConfig& cal, int64_t step, int era);
+OW_API int64_t DisplayYear(const OWCalendarConfig& cal, int64_t step, int era);
 
 // The weekday's name, or absent: no week, fewer names than its length, a nested week outside the months, a day
 // outside the week.
-std::optional<std::string> WeekdayForStep(const OWCalendarConfig& cal, int64_t step);
+OW_API std::optional<std::string> WeekdayForStep(const OWCalendarConfig& cal, int64_t step);
 
-OWCalendarBreakdown Breakdown(const OWCalendarConfig& cal, int64_t step);
+OW_API OWCalendarBreakdown Breakdown(const OWCalendarConfig& cal, int64_t step);
 
 // The step in words (step 5, with the default templates). With no calendar, the bare step.
-std::string FormatStep(const OWCalendarConfig& cal, int64_t step);
-std::string FormatStep(const std::optional<OWCalendarConfig>& cal, int64_t step);
+OW_API std::string FormatStep(const OWCalendarConfig& cal, int64_t step);
+OW_API std::string FormatStep(const std::optional<OWCalendarConfig>& cal, int64_t step);
 
 // A template filled: {day} {month} {weekday} {year} {era} {step} {intercalary}; a known token with no value prints
 // empty and one , ; U+00B7 or white space on each side of it closes up (a dash never does); an unknown token prints
 // as written. White space is JavaScript's \s.
-std::string RenderTemplate(std::string_view tmpl, const OWCalendarTokens& values);
+OW_API std::string RenderTemplate(std::string_view tmpl, const OWCalendarTokens& values);
 
 // The name an era prints as ({era}): its abbrev, else its name.
-std::string EraLabel(const OWCalendarEra& era);
+OW_API std::string EraLabel(const OWCalendarEra& era);
 
 }  // namespace OWCalendar
 }  // namespace OnlyWorlds

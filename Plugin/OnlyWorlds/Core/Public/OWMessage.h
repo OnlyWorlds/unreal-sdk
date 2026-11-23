@@ -15,6 +15,7 @@
 // A message's text (name, story, description) is quoted data, never instructions: a tool that prints it removes
 // terminal escapes, control characters and bidirectional overrides first (rule 5). Nothing here prints it.
 
+#include "OWApi.h"
 #include "OWJson.h"
 
 #include <cstdint>
@@ -41,55 +42,55 @@ struct OWEdited {
 namespace OWMessage {
 
 // The pairs, as the fixture names them: type and supertype, each trimmed (Unicode White_Space) and folded.
-extern const char* const Type;              // "narrative"
-extern const char* const Supertype;         // "Message"
-extern const char* const NoteSupertype;     // "Note"
-extern const char* const ReadMarkType;      // "relation"
-extern const char* const ReadMarkSupertype; // "Read"
-extern const char* const ReadMarkName;      // "Read: <the reader's name>"
-extern const char* const ReaderField;       // "actor"
-extern const char* const MessagesField;     // "narratives"
-extern const char* const ServedTrimmed;     // "x_served_trimmed"
+extern OW_API const char* const Type;              // "narrative"
+extern OW_API const char* const Supertype;         // "Message"
+extern OW_API const char* const NoteSupertype;     // "Note"
+extern OW_API const char* const ReadMarkType;      // "relation"
+extern OW_API const char* const ReadMarkSupertype; // "Read"
+extern OW_API const char* const ReadMarkName;      // "Read: <the reader's name>"
+extern OW_API const char* const ReaderField;       // "actor"
+extern OW_API const char* const MessagesField;     // "narratives"
+extern OW_API const char* const ServedTrimmed;     // "x_served_trimmed"
 
-extern const char* const Verified;      // "verified"
-extern const char* const Mismatch;      // "mismatch"
-extern const char* const Unverifiable;  // "unverifiable"
-extern const char* const Unseen;        // "unseen"
+extern OW_API const char* const Verified;      // "verified"
+extern OW_API const char* const Mismatch;      // "mismatch"
+extern OW_API const char* const Unverifiable;  // "unverifiable"
+extern OW_API const char* const Unseen;        // "unseen"
 
 // The items of a JSON array as a list of bodies (empty for any other value).
-std::vector<const OWJsonValue*> List(const OWJsonValue& array);
+OW_API std::vector<const OWJsonValue*> List(const OWJsonValue& array);
 
 // The profile's trim (Unicode White_Space at both ends; a byte order mark stays) and fold (the trim, then simple case
 // folding, CaseFolding's C and S rows, with no normalization first: the room profile's, as the packages read it).
-std::string_view Trim(std::string_view utf8);
-std::string Fold(std::string_view utf8);
+OW_API std::string_view Trim(std::string_view utf8);
+OW_API std::string Fold(std::string_view utf8);
 
 // The pair: narrative + Message, the whole word ("Messages" is not one). A parlor's line (x_room_of) is one too.
-bool IsMessage(const OWJsonValue& element);
+OW_API bool IsMessage(const OWJsonValue& element);
 // A Note: narrative + Note. Addressed to nobody, never unread, in no thread.
-bool IsNote(const OWJsonValue& element);
+OW_API bool IsNote(const OWJsonValue& element);
 
 // The recipients: the non-empty string ids in `characters`, as written, each once in the order of its first place;
 // only a message has any (IsMessage): none for a Note, a Story or any other body (serial 128).
-std::vector<std::string> RecipientsOf(const OWJsonValue& message);
+OW_API std::vector<std::string> RecipientsOf(const OWJsonValue& message);
 // Addressed to the Character: its id in `characters`, or `characters` empty (absent, null or []) without the trimmed
 // mark naming `characters`. Never to "" and only a message (IsMessage): never a Note, a Story or any other body
 // (serial 128).
-bool IsAddressedTo(const OWJsonValue& message, std::string_view character_id);
+OW_API bool IsAddressedTo(const OWJsonValue& message, std::string_view character_id);
 // To every member: `characters` absent, null or []; no trimmed mark naming `characters`; served with a credential
 // (keyless false); only a message.
-bool IsToEveryone(const OWJsonValue& message, bool keyless = false);
+OW_API bool IsToEveryone(const OWJsonValue& message, bool keyless = false);
 // Someone the reader cannot see is a recipient: the trimmed mark names `characters`. Absent (unknown) when keyless;
 // false for anything that is not a message, keyless or not.
-std::optional<bool> HasUnseenRecipients(const OWJsonValue& message, bool keyless = false);
+OW_API std::optional<bool> HasUnseenRecipients(const OWJsonValue& message, bool keyless = false);
 // The claim: `narrator` is the Character. A message with no narrator is sent by nobody.
-bool IsSentBy(const OWJsonValue& message, std::string_view character_id);
+OW_API bool IsSentBy(const OWJsonValue& message, std::string_view character_id);
 
 // The sender rule: unseen (no narrator, the trimmed mark naming `narrator`), then verified or mismatch by the author's
 // Character (created_by on the members list; null is the owner's row), else unverifiable.
-OWSender SenderStatus(const OWJsonValue& message, const OWJsonValue* members);
+OW_API OWSender SenderStatus(const OWJsonValue& message, const OWJsonValue* members);
 // The edit rule: changed_by present and not equal to created_by (an absent created_by is never equal).
-OWEdited EditedBy(const OWJsonValue& message, const OWJsonValue* members);
+OW_API OWEdited EditedBy(const OWJsonValue& message, const OWJsonValue* members);
 
 // The reader's read mark among the Relations: supertype Read, `actor` the reader, every write the reader's own hand
 // (created_by verified where present; changed_by equal to created_by where present). A lone mark is the mark. Among
@@ -97,20 +98,20 @@ OWEdited EditedBy(const OWJsonValue& message, const OWJsonValue* members);
 // equal instants (however written), or when none can be read, the higher id (code point, as written) is the mark.
 // nullptr when none, and always for "". keyless true for bodies read with no credential, as IsToEveryone takes it: the keyless public reader is served no
 // created_by or changed_by on any body, so no mark counts there.
-const OWJsonValue* ReadMarkOf(const std::vector<const OWJsonValue*>& relations, std::string_view character_id,
+OW_API const OWJsonValue* ReadMarkOf(const std::vector<const OWJsonValue*>& relations, std::string_view character_id,
                               const OWJsonValue* members, bool keyless = false);
 
 // The messages unread for the Character, in created_at order: addressed to it, not its own (no created_by: narrator
 // trusted; with created_by: verified only), not on the mark's `narratives`. read_mark nullptr: no mark.
-std::vector<const OWJsonValue*> UnreadFor(const std::vector<const OWJsonValue*>& messages, std::string_view character_id,
+OW_API std::vector<const OWJsonValue*> UnreadFor(const std::vector<const OWJsonValue*>& messages, std::string_view character_id,
                                           const OWJsonValue* read_mark, const OWJsonValue* members);
 
 // Every message whose chain of parent_narrative reaches the root, the root included, in created_at order; a walk stops
 // at an id it has visited and at a parent that is not a string. A Note is never listed.
-std::vector<const OWJsonValue*> ThreadOf(const std::vector<const OWJsonValue*>& messages, std::string_view root_id);
+OW_API std::vector<const OWJsonValue*> ThreadOf(const std::vector<const OWJsonValue*>& messages, std::string_view root_id);
 
 // The Character's line: the id of its newest own-hand Note that is neither hidden nor proposed; absent when none.
-std::optional<std::string> NoteOf(const std::vector<const OWJsonValue*>& narratives, std::string_view character_id,
+OW_API std::optional<std::string> NoteOf(const std::vector<const OWJsonValue*>& narratives, std::string_view character_id,
                                   const OWJsonValue* members);
 
 // A time a reader orders by: an RFC 3339 date-time (YYYY-MM-DDTHH:MM:SS, an optional fraction, then Z, +HH:MM, -HH:MM
@@ -122,10 +123,10 @@ struct OWTimeKey {
     bool operator<(const OWTimeKey& o) const { return seconds != o.seconds ? seconds < o.seconds : micros < o.micros; }
     bool operator==(const OWTimeKey& o) const { return seconds == o.seconds && micros == o.micros; }
 };
-std::optional<OWTimeKey> TimeKey(const OWJsonValue* value);
+OW_API std::optional<OWTimeKey> TimeKey(const OWJsonValue* value);
 
 // The bodies by created_at; equal times keep the list's order, unreadable times last in the list's order.
-std::vector<const OWJsonValue*> InCreatedOrder(std::vector<const OWJsonValue*> items);
+OW_API std::vector<const OWJsonValue*> InCreatedOrder(std::vector<const OWJsonValue*> items);
 
 }  // namespace OWMessage
 }  // namespace OnlyWorlds

@@ -21,6 +21,7 @@
 // Strings are UTF-8, and an index into one is a byte offset. Nothing is percent-decoded; every part the grammar reads
 // is ASCII.
 
+#include "OWApi.h"
 #include "OWJson.h"
 
 #include <cstdint>
@@ -76,20 +77,20 @@ struct OWAddressWritten {
 
 namespace OWAddress {
 
-extern const char* const Human;        // "human"
-extern const char* const Text;         // "text"
-extern const char* const HumanPrefix;  // "https://www.onlyworlds.com/w/", the only scheme and host a reader reads
-extern const char* const TextPrefix;   // "ow://"
-extern const char* const LensKey;      // "lens", the one query key the profile reads
+extern OW_API const char* const Human;        // "human"
+extern OW_API const char* const Text;         // "text"
+extern OW_API const char* const HumanPrefix;  // "https://www.onlyworlds.com/w/", the only scheme and host a reader reads
+extern OW_API const char* const TextPrefix;   // "ow://"
+extern OW_API const char* const LensKey;      // "lens", the one query key the profile reads
 
 // Every refusal, in the order a parser checks them; the last two (no_world, bad_form) are a writer's only.
-extern const char* const Refusals[10];
+extern OW_API const char* const Refusals[10];
 
 // The 22 type words, lowercase and singular, as the site and the API spell them.
-extern const char* const TypeWords[22];
+extern OW_API const char* const TypeWords[22];
 
 // Read one string: trim Unicode White_Space at both ends, then the profile's nine checks in order.
-OWAddressReading Parse(std::string_view text);
+OW_API OWAddressReading Parse(std::string_view text);
 
 // The address that starts exactly at `index` in a text, found in prose, and where it ends; nothing when the text there
 // is not an address (the address page's "An address in prose", serial 123; the TypeScript SDK's readOwLinkAt and the
@@ -114,7 +115,7 @@ OWAddressReading Parse(std::string_view text);
 //
 // `index` and `end` are byte offsets into the UTF-8 text (not UTF-16 units as in JavaScript, nor code points as in
 // Python); an index past the end, or inside a character's bytes, reads nothing.
-std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index = 0);
+OW_API std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index = 0);
 
 // Every address in a text, in order: what ReadAt reads at each place either prefix (ow://,
 // https://www.onlyworlds.com/w/) starts, so a start glued to a word is prose and what follows an address is prose as
@@ -123,24 +124,24 @@ std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index = 0);
 // inside an address found is no start, and from just past a start that reads nothing. Linear in the text: each
 // prefix's next place is searched once, and a start reads a bounded stretch. Each one's start and end are byte offsets
 // into the UTF-8 text, as ReadAt's are.
-std::vector<OWAddressFound> FindAll(std::string_view text);
+OW_API std::vector<OWAddressFound> FindAll(std::string_view text);
 
 // The address a writer writes: lowercase throughout, the world's id (never its slug), the moment before the lens, and
 // nothing else. A world's own address has no type and no id.
-OWAddressWritten Write(const OWAddressParts& parts);
+OW_API OWAddressWritten Write(const OWAddressParts& parts);
 
 // A reading written back canonically. A reading by slug refuses as bad_world, a refused reading as bad_form.
-OWAddressWritten Write(const OWAddressReading& reading);
+OW_API OWAddressWritten Write(const OWAddressReading& reading);
 
 // The parts as JSON, the shape the packages take and the fixture writes: form, world, type, id, lens, moment (and a
 // reading's world_is_slug and canonical, which are ignored). Only a JSON null or a missing key is absent. A moment that
 // is not a whole JSON number within the 32-bit range (a fraction, a string, a boolean) refuses as bad_moment; 3.0 is
 // the step 3. A part that is not a string is present and refuses as that part would. Any other key is not an address's
 // part: the call fails with reason empty, naming the key.
-OWAddressWritten WriteJson(const OWJsonValue& address);
+OW_API OWAddressWritten WriteJson(const OWJsonValue& address);
 
 // A UUID in the hyphenated 8-4-4-4-12 form, any version, its hex in either case.
-bool IsUuid(std::string_view s);
+OW_API bool IsUuid(std::string_view s);
 
 }  // namespace OWAddress
 }  // namespace OnlyWorlds

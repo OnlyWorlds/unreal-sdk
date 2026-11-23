@@ -95,7 +95,8 @@ same file is `Host/Source/OWHost/OWFirstRun.cpp`.
 
 The client is the plugin's core, plain C++17 with no Unreal header, so its types are the standard library's
 (`std::make_shared`, snake_case members) and `OWConvert` turns its text into an `FString`. The first callback holds
-`Client`, so the client is still there for the second call.
+`Client`, so the client is still there for the second call. Your module links against the core's classes and
+functions directly: the plugin's module exports them (`OW_API`).
 
 On Blueprints the same read is the **Read World** node: give it a config whose `ApiKey` is `0000000001`, and
 `OnSuccess` hands you the world as JSON text, not a struct. The API's reads and element writes each have a node like
@@ -174,6 +175,7 @@ python codegen/generate_models.py --check           # the generated structs matc
 python codegen/generate_tools.py --check            # the tools list's pin holds, OWTools.generated.cpp is current
 python codegen/generate_presentation.py --check     # the generated sidecar matches presentation.json
 python codegen/generate_frame_bits.py --check       # tests/data's frame bits match the map-space fixture
+python tools/check_exports.py                       # every core declaration a game module links against carries OW_API
 ```
 
 The plugin builds, and its automation tests (`OnlyWorlds.*`) run, through the host project in `Host/`, which finds the
