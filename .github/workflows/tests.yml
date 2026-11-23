@@ -36,6 +36,12 @@ jobs:
           python codegen/test_generate_presentation.py
           python codegen/test_generate_tools.py
 
+      # The zip a release carries (tools/release_zip.py), made from this commit: the script and the .uplugin's
+      # VersionName stay readable. Building the zipped plugin needs Unreal and does not run here.
+      - name: The release zip
+        shell: bash
+        run: python tools/release_zip.py HEAD --out dist
+
       - name: Find Visual Studio
         shell: pwsh
         run: |

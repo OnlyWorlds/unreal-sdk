@@ -1,20 +1,33 @@
 # Changelog
 
 Notable changes to the OnlyWorlds SDK for Unreal. Format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Where it stands.** Version 0.1.0 (`Plugin/OnlyWorlds/OnlyWorlds.uplugin`), not yet tagged: nothing is released, and
-`main` is the plugin as it is. What a game can do with it today: open a world on disk (a world folder or an
-`.owworld` file) and read its elements of all 22 types as Blueprint structs; read and write a world over the
-onlyworlds.com API from Blueprint nodes, which answer JSON text, and from C++; and read a world it holds without a
-server (as a graph, as map geometry, by its own calendar, as one reader may see it), each reader giving the same
-answers as the other OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine 5.8, Win64.
-Everything so far is under [Unreleased] below, in the detail a maintainer needs; the history before this file is in
-the git log. The [README](README.md) has the install and a first run.
+**Where it stands.** 0.1.0 is the first release. `onlyworlds-unreal-0.1.0.zip`, on the repository's Releases page,
+holds the plugin folder to drop into a project's `Plugins/`, as source the project compiles; the [README](README.md)
+has the install and a first run. What a game can do with it: open a world on disk (a world folder or an `.owworld`
+file) and read its elements of all 22 types as Blueprint structs; read and write a world over the onlyworlds.com API
+from Blueprint nodes, which answer JSON text, and from C++; and read a world it holds without a server (as a graph, as
+map geometry, by its own calendar, as one reader may see it), each reader giving the same answers as the other
+OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine 5.8, Win64. The entries below are in
+the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+## [0.1.0] - RELEASE-DATE
+
+The first numbered release: the plugin as built so far, every call as [docs/reference.md](docs/reference.md) describes
+it, in one zip.
+
 ### Added
+
+- The release zip, `onlyworlds-unreal-<version>.zip`: one `OnlyWorlds/` folder to drop into a project's `Plugins/`,
+  `Plugin/OnlyWorlds/` as the tagged commit holds it, with a copy of the licence inside. It leaves out the automation
+  tests (`Source/OnlyWorlds/Private/Tests/`): they need the repository's fixtures and run from a clone.
+  `tools/release_zip.py <tag>` makes it from git, never from the working folder (so never a build's `Binaries/` or
+  `Intermediate/`), refuses a tag that the `.uplugin`'s `VersionName` does not match, and writes the same bytes for the
+  same commit; the tests workflow makes it on every push.
 
 - A front door for a first-time reader: `LICENSE` (MIT), `SECURITY.md`, a README with an install and a first run on
   the public sample world Moppetopia with its demo key (`Host/Source/OWHost/OWFirstRun.cpp`, the console command
@@ -145,6 +158,157 @@ the git log. The [README](README.md) has the install and a first run.
   12 by-kind cases bit for bit, 7 around cases. `tools/twin_run.cpp` answers the layout twin's two kinds as well: on
   1,500 random graphs against the TypeScript SDK, 159,081 by-kind points equal to the bit and 705 around runs within
   1e-12. Not yet for Blueprints.
+
+- `OWLanding::LandingOf(graph, options)` in the core (`OWLanding.h`): the landing profile's reader (schema-dist
+  `profiles/landing.md`, serial 103), a world's first picture at a door, read from the graph `OWGraph::WorldGraph`
+  answers for the visitor, so it sees exactly what that reader may see. The answer (`OWWorldLanding`, `ToJson()` the
+  profile's `{mode, size, clusters, unclustered, gaps}`): the most-linked Characters as heads, each with the nodes
+  within `hops` steps of it (the nearest head wins, a tie going to the higher-ranked one), every node no head reaches,
+  and the gaps (an orphan, a near-orphan, a Character with no place, a Location nobody is in), with the mode (`gaps`
+  under `size` nodes, `graph` at it). Options (`OWLandingOptions`, or as JSON the way the packages take them): `heads`
+  (5), `hops` (1), `size` (24), each a whole number of 1 or more; an unknown key or another value is refused by name.
+  Counted in integers, ids in code point order. Parity with the TypeScript SDK's `landingOf` and the Python package's
+  `landing_of`; held to the profile's 30-case fixture by its sha256. Not yet in the plugin's Blueprint library.
+- `OWRecord::RecordsOf(character, elements)` in the core (`OWRecord.h`): the record profile's reader (schema-dist
+  `profiles/record.md`, serial 102), a Character's records in a world, each a game's run kept as an Event marked by
+  `x_record`, read over the elements as served: the run's tool, `played_at`, version, seed and outcome, the
+  Character's seat, and their stories of it (`protagonist`, `narrator` or `both`), newest first (`OWCharacterRecord`,
+  `ToJson()` the profile's entry). Who took part is the Event's `characters` alone, never `seats`; a run or story still
+  proposed is not read; a mark on anything but an Event is no record. Beside it `OWRecord::MarkOf(element)` (the mark
+  read, or none for a broken writer: a tool or outcome out of form, a seed or version that is not a string, seats that
+  are not an object of strings) and `OWRecord::InstantOf(played_at)`: `played_at` is checked by its parts on the
+  Gregorian calendar, never by a date parser, and ordered as an instant to the millisecond, a fraction truncated past
+  three digits; ties and stories by id in code point order. Held to the profile's 32-case fixture by its sha256. Not
+  yet in the plugin's Blueprint library.
+- `OWClient` in the core (`OWClient.h`): the first API client, so a game reads an onlyworlds.com world over keel's v2
+  API. The read calls: `Health`, `GetWorld`, `Me` (`OWCharter::Served` reads its `reading_aids`), `Members` (the rows
+  `OWMessage` takes), `List` with its typed options and single-link filters, `ListAll` (every page by `has_more`; a
+  page that hands back the cursor it was sent stops the walk), `Get`, `Changes` and `ChangesHead` (the tip read,
+  conditional on its ETag: a 304 hands back the last 200's tip). Elements are answered as their bodies (`OWJsonValue`),
+  errors as one `OWApiError` (keel's envelope, `Retry-After`, the read helpers). The credential rules are the Unity
+  SDK's: the PIN only on `GET /me` among the reads and on every request of a legacy key, an account token as a Bearer
+  with `world=`, no key reading a public world, and what a client may not send refused before sending. Every value a
+  call puts in a request path, the element type and the id, is sent as one escaped segment, as the TypeScript SDK
+  sends it since 4.122.1: a string like `abc/hidden` never asks a different route. Requests go
+  through `OWTransport` (`OWTransport.h`), one call answered once through a callback, so Unreal's asynchronous HTTP and
+  a synchronous test fake both fit; a client may be destroyed with a request in flight. Held to keel's OpenAPI
+  document, vendored from the Unity SDK (`tests/data/keel-wire.json`), which follows keel's (at `a42c3fa5ed09`: the Pin
+  list takes `element`, the Pins that place that element of any type, `""` for the Pins placing nothing; a read-only
+  sign-in's token answers carry `scope`; the AI lens answer carries `charged`; the member rows carry `follows_sponsor`
+  and `may_change_character_note`, and two 422 codes, `seat_above_sponsor` and `seat_follows_sponsor`, are listed; the agent seat rows carry `may_change_character`, its note and `follows_sponsor`; the front door on `GET /me`, `POST /join` and two `PUT /me/...` answers serves
+  `front_door.charter_element` and `front_door.charter_skill_elements`; a member's PATCH body and answer carry
+  `may_change_character`; the draught's answer carries `work[].by_role`; the request body of `POST /account/worlds/{world_id}/messages`
+  takes `constructs`, `objects` and `relations` beside `characters`; `POST /bulk` takes `create_only`, and every
+  proposal answer declares `house`; both invite link bodies take `note`, and `POST /join/preview` answers it and its `glimpse`); `List` already sends any
+  field-named filter as given, so `filter["element"] = id` needs no change here, and no path, method, parameter or
+  request key moved.
+- `FOWHttpTransport` in the plugin (`OWHttpTransport.h`): the client's transport on Unreal's `FHttpModule`. It
+  answers each request once, on the game thread, with the body's bytes as received, or with status 0 and a failure
+  (no connection, the timeout, a request that would not start). Unreal's HTTP follows a redirect itself, and nothing
+  above it can stop that, so a followed answer is refused as a failure: the client never reads another address's
+  answer as keel's. Its automation tests: `OnlyWorlds.Client.Transport.NoConnection` (no network), and
+  `OnlyWorldsLive.Client.Health`, `.Moppetopia` and `.Redirect` against production, run by name. Not yet: Blueprint
+  calls for the client.
+- `OWCharter::Served(answer)` in the core (`OWCharter.h`): the front door's packet as the server serves it,
+  `reading_aids` in a `GET /me` answer or an agent's join answer, read as served for that key and never recomputed:
+  the Charter, the Guide and the Domains as served, then the world's strand (serial 100) as `strand`, an
+  `OWWorldStrand` read by `OWStrand::Served` (each slot `{id, name}` or empty, `same` as served). Six null slots read
+  as an empty strand, the world having none or its story being out of the key's view; a packet with no `strand` (a
+  server from before serial 100) leaves `strand` absent; an answer with no packet (a player's join answer) reads
+  none. `ToJson` writes the packet in the charter profile's order, the strand fourth, and only when it was served.
+  `CharterOf` still reads the three aids alone.
+- `OWStrand::StrandOf(world, reader)` in the core (`OWStrand.h`): the strand profile's reader (schema-dist
+  `profiles/strand.md`, serial 98), a world's strand as one reader sees it through the lens reader's own view: the
+  story the World's `x_strand` names, one of its events, that event's place, the story's `protagonist`, where the hero
+  is now, and whether then and now are one place by id (`OWWorldStrand`, `ToJson()` the profile's six keys). A slot
+  holds only its own kind, no slot is filled from another, a list's order is never read, and a story the reader knows
+  only as a stub fills its own slot alone. Only the story's id is required (serial 99): the event and the place null
+  or absent read as unset, a place with no event is an empty place, and any other value there (an empty string, a
+  number, an object) is no mark, as is a story that is not a string. A multi-link that is not a list lists nothing; a
+  nameless slot reads an empty string; the public rung reads only a world open to anyone. Held to the profile's
+  fixture by its sha256. Not yet in the plugin's Blueprint library.
+- The plugin in a packaged game: the host's game target built, cooked and staged by BuildCookRun (Win64 Development),
+  and run outside the editor with `-OWWorld=<folder or .owworld>`, `-nullrhi`. It opens the world through `UOWLibrary`,
+  logs the element count by type, an address written and read back, a step in the world's calendar, the Open with rows
+  online and offline, and exits 0 by itself; a refused or missing world logs its reason and exits 2. Run on Sikelia's
+  folder (20570 elements), the conformance set's `pass-good.owworld`, Moppetopia (its calendar) and two refusals.
+
+- The Open with rows offline, as the npm SDK 4.118.0 and the Python package 0.96.0 give them: `OWOpenerSurface::online`
+  (default true; `online` in `OpenersForJson`'s surface, anything but a boolean refused by name) and
+  `FOWOpenerSurface.bOnline` on Blueprints. Offline, every row whose href is a web address (`http:` or `https:`, in any
+  case) says "Needs a connection", the site's own row included, after "You are here" and before the browser, sign-in
+  and phone words; a row whose link opens an app keeps its own word, and every href stays. Held to the packages' shared
+  fixture, now 54 cases (sha256 `5a9ebbc8...`), and to an exact-refusal test for `online` beside it.
+- Blueprint graphs built, compiled and run in the editor's automation tests (`OnlyWorlds.Graph.Pins`, `.Run`): a
+  function graph of real K2 nodes over every door, compiled by the Kismet compiler with no error or warning, its
+  answers the core's on every element of Sikelia and Moppetopia. The editor's answer to the open question: no
+  generated struct's `TOptional<int64>` member gets a pin on a Break or a Make node (70 members). The module links
+  `UnrealEd` and `BlueprintGraph` in an editor target only, for these tests.
+- The address, the Open with rows and the names on Blueprints: `UOWAddresses` (`ParseAddress`, `WriteAddress`, the
+  `FOWAddress` struct with a `bHas` flag per part, so an empty string refuses as that part would), `UOWOpeners`
+  (`OpenersFor` an element of an opened world or the world itself, `OpenersForAddress`, over the baked tools list;
+  `FOWOpenerSurface`, `FOWOpener`) and `UOWNames` (`TypeWord`). A refusal is `false` and the reason. Each function is
+  held by automation tests that call it through reflection as a graph does: the address fixture's parse and format
+  cases, the openers and names fixtures where a Blueprint pin can carry a case, and every element of Sikelia.
+- `OWNames::TypeWord(world, type, supertype, many)`: a world's own word for a type, the names profile's `x_names`
+  on the World (schema-dist `profiles/names.md`), a port of the npm SDK's `typeWord` and the Python package's
+  `type_word`. The supertype's entry first, its key trimmed and folded as the room profile reads (`OWMessage::Trim`,
+  `Fold`), then the type's, else absent for the standard's name; a value that is not a names map is absent
+  everywhere. `version` is the number 1 in any spelling (`1.0`, `1e0`), never `true` or `"1"`; a `types` or
+  `supertypes` key present and null refuses the map, as npm reads it. Held to the profile's 23-case fixture (its
+  sha256 held to `MANIFEST.json`). Core only, no Blueprint function yet.
+- The review profile's rule 1 held by the npm and Python packages' 24 shared cases (npm `test/review.test.mjs`
+  at 4.102.2, Python `tests/test_review.py` at 0.84.1), same names and order, against `OWLens::IsProposed`: whether
+  a reader leaves an element out as proposed, a doubt included. The reader is unchanged; three mutants of it (an
+  empty list or object counted, a null mark counted, a mark string untrimmed) each fail the cases.
+- The room profile's conformance fixture (schema-dist `profiles/room.fixture.json`, its sha256 held to
+  `MANIFEST.json`) run against `OWLens::IsRoomElement`: all 32 cases, each in the room exactly when the pair and
+  the mark both hold. The reader itself is unchanged; four mutants of it (the mark or the pair ignored, a mark
+  string untrimmed, the pair unfolded) each fail the cases.
+- `OWCharter` in the core, the charter profile's reader (schema-dist `profiles/charter.md`): `CharterOf(world, reader)`
+  (the profile's `charterOf`: the packet `{charter, guide, domains}` as one reader sees the world, the Charter
+  `{id, name, rules, skill}` and the Guide `{id, name}` the newest marked ones, the Domains `{id, name, sentence, hubs}`
+  in the Guide's order, then by folded name and id), `DomainsOf`, `IsCharterElement` (the pair and the mark),
+  `ReadingAidOf` (the pair alone), `FirstLine` and the profile's tables. It reads who sees what, and the body each
+  reader is served, through `OWLens`'s own view. keel's reading aids (`reading_aids`, `charter_skill`) are the rule
+  followed: the Charter is read whole as stored, so a guest who knows it only as a stub still reads its rules and
+  skill, and a skill id matches an Object's whatever its case. A proposed element is in no reader's view here, as in
+  the lens reader. Tested by every case of the profile's fixture (18 `charter`, 5 `element`).
+- `OWGraph` in the core, the lens profile's graph section: `WorldGraph(world, reader, options)` (the profile's
+  `worldGraph`: the nodes by id with their colour word and icon from `OWPresentation`, their marks and `known_of`; the
+  edges by source, field and index, the index the reader is served; `edges_cut` and `cut` by reason; `unreadable`; or
+  `refused` naming a flag asked from the wrong rung), `DegreeOf`, `OutDegreeOf` and the profile's tables. It reads
+  who sees what, and a lens's kept and cut, through `OWLens`'s own view and resolution. keel's graph reader for the
+  profile is the rule followed. Tested by the fixture's 39 graph cases (every case of the lens fixture now runs) and
+  the profile's invariants over each.
+- `OWPresentation` in the core: the presentation sidecar (schema-dist `presentation.json`), generated by
+  `codegen/generate_presentation.py` into `Core/Private/OWPresentation.generated.cpp` (`--check` fails on drift):
+  `Order()` (the colour words, `colors.order`), `FamilyOf`, `IconOf` and `PublicOf` per type. A family word not in
+  `colors.order` fails loudly, naming the word: the generator writes nothing, and the generated table holds the rule as
+  a `static_assert`. `OWLens::PublicFieldsOf` reads it in place of its copied table. Tested against the vendored file
+  (`tests/test_presentation.cpp`) and by `codegen/test_generate_presentation.py`.
+- `OWLens` in the core, the lens profile's reader: `Resolve(world, lens, reader, options)` (the profile's `resolveLens`:
+  the kept ids in the profile's order, `show`'s rows, the cut counted by reason, `notes_ignored`, the mail part, or
+  `unreadable` naming the key), `IsLens`, `IsTemplate`, `CheckKeys` (the legal values of `x_lens`), `LensesInUse`
+  (where a seat's choice lives), `DateOf` (the profile's date table), `IsRoomElement`, `IsReadingAid`, `IsProposed`
+  and the profile's tables. keel's reader (`elements/lens.py`, with the bodies `elements/serialize.py` serves each
+  reader) is the rule followed; the mail rule reads through `OWMessage`. Tested by the fixture's 114 shape, keys, uses,
+  resolve and invariant cases, the tables held to the
+  fixture, the field table to `schema.json` and the stub's public fields to `presentation.json`.
+- `OWOpeners::OpenersFor(tools, kind, address, surface)` in the core: the rows of an "Open with" menu for a world
+  (`"world"`) or one of its elements (`"element"`), a port of the npm SDK's `openersFor` and the Python package's
+  `openers_for`. The site's page comes first, then each listed tool with a link for that kind, in the list's order,
+  each an `OWOpener` (`id`, `name`, `href`, `state`: the row's word in sentence case, or none). The address is
+  `OWAddressParts` or an `OWAddressReading`; `OpenersForJson` takes the tools, the address and the surface as JSON.
+  An `OWOpenersResult` answers: `rows` when `ok`; else `reason`, the address profile's refusal, or an empty `reason`
+  and a `message` naming the key. The whole address is checked by the writer, so a malformed form, lens or moment
+  refuses (`bad_form`, `bad_lens`, `bad_moment`), as the npm SDK 4.110.0 and the Python package 0.91.0 do. Tested
+  by the packages' shared fixture (45 cases, held by its sha256). Core only: no Blueprint function yet.
+- `OWTools::All()`: the OnlyWorlds tools list (github.com/OnlyWorlds/tools, `tools.json` format 1) baked in at commit
+  `86208c8`, the keys `OpenersFor` reads. The list is vendored at `codegen/tools/tools.json` and pinned in
+  `codegen/tools-pin.json`; `codegen/generate_tools.py` writes `Core/Private/OWTools.generated.cpp` and `--check`
+  fails when the two disagree. A tool listed after a release is offered from the next one. The Runtime module
+  compiles both new files with the rest of `Core/Private`, with no list to change.
 
 ### Changed
 
@@ -417,21 +581,6 @@ the git log. The [README](README.md) has the install and a first run.
   door. A row without the key reads as before. On Blueprints, `UOWOpeners::OpenersFor` and `OpenersForAddress` both
   leave the row out (each passes the address's type). Parity with the TypeScript SDK 4.132.0 and the Python package
   0.106.0: the shared openers fixture at 100 cases, the same bytes.
-
-### Fixed
-
-- `OWFrame::RootMap` (the frame test's scene and the host's `-OWFrame`) never takes a layout map as the root: among
-  the Maps with no `parent_map` it skips any whose `x_layout` is an object with a non-empty string `method` (the
-  map-space profile's rule 8, read through `OWMapSpace::LayoutOf`). A parentless layout map read after the ground
-  (its file name sorting later, as `sikelia-layout--…` after `sikelia--…`) was taken as the map to draw. A world whose
-  only Maps are layout maps has no root Map. Held by `OnlyWorlds.Frame.RootMapSkipsLayoutMaps`, which needs no renderer.
-- `OWFrame::RootMap` puts a Pin on the root Map only when its `map` is the Map's id as written. `FString`'s `==`
-  ignores case, so a Pin whose `map` spelled the Map's id in upper case was drawn on it, where the core's map-space
-  reader on the same world compares exactly. Held by `OnlyWorlds.Frame.RootMapPinsByTheMapsIdAsWritten`. The Map's
-  image is still found under `media/<map id>/base-image/` without case: that is a path, and a world's paths are one
-  name whatever their case.
-
-### Changed
 
 - Schema pin to `v0.34.1-dist.145` (`f73146c`): canonical `00.34.01` unchanged; only the charter and checks pages,
   the charter fixture and the views fixture moved, and the generated files moved in their stamp only (the generators'
@@ -871,92 +1020,12 @@ the git log. The [README](README.md) has the install and a first run.
   `OWOpeners::OpenersFor` offers it in the Open with menu for a world and for an element, to anyone (it needs no account).
   No type or function changed.
 
-### Added
-
-- `OWLanding::LandingOf(graph, options)` in the core (`OWLanding.h`): the landing profile's reader (schema-dist
-  `profiles/landing.md`, serial 103), a world's first picture at a door, read from the graph `OWGraph::WorldGraph`
-  answers for the visitor, so it sees exactly what that reader may see. The answer (`OWWorldLanding`, `ToJson()` the
-  profile's `{mode, size, clusters, unclustered, gaps}`): the most-linked Characters as heads, each with the nodes
-  within `hops` steps of it (the nearest head wins, a tie going to the higher-ranked one), every node no head reaches,
-  and the gaps (an orphan, a near-orphan, a Character with no place, a Location nobody is in), with the mode (`gaps`
-  under `size` nodes, `graph` at it). Options (`OWLandingOptions`, or as JSON the way the packages take them): `heads`
-  (5), `hops` (1), `size` (24), each a whole number of 1 or more; an unknown key or another value is refused by name.
-  Counted in integers, ids in code point order. Parity with the TypeScript SDK's `landingOf` and the Python package's
-  `landing_of`; held to the profile's 30-case fixture by its sha256. Not yet in the plugin's Blueprint library.
-- `OWRecord::RecordsOf(character, elements)` in the core (`OWRecord.h`): the record profile's reader (schema-dist
-  `profiles/record.md`, serial 102), a Character's records in a world, each a game's run kept as an Event marked by
-  `x_record`, read over the elements as served: the run's tool, `played_at`, version, seed and outcome, the
-  Character's seat, and their stories of it (`protagonist`, `narrator` or `both`), newest first (`OWCharacterRecord`,
-  `ToJson()` the profile's entry). Who took part is the Event's `characters` alone, never `seats`; a run or story still
-  proposed is not read; a mark on anything but an Event is no record. Beside it `OWRecord::MarkOf(element)` (the mark
-  read, or none for a broken writer: a tool or outcome out of form, a seed or version that is not a string, seats that
-  are not an object of strings) and `OWRecord::InstantOf(played_at)`: `played_at` is checked by its parts on the
-  Gregorian calendar, never by a date parser, and ordered as an instant to the millisecond, a fraction truncated past
-  three digits; ties and stories by id in code point order. Held to the profile's 32-case fixture by its sha256. Not
-  yet in the plugin's Blueprint library.
-- `OWClient` in the core (`OWClient.h`): the first API client, so a game reads an onlyworlds.com world over keel's v2
-  API. The read calls: `Health`, `GetWorld`, `Me` (`OWCharter::Served` reads its `reading_aids`), `Members` (the rows
-  `OWMessage` takes), `List` with its typed options and single-link filters, `ListAll` (every page by `has_more`; a
-  page that hands back the cursor it was sent stops the walk), `Get`, `Changes` and `ChangesHead` (the tip read,
-  conditional on its ETag: a 304 hands back the last 200's tip). Elements are answered as their bodies (`OWJsonValue`),
-  errors as one `OWApiError` (keel's envelope, `Retry-After`, the read helpers). The credential rules are the Unity
-  SDK's: the PIN only on `GET /me` among the reads and on every request of a legacy key, an account token as a Bearer
-  with `world=`, no key reading a public world, and what a client may not send refused before sending. Every value a
-  call puts in a request path, the element type and the id, is sent as one escaped segment, as the TypeScript SDK
-  sends it since 4.122.1: a string like `abc/hidden` never asks a different route. Requests go
-  through `OWTransport` (`OWTransport.h`), one call answered once through a callback, so Unreal's asynchronous HTTP and
-  a synchronous test fake both fit; a client may be destroyed with a request in flight. Held to keel's OpenAPI
-  document, vendored from the Unity SDK (`tests/data/keel-wire.json`), which follows keel's (at `a42c3fa5ed09`: the Pin
-  list takes `element`, the Pins that place that element of any type, `""` for the Pins placing nothing; a read-only
-  sign-in's token answers carry `scope`; the AI lens answer carries `charged`; the member rows carry `follows_sponsor`
-  and `may_change_character_note`, and two 422 codes, `seat_above_sponsor` and `seat_follows_sponsor`, are listed; the agent seat rows carry `may_change_character`, its note and `follows_sponsor`; the front door on `GET /me`, `POST /join` and two `PUT /me/...` answers serves
-  `front_door.charter_element` and `front_door.charter_skill_elements`; a member's PATCH body and answer carry
-  `may_change_character`; the draught's answer carries `work[].by_role`; the request body of `POST /account/worlds/{world_id}/messages`
-  takes `constructs`, `objects` and `relations` beside `characters`; `POST /bulk` takes `create_only`, and every
-  proposal answer declares `house`; both invite link bodies take `note`, and `POST /join/preview` answers it and its `glimpse`); `List` already sends any
-  field-named filter as given, so `filter["element"] = id` needs no change here, and no path, method, parameter or
-  request key moved.
-- `FOWHttpTransport` in the plugin (`OWHttpTransport.h`): the client's transport on Unreal's `FHttpModule`. It
-  answers each request once, on the game thread, with the body's bytes as received, or with status 0 and a failure
-  (no connection, the timeout, a request that would not start). Unreal's HTTP follows a redirect itself, and nothing
-  above it can stop that, so a followed answer is refused as a failure: the client never reads another address's
-  answer as keel's. Its automation tests: `OnlyWorlds.Client.Transport.NoConnection` (no network), and
-  `OnlyWorldsLive.Client.Health`, `.Moppetopia` and `.Redirect` against production, run by name. Not yet: Blueprint
-  calls for the client.
-- `OWCharter::Served(answer)` in the core (`OWCharter.h`): the front door's packet as the server serves it,
-  `reading_aids` in a `GET /me` answer or an agent's join answer, read as served for that key and never recomputed:
-  the Charter, the Guide and the Domains as served, then the world's strand (serial 100) as `strand`, an
-  `OWWorldStrand` read by `OWStrand::Served` (each slot `{id, name}` or empty, `same` as served). Six null slots read
-  as an empty strand, the world having none or its story being out of the key's view; a packet with no `strand` (a
-  server from before serial 100) leaves `strand` absent; an answer with no packet (a player's join answer) reads
-  none. `ToJson` writes the packet in the charter profile's order, the strand fourth, and only when it was served.
-  `CharterOf` still reads the three aids alone.
-- `OWStrand::StrandOf(world, reader)` in the core (`OWStrand.h`): the strand profile's reader (schema-dist
-  `profiles/strand.md`, serial 98), a world's strand as one reader sees it through the lens reader's own view: the
-  story the World's `x_strand` names, one of its events, that event's place, the story's `protagonist`, where the hero
-  is now, and whether then and now are one place by id (`OWWorldStrand`, `ToJson()` the profile's six keys). A slot
-  holds only its own kind, no slot is filled from another, a list's order is never read, and a story the reader knows
-  only as a stub fills its own slot alone. Only the story's id is required (serial 99): the event and the place null
-  or absent read as unset, a place with no event is an empty place, and any other value there (an empty string, a
-  number, an object) is no mark, as is a story that is not a string. A multi-link that is not a list lists nothing; a
-  nameless slot reads an empty string; the public rung reads only a world open to anyone. Held to the profile's
-  fixture by its sha256. Not yet in the plugin's Blueprint library.
-- The plugin in a packaged game: the host's game target built, cooked and staged by BuildCookRun (Win64 Development),
-  and run outside the editor with `-OWWorld=<folder or .owworld>`, `-nullrhi`. It opens the world through `UOWLibrary`,
-  logs the element count by type, an address written and read back, a step in the world's calendar, the Open with rows
-  online and offline, and exits 0 by itself; a refused or missing world logs its reason and exits 2. Run on Sikelia's
-  folder (20570 elements), the conformance set's `pass-good.owworld`, Moppetopia (its calendar) and two refusals.
-
-### Changed (breaking)
-
 - A generated struct's integer is two members, `bool bHas<Field>` and `int64 <Field>` (`false` and `0` for null or a
   missing key), not a `TOptional<int64>`: the editor gave a `TOptional` member no pin on a Break or a Make node, so a
   graph could not read a single integer or date and a Make left them unset. C++ callers change: `C.BirthDate.IsSet()` is
   `C.bHasBirthDate`, `C.BirthDate.GetValue()` is `C.BirthDate`. Every integer of Sikelia's and Moppetopia's elements
   reads as before (the two readings written out and compared byte for byte); `codegen/generate_models.py` refuses a
   struct whose members would share a name.
-
-### Changed
 
 - The Open with menu's own site row says "You are here" when the surface's `tool` is `onlyworlds` (the site itself),
   where before it said "Needs a connection" offline or nothing. Parity with the TypeScript SDK 4.123.0, the shared
@@ -1044,81 +1113,15 @@ Two readings of `OWGraph`, ruled the same day to keel's reading:
 - A node's `type` is the element's type as stored, never folded; its colour word and icon still come from the type it
   names.
 
-### Added
+### Fixed
 
-- The Open with rows offline, as the npm SDK 4.118.0 and the Python package 0.96.0 give them: `OWOpenerSurface::online`
-  (default true; `online` in `OpenersForJson`'s surface, anything but a boolean refused by name) and
-  `FOWOpenerSurface.bOnline` on Blueprints. Offline, every row whose href is a web address (`http:` or `https:`, in any
-  case) says "Needs a connection", the site's own row included, after "You are here" and before the browser, sign-in
-  and phone words; a row whose link opens an app keeps its own word, and every href stays. Held to the packages' shared
-  fixture, now 54 cases (sha256 `5a9ebbc8...`), and to an exact-refusal test for `online` beside it.
-- Blueprint graphs built, compiled and run in the editor's automation tests (`OnlyWorlds.Graph.Pins`, `.Run`): a
-  function graph of real K2 nodes over every door, compiled by the Kismet compiler with no error or warning, its
-  answers the core's on every element of Sikelia and Moppetopia. The editor's answer to the open question: no
-  generated struct's `TOptional<int64>` member gets a pin on a Break or a Make node (70 members). The module links
-  `UnrealEd` and `BlueprintGraph` in an editor target only, for these tests.
-- The address, the Open with rows and the names on Blueprints: `UOWAddresses` (`ParseAddress`, `WriteAddress`, the
-  `FOWAddress` struct with a `bHas` flag per part, so an empty string refuses as that part would), `UOWOpeners`
-  (`OpenersFor` an element of an opened world or the world itself, `OpenersForAddress`, over the baked tools list;
-  `FOWOpenerSurface`, `FOWOpener`) and `UOWNames` (`TypeWord`). A refusal is `false` and the reason. Each function is
-  held by automation tests that call it through reflection as a graph does: the address fixture's parse and format
-  cases, the openers and names fixtures where a Blueprint pin can carry a case, and every element of Sikelia.
-- `OWNames::TypeWord(world, type, supertype, many)`: a world's own word for a type, the names profile's `x_names`
-  on the World (schema-dist `profiles/names.md`), a port of the npm SDK's `typeWord` and the Python package's
-  `type_word`. The supertype's entry first, its key trimmed and folded as the room profile reads (`OWMessage::Trim`,
-  `Fold`), then the type's, else absent for the standard's name; a value that is not a names map is absent
-  everywhere. `version` is the number 1 in any spelling (`1.0`, `1e0`), never `true` or `"1"`; a `types` or
-  `supertypes` key present and null refuses the map, as npm reads it. Held to the profile's 23-case fixture (its
-  sha256 held to `MANIFEST.json`). Core only, no Blueprint function yet.
-- The review profile's rule 1 held by the npm and Python packages' 24 shared cases (npm `test/review.test.mjs`
-  at 4.102.2, Python `tests/test_review.py` at 0.84.1), same names and order, against `OWLens::IsProposed`: whether
-  a reader leaves an element out as proposed, a doubt included. The reader is unchanged; three mutants of it (an
-  empty list or object counted, a null mark counted, a mark string untrimmed) each fail the cases.
-- The room profile's conformance fixture (schema-dist `profiles/room.fixture.json`, its sha256 held to
-  `MANIFEST.json`) run against `OWLens::IsRoomElement`: all 32 cases, each in the room exactly when the pair and
-  the mark both hold. The reader itself is unchanged; four mutants of it (the mark or the pair ignored, a mark
-  string untrimmed, the pair unfolded) each fail the cases.
-- `OWCharter` in the core, the charter profile's reader (schema-dist `profiles/charter.md`): `CharterOf(world, reader)`
-  (the profile's `charterOf`: the packet `{charter, guide, domains}` as one reader sees the world, the Charter
-  `{id, name, rules, skill}` and the Guide `{id, name}` the newest marked ones, the Domains `{id, name, sentence, hubs}`
-  in the Guide's order, then by folded name and id), `DomainsOf`, `IsCharterElement` (the pair and the mark),
-  `ReadingAidOf` (the pair alone), `FirstLine` and the profile's tables. It reads who sees what, and the body each
-  reader is served, through `OWLens`'s own view. keel's reading aids (`reading_aids`, `charter_skill`) are the rule
-  followed: the Charter is read whole as stored, so a guest who knows it only as a stub still reads its rules and
-  skill, and a skill id matches an Object's whatever its case. A proposed element is in no reader's view here, as in
-  the lens reader. Tested by every case of the profile's fixture (18 `charter`, 5 `element`).
-- `OWGraph` in the core, the lens profile's graph section: `WorldGraph(world, reader, options)` (the profile's
-  `worldGraph`: the nodes by id with their colour word and icon from `OWPresentation`, their marks and `known_of`; the
-  edges by source, field and index, the index the reader is served; `edges_cut` and `cut` by reason; `unreadable`; or
-  `refused` naming a flag asked from the wrong rung), `DegreeOf`, `OutDegreeOf` and the profile's tables. It reads
-  who sees what, and a lens's kept and cut, through `OWLens`'s own view and resolution. keel's graph reader for the
-  profile is the rule followed. Tested by the fixture's 39 graph cases (every case of the lens fixture now runs) and
-  the profile's invariants over each.
-- `OWPresentation` in the core: the presentation sidecar (schema-dist `presentation.json`), generated by
-  `codegen/generate_presentation.py` into `Core/Private/OWPresentation.generated.cpp` (`--check` fails on drift):
-  `Order()` (the colour words, `colors.order`), `FamilyOf`, `IconOf` and `PublicOf` per type. A family word not in
-  `colors.order` fails loudly, naming the word: the generator writes nothing, and the generated table holds the rule as
-  a `static_assert`. `OWLens::PublicFieldsOf` reads it in place of its copied table. Tested against the vendored file
-  (`tests/test_presentation.cpp`) and by `codegen/test_generate_presentation.py`.
-- `OWLens` in the core, the lens profile's reader: `Resolve(world, lens, reader, options)` (the profile's `resolveLens`:
-  the kept ids in the profile's order, `show`'s rows, the cut counted by reason, `notes_ignored`, the mail part, or
-  `unreadable` naming the key), `IsLens`, `IsTemplate`, `CheckKeys` (the legal values of `x_lens`), `LensesInUse`
-  (where a seat's choice lives), `DateOf` (the profile's date table), `IsRoomElement`, `IsReadingAid`, `IsProposed`
-  and the profile's tables. keel's reader (`elements/lens.py`, with the bodies `elements/serialize.py` serves each
-  reader) is the rule followed; the mail rule reads through `OWMessage`. Tested by the fixture's 114 shape, keys, uses,
-  resolve and invariant cases, the tables held to the
-  fixture, the field table to `schema.json` and the stub's public fields to `presentation.json`.
-- `OWOpeners::OpenersFor(tools, kind, address, surface)` in the core: the rows of an "Open with" menu for a world
-  (`"world"`) or one of its elements (`"element"`), a port of the npm SDK's `openersFor` and the Python package's
-  `openers_for`. The site's page comes first, then each listed tool with a link for that kind, in the list's order,
-  each an `OWOpener` (`id`, `name`, `href`, `state`: the row's word in sentence case, or none). The address is
-  `OWAddressParts` or an `OWAddressReading`; `OpenersForJson` takes the tools, the address and the surface as JSON.
-  An `OWOpenersResult` answers: `rows` when `ok`; else `reason`, the address profile's refusal, or an empty `reason`
-  and a `message` naming the key. The whole address is checked by the writer, so a malformed form, lens or moment
-  refuses (`bad_form`, `bad_lens`, `bad_moment`), as the npm SDK 4.110.0 and the Python package 0.91.0 do. Tested
-  by the packages' shared fixture (45 cases, held by its sha256). Core only: no Blueprint function yet.
-- `OWTools::All()`: the OnlyWorlds tools list (github.com/OnlyWorlds/tools, `tools.json` format 1) baked in at commit
-  `86208c8`, the keys `OpenersFor` reads. The list is vendored at `codegen/tools/tools.json` and pinned in
-  `codegen/tools-pin.json`; `codegen/generate_tools.py` writes `Core/Private/OWTools.generated.cpp` and `--check`
-  fails when the two disagree. A tool listed after a release is offered from the next one. The Runtime module
-  compiles both new files with the rest of `Core/Private`, with no list to change.
+- `OWFrame::RootMap` (the frame test's scene and the host's `-OWFrame`) never takes a layout map as the root: among
+  the Maps with no `parent_map` it skips any whose `x_layout` is an object with a non-empty string `method` (the
+  map-space profile's rule 8, read through `OWMapSpace::LayoutOf`). A parentless layout map read after the ground
+  (its file name sorting later, as `sikelia-layout--…` after `sikelia--…`) was taken as the map to draw. A world whose
+  only Maps are layout maps has no root Map. Held by `OnlyWorlds.Frame.RootMapSkipsLayoutMaps`, which needs no renderer.
+- `OWFrame::RootMap` puts a Pin on the root Map only when its `map` is the Map's id as written. `FString`'s `==`
+  ignores case, so a Pin whose `map` spelled the Map's id in upper case was drawn on it, where the core's map-space
+  reader on the same world compares exactly. Held by `OnlyWorlds.Frame.RootMapPinsByTheMapsIdAsWritten`. The Map's
+  image is still found under `media/<map id>/base-image/` without case: that is a path, and a world's paths are one
+  name whatever their case.

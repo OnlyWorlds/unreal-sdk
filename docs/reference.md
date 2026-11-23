@@ -24,9 +24,11 @@ Words used below:
 ## Layout
 
 **The plugin is the folder `Plugin/OnlyWorlds/`, whole and on its own**: copy it into a project's
-`Plugins/OnlyWorlds/`. The rest of the repository builds and tests it: `build.cmd` and `tests/` (the core alone),
-`codegen/` (the generators and the vendored schema-dist), `Host/` (a project that builds the plugin and runs its
-automation tests).
+`Plugins/OnlyWorlds/`. A release's zip, `onlyworlds-unreal-<version>.zip`, is that folder as the tagged commit holds it
+(as `OnlyWorlds/`, with a copy of the licence, without the automation tests in `Private/Tests/`), made by
+`tools/release_zip.py`. The rest of the repository builds and
+tests it: `build.cmd` and `tests/` (the core alone), `codegen/` (the generators and the vendored schema-dist), `Host/`
+(a project that builds the plugin and runs its automation tests).
 
 The plugin is two layers:
 

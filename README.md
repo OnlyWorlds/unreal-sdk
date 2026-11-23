@@ -18,15 +18,25 @@ and on disk; a world read from disk and written back unedited is byte-equal.
 
 ## Install
 
-**Unreal Engine 5.8 on Windows (Win64)**, with Visual Studio 2022 and its C++ workload. Other engine versions and
-platforms are untested.
+**Unreal Engine 5.8 on Windows (Win64)**, with Visual Studio 2022 (17.14 or later, Epic's floor for 5.8) and its
+**Game development with C++** workload. Other engine versions and platforms are untested.
 
-1. Copy the `Plugin/OnlyWorlds/` folder of this repository into your project as `Plugins/OnlyWorlds/`.
-2. Open the project. Unreal builds the plugin from source, so the project needs a C++ toolchain; a Blueprint-only
-   project needs one C++ class first (**Tools → New C++ Class**).
+It is a source plugin: Unreal compiles it with your project, so the project must be a C++ project. A Blueprint-only
+project becomes one with its first C++ class (**Tools → New C++ Class**).
+
+1. Put the plugin in the `Plugins` folder of your project's directory (beside the `.uproject`; make it if there is
+   none), one of two ways:
+   - **The release zip**: `onlyworlds-unreal-0.1.0.zip`, from this repository's
+     [Releases](https://github.com/OnlyWorlds/unreal-sdk/releases) page. It holds one folder, `OnlyWorlds/`: unpack
+     it into `Plugins/`, so the plugin is at `Plugins/OnlyWorlds/OnlyWorlds.uplugin`.
+   - **A clone** of this repository: copy its `Plugin/OnlyWorlds/` folder into your project as `Plugins/OnlyWorlds/`.
+2. Open the project. Unreal builds the plugin from source with the project, so the first open takes a while.
 3. Check that **OnlyWorlds** is enabled under **Edit → Plugins**.
 4. To call it from C++, add `"OnlyWorlds"` to your module's dependencies in its `.Build.cs`
    (`PrivateDependencyModuleNames`).
+
+**Versions.** 0.1.0 is the first numbered release. Before 1.0, a minor version may change a call's name, and the
+[CHANGELOG](CHANGELOG.md) says so when it does.
 
 ## First run
 
@@ -174,6 +184,7 @@ python codegen/generate_models.py --check           # the generated structs matc
 python codegen/generate_tools.py --check            # the tools list's pin holds, OWTools.generated.cpp is current
 python codegen/generate_presentation.py --check     # the generated sidecar matches presentation.json
 python codegen/generate_frame_bits.py --check       # tests/data's frame bits match the map-space fixture
+python tools/release_zip.py v0.1.0                  # the release zip, from a tag or a commit, into dist/
 ```
 
 The plugin builds, and its automation tests (`OnlyWorlds.*`) run, through the host project in `Host/`, which finds the
