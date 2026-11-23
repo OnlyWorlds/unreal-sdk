@@ -2,7 +2,9 @@ using UnrealBuildTool;
 
 // The host's editor-only module: the commandlets that write the Blueprint graphs the packaged game runs
 // (OWMakeGraphCommandlet.cpp, -run=OWMakeGraph) and the material it draws its frame with (OWMakeFrameCommandlet.cpp,
-// -run=OWMakeFrame; Engine's material expressions). "Type": "Editor" in OWHost.uproject, so a game target never builds it.
+// -run=OWMakeFrame; Engine's material expressions), and the README's Blueprint first run built in code
+// (OWFirstRunGraph.cpp: saved by -run=OWMakeFirstRun, kept true by the test OnlyWorlds.FirstRun.Blueprint).
+// "Type": "Editor" in OWHost.uproject, so a game target never builds it.
 public class OWHostEditor : ModuleRules
 {
 	public OWHostEditor(ReadOnlyTargetRules Target) : base(Target)

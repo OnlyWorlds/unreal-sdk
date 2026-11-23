@@ -15,6 +15,25 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- The README's Blueprint first run ("On Blueprints, from a world on disk") built in code and run. The host's editor
+  module builds its graph node for node as an Actor Blueprint (`OWFirstRunGraph.cpp`: Event BeginPlay, Open World
+  Folder, Get All Characters, For Each Loop, Break OWCharacter, Print String of Name; each node placed as the editor
+  places one, each link made through the K2 schema). `-run=OWMakeFirstRun` saves it as `/Game/OW/BP_OWFirstRun` with
+  Path `Worlds/hyperion`; `-Play` runs it after the save and `-PlayOnly` runs the saved asset, each placing it in a
+  game world and dispatching its BeginPlay, so Print String's lines land in the log. The automation test
+  `OnlyWorlds.FirstRun.Blueprint` holds it: on the example world the repository carries, the three Characters' names
+  in order (Mr. Steinway, Rachmaninov, The Consul); on a folder that is not there, nothing printed and the plugin's
+  `no world.json in <path>`.
+
+### Changed
+
+- README, the Blueprint first run: its steps now say what the graph needs that they left out. The Blueprint is the
+  Level Blueprint or an Actor Blueprint placed in the level, and the For Each Loop is entered from Open World Folder's
+  exec output (without that link the loop never runs). The Output Log's form of the names, and of the reason when the
+  folder is missing, is given. The note that the steps had never been run is replaced by what runs them now.
+
 ## [0.1.0] - 2026-11-23
 
 The first numbered release: the plugin as built so far, every call as [docs/reference.md](docs/reference.md) describes

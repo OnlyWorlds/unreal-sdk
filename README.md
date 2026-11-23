@@ -114,21 +114,24 @@ it, with `OnSuccess` and `OnFailure`.
 
 ### On Blueprints, from a world on disk
 
-**Not yet run in the editor**: these steps are read from the plugin's declarations, and no test runs this graph as
-written. The plugin's own Blueprint tests build their graphs in code.
+These nodes, wired as below, are built in code and run (placed in a game world, not by play-in-editor) by this
+repository's test `OnlyWorlds.FirstRun.Blueprint` beside the plugin's own; placing them by hand in the editor's graph
+view has not been done.
 
 1. Copy the example world `codegen/schema-dist/example/hyperion` of this repository into your project as
    `Worlds/hyperion` (beside the `.uproject`).
-2. In a Blueprint's event graph (the Level Blueprint will do), from **Event BeginPlay** place **Open World Folder**
-   (category OnlyWorlds) and type `Worlds/hyperion` in its **Path**. A relative path is taken from the project's
-   folder.
+2. In the Level Blueprint's event graph, or in an Actor Blueprint's that you then place in the level, from **Event
+   BeginPlay** place **Open World Folder** (category OnlyWorlds) and type `Worlds/hyperion` in its **Path**. A
+   relative path is taken from the project's folder.
 3. From its **Return Value** (the opened world), place **Get All Characters**: an array of `OWCharacter` structs.
-4. Place a **For Each Loop** on that array, a **Break OWCharacter** on its **Array Element**, and from **Loop Body** a
-   **Print String** whose **In String** is the struct's **Name**.
+4. From Open World Folder's exec output, place a **For Each Loop** on that array, a **Break OWCharacter** on its
+   **Array Element**, and from **Loop Body** a **Print String** whose **In String** is the struct's **Name**.
 5. Play in the editor. The screen and the Output Log show the world's three Characters: Mr. Steinway, Rachmaninov and
-   The Consul.
+   The Consul (in the log, `LogBlueprintUserMessages: [<the actor>] Mr. Steinway`).
 
-When **Return Value** is empty, **Error** says why (`no world.json in Worlds/hyperion`).
+When **Return Value** is empty, **Error** says why (`no world.json in Worlds/hyperion`). In this graph Error is wired
+to nothing, so nothing prints; the Output Log carries the reason as `LogOnlyWorlds: OpenWorldFolder: no world.json in
+Worlds/hyperion`.
 
 ## Your own world
 
