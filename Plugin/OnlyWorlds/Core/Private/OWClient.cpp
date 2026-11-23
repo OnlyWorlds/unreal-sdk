@@ -798,10 +798,75 @@ void OWClient::AcceptJoin(const std::string& code, OWHandler<OWJoinedMembership>
     // An account route: the Bearer and the media type, never the PIN, no X-OW-* (no element is written), no world=.
     How how;
     how.body = "{\"code\":" + OWJson::Quote(code) + "}";
-    const std::string route = "POST /account/join";
-    Request(state_, "POST", "/account/join", {}, how, [route, done](OWReply<OWJsonValue> raw) {
+    const std::string route = "POST /account/join/";
+    Request(state_, "POST", "/account/join/", {}, how, [route, done](OWReply<OWJsonValue> raw) {
         done(Then<OWJoinedMembership>(Object(std::move(raw), route), [](OWJsonValue& body, OWReply<OWJoinedMembership>& r) {
             r.value = OWJoin::MembershipOf(body);
+        }));
+    });
+}
+
+// OWJoin's two keyless calls are made here, through Request, so the core keeps one request builder and one path scan
+// (tests/test_path_segments.cpp). Each goes on a bare state of its own: no key, no world, the config's transport and
+// API root; `auth` off, so no API-Key, API-Pin or Bearer and no client refused for its key (keel declares no security
+// on either route), and no element write, so no X-OW-*.
+namespace {
+
+// "" when the call may be sent; else the refusal.
+std::string JoinWhy(const char* call, const std::string& code, const OWJoinConfig& where) {
+    if (code.empty()) {
+        return std::string(call) + ": a join code is required (the part of the link after #: OWJoin::ParseLink reads it "
+                                   "out of a pasted link)." + NothingSent;
+    }
+    if (!where.transport) {
+        return std::string(call) + ": a transport is required: the core has no HTTP of its own (the plugin's sends "
+                                   "through Unreal's)." + NothingSent;
+    }
+    return "";
+}
+
+StatePtr Keyless(const OWJoinConfig& where) {
+    auto s = std::make_shared<OWClient::State>();
+    s->base_url = where.base_url;
+    while (!s->base_url.empty() && s->base_url.back() == '/') s->base_url.pop_back();
+    if (s->base_url.empty()) s->base_url = OWClient::DefaultBaseUrl;
+    s->transport = where.transport;
+    return s;
+}
+
+}  // namespace
+
+void OWJoin::Preview(const std::string& code, const OWJoinConfig& where, OWHandler<OWJoinPreview> done) {
+    std::string why = JoinWhy("OWJoin::Preview", code, where);
+    if (!why.empty()) return Refuse(done, why);
+    How how;
+    how.auth = false;
+    how.body = "{\"code\":" + OWJson::Quote(code) + "}";
+    const std::string route = "POST /join/preview/";
+    Request(Keyless(where), "POST", "/join/preview/", {}, how, [route, done](OWReply<OWJsonValue> raw) {
+        done(Then<OWJoinPreview>(Object(std::move(raw), route), [](OWJsonValue& body, OWReply<OWJoinPreview>& r) {
+            r.value = OWJoin::PreviewOf(body);
+        }));
+    });
+}
+
+void OWJoin::Redeem(const std::string& code, const OWRedeemOptions& options, const OWJoinConfig& where,
+                    OWHandler<OWJoined> done) {
+    std::string why = JoinWhy("OWJoin::Redeem", code, where);
+    if (!why.empty()) return Refuse(done, why);
+    // In the order keel's tests and the TypeScript SDK send them; each only when set.
+    OWJsonValue body = OWJsonValue::Object();
+    body.Set("code", OWJsonValue::String(code));
+    if (options.name) body.Set("name", OWJsonValue::String(*options.name));
+    if (options.agent_name) body.Set("agent_name", OWJsonValue::String(*options.agent_name));
+    if (options.character) body.Set("character", OWJsonValue::String(*options.character));
+    How how;
+    how.auth = false;
+    how.body = Compact(body);
+    const std::string route = "POST /join/";
+    Request(Keyless(where), "POST", "/join/", {}, how, [route, done](OWReply<OWJsonValue> raw) {
+        done(Then<OWJoined>(Object(std::move(raw), route), [](OWJsonValue& answer, OWReply<OWJoined>& r) {
+            r.value = OWJoin::JoinedOf(answer);
         }));
     });
 }

@@ -207,7 +207,7 @@ OW_TEST(join_redeem_posts_the_code_and_name_with_no_credential) {
     t.Eq(fake->calls.size(), size_t(1), "one request");
     const OWRequest& a = fake->Last();
     t.Eq(a.method, std::string("POST"), "the verb");
-    t.Eq(a.url, Base + "/join", "the path, no query");
+    t.Eq(a.url, Base + "/join/", "the path, with the trailing slash the client writes, no query");
     t.Eq(a.body.value_or(""), "{\"code\":\"" + Code + "\",\"name\":\"Ana\"}", "the code and the name, in keel's spelling");
     t.Ok(HeaderNames(a) == std::vector<std::string>{"Content-Type"}, "the media type alone: no credential");
     t.Eq(a.Header("Content-Type") ? *a.Header("Content-Type") : std::string(), std::string("application/json"), "JSON");
@@ -269,7 +269,7 @@ OW_TEST(join_preview_posts_the_code_with_no_credential) {
     t.Ok(r.Ok(), "answered (" + (r.error ? r.error->ToString() : std::string()) + ")");
     const OWRequest& a = fake->Last();
     t.Eq(a.method, std::string("POST"), "the verb");
-    t.Eq(a.url, Base + "/join/preview", "the path, no query");
+    t.Eq(a.url, Base + "/join/preview/", "the path, with the trailing slash the client writes, no query");
     t.Eq(a.body.value_or(""), "{\"code\":\"" + Code + "\"}", "the code alone");
     t.Ok(HeaderNames(a) == std::vector<std::string>{"Content-Type"}, "the media type alone: no credential");
     NoCredential(t, a, "preview");
@@ -280,17 +280,17 @@ OW_TEST(join_the_default_host_is_production) {
     OWJoinConfig plain;
     plain.transport = fake;
     OWJoin::Preview(Code, plain, [](OWReply<OWJoinPreview>) {});
-    t.Eq(fake->Last().url, std::string("https://www.onlyworlds.com/api/v2/join/preview"), "production, by default");
+    t.Eq(fake->Last().url, std::string("https://www.onlyworlds.com/api/v2/join/preview/"), "production, by default");
     t.Eq(std::string(OWJoinConfig{}.base_url), std::string(OWClient::DefaultBaseUrl), "the client's default");
     OWJoinConfig empty;
     empty.transport = fake;
     empty.base_url = "";
     OWJoin::Preview(Code, empty, [](OWReply<OWJoinPreview>) {});
-    t.Eq(fake->Last().url, std::string("https://www.onlyworlds.com/api/v2/join/preview"), "\"\" means production");
+    t.Eq(fake->Last().url, std::string("https://www.onlyworlds.com/api/v2/join/preview/"), "\"\" means production");
     OWJoinConfig slashes = Where(fake);
     slashes.base_url = Base + "//";
     OWJoin::Redeem(Code, {}, slashes, [](OWReply<OWJoined>) {});
-    t.Eq(fake->Last().url, Base + "/join", "a base_url's trailing slashes trimmed");
+    t.Eq(fake->Last().url, Base + "/join/", "a base_url's trailing slashes trimmed");
 }
 
 // -- The answers ------------------------------------------------------------------------------------------------------
@@ -674,7 +674,7 @@ OW_TEST(join_accept_join_posts_account_join_the_code_alone_the_bearer_and_answer
     t.Eq(fake->calls.size(), size_t(1), "one request");
     const OWRequest& a = fake->Last();
     t.Eq(a.method, std::string("POST"), "the verb");
-    t.Eq(a.url, Base + "/account/join", "the path, no query");
+    t.Eq(a.url, Base + "/account/join/", "the path, with the trailing slash the client writes, no query");
     t.Eq(a.body.value_or(""), std::string("{\"code\":\"ow_j_abc\"}"), "the code alone");
     t.Ok(HeaderNames(a) == std::vector<std::string>{"Authorization", "Content-Type"},
          "the Bearer and the media type: no PIN, no write header");
@@ -694,7 +694,7 @@ OW_TEST(join_accept_join_posts_account_join_the_code_alone_the_bearer_and_answer
     auto worlded = Answering(201, Membership);
     Got<OWJoinedMembership> w;
     Account(worlded, "ow_a_test", "w1").AcceptJoin("ow_j_abc", w.H());
-    t.Eq(worlded->Last().url, Base + "/account/join", "no world= on an account route");
+    t.Eq(worlded->Last().url, Base + "/account/join/", "no world= on an account route");
 }
 
 // Kills: an empty code reaching the transport (keel's 404 would read as a bad code, not a missing one).

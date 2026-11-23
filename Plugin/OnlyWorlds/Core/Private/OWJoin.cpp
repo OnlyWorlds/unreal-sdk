@@ -2,8 +2,10 @@
 
 #include "OWUnicode.h"
 
+// The answers' readers and ParseLink. The two keyless calls, Preview and Redeem, are in OWClient.cpp: the core's one
+// request builder makes their requests.
+
 #include <cmath>
-#include <ctime>
 #include <utility>
 
 namespace OnlyWorlds {
@@ -11,8 +13,6 @@ namespace OnlyWorlds {
 const char* const OWJoin::CodePrefix = "ow_j_";
 
 namespace {
-
-const char* const NothingSent = " Nothing was sent.";
 
 // Unicode's White_Space, the set C#'s char.IsWhiteSpace and Godot's trim read: OWUnicode::IsWhite is Python's
 // str.strip set, which adds U+001C to U+001F (bidi separators that are no White_Space).
@@ -86,66 +86,6 @@ std::optional<OWJoinGlimpse> GlimpseOf(const OWJsonValue* v) {
         g.links.push_back(std::move(link));
     }
     return g;
-}
-
-template <typename T>
-void Refuse(const OWHandler<T>& done, std::string why) {
-    OWReply<T> r;
-    r.error = OWApiError::Of(OWApiError::Kind::Refused, std::move(why));
-    done(std::move(r));
-}
-
-// "" when the call may be sent; else the refusal.
-std::string Check(const char* call, const std::string& code, const OWJoinConfig& where) {
-    if (code.empty()) {
-        return std::string(call) + ": a join code is required (the part of the link after #: OWJoin::ParseLink reads it "
-                                   "out of a pasted link)." + NothingSent;
-    }
-    if (!where.transport) {
-        return std::string(call) + ": a transport is required: the core has no HTTP of its own (the plugin's sends "
-                                   "through Unreal's)." + NothingSent;
-    }
-    return "";
-}
-
-// The one keyless request: no API-Key, no API-Pin, no Bearer (keel declares no security on either route), the body
-// compact JSON with Content-Type alone; keel's envelope on a non-2xx, and a 2xx whose body is no JSON object an error
-// of kind Answer. `read` makes the answer from the object. The handler is called once: a second answer is dropped.
-template <typename T, typename Read>
-void Post(const std::string& path, std::string body, const OWJoinConfig& where, OWHandler<T> done, Read read) {
-    std::string base = where.base_url;
-    while (!base.empty() && base.back() == '/') base.pop_back();
-    if (base.empty()) base = OWClient::DefaultBaseUrl;
-    OWRequest request;
-    request.method = "POST";
-    request.url = base + path;
-    request.headers.emplace_back("Content-Type", "application/json");
-    request.body = std::move(body);
-    const std::string route = "POST " + path;
-    auto answered = std::make_shared<bool>(false);
-    where.transport->Send(std::move(request), [route, answered, done, read](OWResponse response) {
-        if (*answered) return;
-        *answered = true;
-        OWReply<T> r;
-        if (response.status == 0 || !response.failure.empty()) {
-            std::string why = response.failure.empty() ? "no answer" : response.failure;
-            r.error = OWApiError::Of(OWApiError::Kind::Transport, "OnlyWorlds request failed: " + route + ": " + why);
-        } else if (!response.IsSuccess()) {
-            r.error = OWApiError::FromResponse(response, static_cast<int64_t>(std::time(nullptr)));
-        } else {
-            OWJsonParseResult parsed = OWJson::Parse(response.body);
-            if (parsed.ok && parsed.value.IsObject()) {
-                r.value = read(parsed.value);
-            } else {
-                r.error = OWApiError::Of(OWApiError::Kind::Answer,
-                                         route + " answered " + std::to_string(response.status) +
-                                             " with a body that is not a JSON object",
-                                         response.status, response.body);
-            }
-        }
-        r.response = std::move(response);
-        done(std::move(r));
-    });
 }
 
 }  // namespace
@@ -295,27 +235,6 @@ OWJoinedMembership OWJoin::MembershipOf(const OWJsonValue& v) {
     m.joined_at = Maybe(v, "joined_at");
     m.roster_character = Maybe(v, "roster_character");
     return m;
-}
-
-void OWJoin::Preview(const std::string& code, const OWJoinConfig& where, OWHandler<OWJoinPreview> done) {
-    std::string why = Check("OWJoin::Preview", code, where);
-    if (!why.empty()) return Refuse(done, why);
-    Post<OWJoinPreview>("/join/preview", "{\"code\":" + OWJson::Quote(code) + "}", where, std::move(done),
-                        [](const OWJsonValue& v) { return PreviewOf(v); });
-}
-
-void OWJoin::Redeem(const std::string& code, const OWRedeemOptions& options, const OWJoinConfig& where,
-                    OWHandler<OWJoined> done) {
-    std::string why = Check("OWJoin::Redeem", code, where);
-    if (!why.empty()) return Refuse(done, why);
-    // In the order keel's tests and the TypeScript SDK send them; each only when set.
-    std::string body = "{\"code\":" + OWJson::Quote(code);
-    for (auto [name, value] : {std::make_pair("name", &options.name), std::make_pair("agent_name", &options.agent_name),
-                               std::make_pair("character", &options.character)}) {
-        if (*value) body += std::string(",\"") + name + "\":" + OWJson::Quote(**value);
-    }
-    body += "}";
-    Post<OWJoined>("/join", std::move(body), where, std::move(done), [](const OWJsonValue& v) { return JoinedOf(v); });
 }
 
 }  // namespace OnlyWorlds
