@@ -23,10 +23,11 @@ it, in one zip.
 ### Added
 
 - The release zip, `onlyworlds-unreal-<version>.zip`: one `OnlyWorlds/` folder to drop into a project's `Plugins/`,
-  `Plugin/OnlyWorlds/` as the tagged commit holds it, with a copy of the licence inside. `tools/release_zip.py <tag>`
-  makes it from git, never from the working folder (so never a build's `Binaries/` or `Intermediate/`), refuses a tag
-  that the `.uplugin`'s `VersionName` does not match, and writes the same bytes for the same commit; the tests workflow
-  makes it on every push.
+  `Plugin/OnlyWorlds/` as the tagged commit holds it, with a copy of the licence inside. It leaves out the automation
+  tests (`Source/OnlyWorlds/Private/Tests/`): they need the repository's fixtures and run from a clone.
+  `tools/release_zip.py <tag>` makes it from git, never from the working folder (so never a build's `Binaries/` or
+  `Intermediate/`), refuses a tag that the `.uplugin`'s `VersionName` does not match, and writes the same bytes for the
+  same commit; the tests workflow makes it on every push.
 
 - A front door for a first-time reader: `LICENSE` (MIT), `SECURITY.md`, a README with an install and a first run on
   the public sample world Moppetopia with its demo key (`Host/Source/OWHost/OWFirstRun.cpp`, the console command

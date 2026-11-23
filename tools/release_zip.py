@@ -5,10 +5,11 @@
     python tools/release_zip.py HEAD --out dist     # any commit
 
 The zip holds one folder, OnlyWorlds/, to drop into a project's Plugins/ folder: Plugin/OnlyWorlds/ as the named
-commit has it (every tracked file under it, so never a build's Binaries/ or Intermediate/), and a copy of the
-repository's LICENSE inside it. It is a source plugin: the project that takes it compiles it. The plugin's automation
-tests are inside the folder and compile to nothing there, since they need the repository around the plugin
-(OW_REPO_TESTS, OnlyWorlds.Build.cs).
+commit has it (its tracked files, so never a build's Binaries/ or Intermediate/), and a copy of the repository's
+LICENSE inside it. It is a source plugin: the project that takes it compiles it. Left out: the plugin's automation
+tests (Source/OnlyWorlds/Private/Tests/). They need the repository's fixtures and run from a clone, and in another
+project they would compile to nothing but two test-only classes reflected into every target. Nothing outside that
+folder includes a file of it or names one of its classes.
 
 The version is OnlyWorlds.uplugin's VersionName, read at that commit. A tag must be vX.Y.Z and say the same version, or
 nothing is written. The file is the same bytes for the same commit: entries in path order, each dated with the
@@ -30,6 +31,7 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLUGIN = "Plugin/OnlyWorlds"
 FOLDER = "OnlyWorlds"
+TESTS = PLUGIN + "/Source/OnlyWorlds/Private/Tests/"   # left out (above)
 
 
 def git(*args: str) -> bytes:
@@ -71,6 +73,8 @@ def main() -> int:
     paths = [p for p in git("ls-tree", "-r", "--name-only", "-z", sha, "--", PLUGIN + "/").decode("utf-8").split("\0") if p]
     if not paths:
         raise SystemExit("%s holds no files at %s" % (PLUGIN, sha[:7]))
+    left_out = [p for p in paths if p.startswith(TESTS)]
+    paths = [p for p in paths if not p.startswith(TESTS)]
     files = {FOLDER + p[len(PLUGIN):]: blob(sha, p) for p in paths}
     files[FOLDER + "/LICENSE"] = blob(sha, "LICENSE")
 
@@ -96,7 +100,7 @@ def main() -> int:
     print("zip:     %s" % out)
     print("from:    %s%s" % (sha, " (tag %s)" % tag if tag else " (a commit, not a tag)"))
     print("version: %s" % version)
-    print("files:   %d" % len(files))
+    print("files:   %d (%d test files left out)" % (len(files), len(left_out)))
     print("size:    %d bytes" % len(data))
     print("sha256:  %s" % hashlib.sha256(data).hexdigest())
     return 0
