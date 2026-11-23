@@ -16,3 +16,5 @@ __pycache__/
 # The host's content: generated, never committed (Content/OW/, the Blueprint graphs -run=OWMakeGraph writes)
 /Host/Content/
 /Host/*.sln
+# The release zip (tools/release_zip.py)
+/dist/
