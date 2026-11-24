@@ -81,6 +81,19 @@ the detail a maintainer needs; the history before this file is in the git log.
   one added as `Add("Character", ...)` is written to a folder no reader reads. The plugin's `UOWWorld` reads through
   the core and follows it; `GetErrors` lists the new lines.
 
+### Fixed
+
+- **`OWAddress::FindAll` reads a prefix that holds no address once.** `ReadAt` parsed the text at every length of
+  the path after a prefix, building a reading each time, so a text full of bare prefixes paid a whole `Parse` a
+  character: 60,000 `ow://character/` took 239 to 293 ms in the core's test build (`build.cmd`, MSVC `/O2`), 17 to 20
+  times the TypeScript SDK's 14 ms on Node, and `OWNameFinder::Find` paid the same on such a text. Now an end is
+  parsed only when its last 36 characters are an id and the word before it is one of the 22 as written, as the
+  TypeScript SDK's `readOwLinkAt` does, and a moment only when it reads as a step: the same text takes about 3 ms.
+  Every answer is the same: the address fixture's cases, and 30,000 made texts read by the old and the new finder
+  (`FindAll` on each, `ReadAt` at every byte of 3,000). A timed test holds both the recipe and 10,000 bare prefixes
+  of both forms (`tests/test_address.cpp`). The plugin's `UOWAddresses::FindAddresses` and `ReadAddressAt` call the core
+  and follow it.
+
 ## [0.1.0] - 2026-11-23
 
 The first numbered release: the plugin as built so far, every call as [docs/reference.md](docs/reference.md) describes
