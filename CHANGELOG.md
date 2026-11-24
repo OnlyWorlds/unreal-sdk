@@ -26,6 +26,26 @@ the detail a maintainer needs; the history before this file is in the git log.
   `OnlyWorlds.FirstRun.Blueprint` holds it: on the example world the repository carries, the three Characters' names
   in order (Mr. Steinway, Rachmaninov, The Consul); on a folder that is not there, nothing printed and the plugin's
   `no world.json in <path>`.
+- Element names found in prose: `OWNameFinder`, in the C++ core, not yet a Blueprint node. Parity with the TypeScript
+  SDK 4.198.0 (`nameFinder`) and the Python package (`name_finder`), held to their shared cases,
+  `tests/data/name-finder.cases.json` (version 2, the same bytes, its sha256 held by the test): every case and its
+  shared names, and the ten timed recipes each within the file's 2 seconds. `OWNameFinder::Of(elements, case)` reads
+  a JSON list's names once (each element's `name`, or the names a function gives) under `OWNameCase::Exact` or
+  `OWNameCase::Folded`, with no default; `Find(text)` lists every whole name in order, none overlapping, with its
+  `start` and `end` in UTF-8 bytes (as `OWAddress::FindAll` counts) and the element's place in the list. A name is
+  whole when no letter, combining mark, decimal digit or underscore of any script is beside it; it is trimmed of white
+  space and three characters at least; the longest whole name wins where several start; a name two elements share is
+  never answered and is listed in `Shared()`; nothing is read inside an address or a Markdown link. The text is read
+  once from its end, so the cost grows with the text alone, however many names. `OWUnicode` gains
+  `IsDecimalDigit` (general category Nd, generated from the same Unicode 15.1.0 file as the letters and marks) and
+  `SimpleFold` (one code point's simple case folding).
+- Which of a map's Pins one reader knows: `OWMapSpace::PinsKnownTo(pins, served)`, in the C++ core, not yet a
+  Blueprint node. Parity with the TypeScript SDK 4.200.0 (`pinsKnownTo`) and the Python package (`pins_known_to`),
+  held to their shared cases, `tests/data/pins-known-to.cases.json` (version 1, the same bytes, its sha256 held by
+  the test): all 31 cases, whole and in key order, and all 8 refusals. A Pin is known when the element it places is
+  among the elements that reader was served, `whole` or `known_of` (a stub); the Pins whose element was not served
+  are a count, never ids, and a Pin that places nothing is counted apart. It reads nothing else, so a map drawn as one
+  Character sees it cannot show more than the world told that reader.
 
 ### Changed
 
