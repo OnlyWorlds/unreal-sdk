@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace OnlyWorlds {
@@ -78,7 +79,55 @@ struct OWLandingOptions {
     std::optional<int64_t> size;   // the node count at which the mode turns from gaps to graph; default 24
 };
 
+// One of the most linked: its id, its name as the graph holds it (none when the node holds no string), its degree.
+struct OWLinked {
+    std::string id;
+    std::optional<std::string> name;
+    int64_t degree = 0;
+};
+
+// What MostLinkedOf answers.
+struct OW_API OWMostLinked {
+    // The count per type it was read at.
+    int64_t per_type = 0;
+    // By type, the types in code point order, each its most linked, highest first, ties by id; a type with nothing to
+    // pick is left out.
+    std::vector<std::pair<std::string, std::vector<OWLinked>>> by_type;
+    // An option refused, named (an unknown key, or a per_type that is not a whole number from 1 to 2^53 - 1): nothing
+    // was read and the answer is empty.
+    std::string refused;
+    // Empty unless the call was a mistake (options that are neither an object nor null): it names the mistake.
+    std::string error;
+
+    // The answer in the fixture's shape, {per_type, by_type} (each entry {id, name, degree}, a missing name null), or
+    // {refused} when refused.
+    OWJsonValue ToJson() const;
+};
+
+// mostLinkedOf's option: per_type, a whole number from 1 to 2^53 - 1; unset is the default, 3.
+struct OWMostLinkedOptions {
+    std::optional<int64_t> per_type;
+};
+
 namespace OWLanding {
+
+// mostLinkedOf's default count per type.
+constexpr int64_t DefaultPerType = 3;
+
+// mostLinkedOf(graph, options), the npm SDK's (4.203.0) and the Python package's most_linked_of: the most linked
+// elements of each type, over the graph WorldGraph answered for the asker, so it holds exactly what that reader may
+// see. For each type (as stored), its nodes by OWGraph::DegreeOf, highest first, ties by id in code point order, at
+// most per_type of each: a few of every type, never one ranking. It is "the most linked", never "where to start":
+// where a world has a Guide, the Guide is the start. A node of degree 0 and a known-of node are never picked; a node's
+// type and name are echoed as written. Pure. A draft reading beside the landing profile, held to the packages' shared
+// fixture (most-linked.fixture.json). A per_type below 1 or past 2^53 - 1 is refused by name, as the npm SDK refuses
+// one that is not a safe integer.
+OW_API OWMostLinked MostLinkedOf(const OWWorldGraph& graph, const OWMostLinkedOptions& options = {});
+
+// The same with the options as JSON, as the packages take them: an object or null. An unknown key is refused by name
+// (the first in the object's order); per_type null takes the default; any other value that is not a whole number from
+// 1 to 2^53 - 1 (a fraction, a string, a boolean) is refused by name. A whole float reads whole (2.0 as 2).
+OW_API OWMostLinked MostLinkedOf(const OWWorldGraph& graph, const OWJsonValue& options);
 
 // The option keys, in the profile's order, and their defaults.
 OW_API const std::vector<std::string>& OptionKeys();
