@@ -20,7 +20,8 @@ rows of CaseFolding. Two more tables serve the core beside the name rules: white
 it (general category Zs, or bidirectional class WS, B or S: how the reference checker trims a world id), and the
 compatibility decompositions and nonspacing marks (category Mn) that the element filename's slug needs (folder spec
 3.2; the Unity writer's `Slugify` decomposes by NFKD and drops nonspacing marks). One more serves the address finder:
-the letters and combining marks (category L or M) that cut an address found in prose inside a word.
+the letters and combining marks (category L or M) that cut an address found in prose inside a word; and the decimal
+digits (category Nd), which the name finder counts as word characters beside them.
 """
 
 from __future__ import annotations
@@ -136,12 +137,10 @@ def compat_tables(rows) -> dict:
     return {"decomp": {cp: full(cp) for cp in raw}, "mn": mn}
 
 
-def letters_and_marks(rows) -> list[list[int]]:
-    """What glues an address found in prose into a word (the address page's "An address in prose", serial 123): general
-    category L or M, any letter or combining mark, as ranges. A `<..., First>` and `<..., Last>` pair of rows is a
-    range (the CJK ideographs, Hangul syllables and the like). The underscore, the set's third member, is Pc and the
-    reader's own."""
-    lm, first = [], None
+def category_ranges(rows, keep) -> list[list[int]]:
+    """The code points whose general category (field 2) `keep` accepts, as ranges. A `<..., First>` and
+    `<..., Last>` pair of rows is a range (the CJK ideographs, Hangul syllables and the like)."""
+    out, first = [], None
     for fields in rows:
         cp = int(fields[0], 16)
         if fields[1].endswith(", First>"):
@@ -149,12 +148,25 @@ def letters_and_marks(rows) -> list[list[int]]:
             continue
         lo = first if fields[1].endswith(", Last>") else cp
         first = None
-        if fields[2][0] in "LM":
-            if lm and lm[-1][1] == lo - 1:
-                lm[-1][1] = cp
+        if keep(fields[2]):
+            if out and out[-1][1] == lo - 1:
+                out[-1][1] = cp
             else:
-                lm.append([lo, cp])
-    return lm
+                out.append([lo, cp])
+    return out
+
+
+def letters_and_marks(rows) -> list[list[int]]:
+    """What glues an address found in prose into a word (the address page's "An address in prose", serial 123): general
+    category L or M, any letter or combining mark, as ranges. The underscore, the set's third member, is Pc and the
+    reader's own."""
+    return category_ranges(rows, lambda category: category[0] in "LM")
+
+
+def decimal_digits(rows) -> list[list[int]]:
+    """The name finder's third word class beside the letters and marks: general category Nd, a decimal digit of any
+    script, as ranges."""
+    return category_ranges(rows, lambda category: category == "Nd")
 
 
 def white_space(rows) -> list[int]:
@@ -176,7 +188,8 @@ def simple_folds() -> dict[int, int]:
     return folds
 
 
-def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], words: list[list[int]], tag: str) -> str:
+def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], words: list[list[int]], digits: list[list[int]],
+         tag: str) -> str:
     def h(cp):
         return "0x%X" % cp
 
@@ -204,6 +217,7 @@ def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], words: list[li
         "// - White space: general category Zs or bidirectional class WS, B or S (Python's str.isspace).",
         "// - The slug's NFKD: every decomposition in field 5 applied recursively, and the nonspacing marks (Mn).",
         "// - Letters and marks: general category L or M, what glues an address found in prose into a word.",
+        "// - Decimal digits: general category Nd, which with the letters, marks and underscore makes a name finder's word.",
         "// Every table is sorted by code point (or by pair key) for binary search.",
         "",
         '#include "OWUnicodeData.h"',
@@ -233,7 +247,9 @@ def emit(nfc: dict, compat: dict, folds: dict, spaces: list[int], words: list[li
     out += ["    {%s, %s}," % (h(a), h(b)) for a, b in compat["mn"]]
     out += ["};", f"const size_t NonspacingMarkCount = {h(len(compat['mn']))};", "", "const RangeRow LettersAndMarks[] = {"]
     out += ["    {%s, %s}," % (h(a), h(b)) for a, b in words]
-    out += ["};", f"const size_t LetterAndMarkCount = {h(len(words))};", "", "}}  // namespace OnlyWorlds::UnicodeData", ""]
+    out += ["};", f"const size_t LetterAndMarkCount = {h(len(words))};", "", "const RangeRow DecimalDigits[] = {"]
+    out += ["    {%s, %s}," % (h(a), h(b)) for a, b in digits]
+    out += ["};", f"const size_t DecimalDigitCount = {h(len(digits))};", "", "}}  // namespace OnlyWorlds::UnicodeData", ""]
     return "\n".join(out)
 
 
@@ -246,7 +262,7 @@ def outputs() -> dict[Path, str]:
         sys.exit("The vendored dist is not what the pin says. Re-vendor from the pinned tag; never edit a hash.")
     rows = unicode_data()
     return {OUT: emit(nfc_tables(rows), compat_tables(rows), simple_folds(), white_space(rows), letters_and_marks(rows),
-                      pin["tag"])}
+                      decimal_digits(rows), pin["tag"])}
 
 
 def main() -> int:

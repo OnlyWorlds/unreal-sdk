@@ -514,4 +514,84 @@ OWMapCarry CarryOf(const OWJsonValue& map, double x, double y, const OWJsonValue
 }
 
 }  // namespace OWMapSpace
+
+// -- pinsKnownTo ------------------------------------------------------------------------------------------------------
+
+OWJsonValue OWPinsKnownTo::ToJson() const {
+    OWJsonValue answer = OWJsonValue::Object();
+    OWJsonValue rows = OWJsonValue::Array();
+    for (const OWPinKnown& k : known) {
+        OWJsonValue row = OWJsonValue::Object();
+        row.Set("pin", Text(k.pin));
+        row.Set("map", TextOrNull(k.map));
+        row.Set("element_type", Text(k.element_type));
+        row.Set("element_id", Text(k.element_id));
+        row.Set("how", Text(k.how));
+        rows.Push(std::move(row));
+    }
+    answer.Set("known", std::move(rows));
+    answer.Set("unknown", Int(unknown));
+    OWJsonValue left = OWJsonValue::Object();
+    if (out.no_link > 0) left.Set("no_link", Int(out.no_link));
+    answer.Set("out", std::move(left));
+    return answer;
+}
+
+namespace OWMapSpace {
+
+OWPinsKnownTo PinsKnownTo(const OWJsonValue& pins, const OWJsonValue& served) {
+    OWPinsKnownTo answer;
+    if (!pins.IsArray()) {
+        answer.error = "pinsKnownTo: pins is a list of elements.";
+        return answer;
+    }
+    if (!served.IsArray()) {
+        answer.error = "pinsKnownTo: served is a list of elements.";
+        return answer;
+    }
+
+    // type -> id -> how, the last served row deciding.
+    std::map<std::string, std::map<std::string, const char*>> servedHow;
+    for (const OWJsonValue& e : served.Items()) {
+        if (!e.IsObject()) continue;
+        const OWJsonValue* type = e.Find("type");
+        if (!type || !type->IsString()) continue;
+        std::optional<std::string> id = IdOf(e.Find("id"));
+        if (!id) continue;
+        const OWJsonValue* stub = e.Find("known_of");
+        servedHow[type->Text()][*id] = stub && stub->IsBool() && stub->AsBool() ? PinKnownOf : PinWhole;
+    }
+
+    // Pin id -> its row, the last one read; in code point order.
+    std::map<std::string, const OWJsonValue*, ByCodePoint> rows;
+    for (const OWJsonValue& p : pins.Items()) {
+        if (!p.IsObject()) continue;
+        const OWJsonValue* type = p.Find("type");
+        if (!type || !type->IsString() || type->Text() != "pin") continue;
+        if (std::optional<std::string> id = IdOf(p.Find("id"))) rows[*id] = &p;
+    }
+
+    for (const auto& [id, p] : rows) {
+        std::optional<std::string> type = IdOf(p->Find("element_type"));
+        std::optional<std::string> element = IdOf(p->Find("element_id"));
+        if (!type || !element) {
+            ++answer.out.no_link;
+            continue;
+        }
+        auto ofType = servedHow.find(*type);
+        if (ofType == servedHow.end()) {
+            ++answer.unknown;
+            continue;
+        }
+        auto how = ofType->second.find(*element);
+        if (how == ofType->second.end()) {
+            ++answer.unknown;
+            continue;
+        }
+        answer.known.push_back(OWPinKnown{id, IdOf(p->Find("map")), *type, *element, how->second});
+    }
+    return answer;
+}
+
+}  // namespace OWMapSpace
 }  // namespace OnlyWorlds

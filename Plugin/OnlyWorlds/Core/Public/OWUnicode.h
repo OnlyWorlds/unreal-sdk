@@ -53,5 +53,14 @@ OW_API bool IsNonspacingMark(char32_t cp);
 // found in prose inside a word.
 OW_API bool IsLetterOrMark(char32_t cp);
 
+// Whether a code point is a decimal digit of any script (general category Nd): with the letters, the marks and the
+// underscore, what OWNameFinder counts as inside a word.
+OW_API bool IsDecimalDigit(char32_t cp);
+
+// One code point's simple case folding (CaseFolding's C and S rows), the code point itself when it has none. A fold
+// never leaves its plane, so it keeps a text's code points; it may change their UTF-8 length (U+212A, three bytes,
+// folds to k).
+OW_API char32_t SimpleFold(char32_t cp);
+
 }  // namespace OWUnicode
 }  // namespace OnlyWorlds
