@@ -46,6 +46,21 @@ the detail a maintainer needs; the history before this file is in the git log.
   among the elements that reader was served, `whole` or `known_of` (a stub); the Pins whose element was not served
   are a count, never ids, and a Pin that places nothing is counted apart. It reads nothing else, so a map drawn as one
   Character sees it cannot show more than the world told that reader.
+- The most linked elements of each type: `OWLanding::MostLinkedOf(graph, options)`, in the C++ core, not yet a
+  Blueprint node. Parity with the TypeScript SDK 4.203.0 (`mostLinkedOf`) and the Python package (`most_linked_of`),
+  held to their shared fixture, `tests/data/most-linked.fixture.json` (the same bytes, its sha256 held by the test):
+  all 18 cases, whole and in key order. Over the graph `OWGraph::WorldGraph` answered for a reader, for each type its
+  most linked nodes by `OWGraph::DegreeOf`, highest first, ties by id in code point order, at most `per_type` (3) of
+  each: a few of every type, never one ranking. A node of degree 0 and a known-of node are never picked.
+  `OWMostLinked::ToJson()` is `{per_type, by_type}`; an unknown option, or a `per_type` that is not a whole number
+  from 1 to 2^53 - 1, is refused by name.
+- The calendar's cost cases: a stored calendar does not set what one date label costs. Parity with the TypeScript SDK
+  4.201.2, its cost cases replayed (`tests/data/calendar-cost.cases.json`, the same bytes as the TypeScript SDK's and
+  the Python package's, its sha256 held by the test): a long run of white space in a template or a month name, 20,000
+  commas at a label's edge and a month of 5,000,000 days, each label in its words and inside the file's 50 ms line.
+  The core already filled and closed up a label in one pass and found a day by walking the months, so nothing in it
+  changed; the roundtrip case's read back is the TypeScript SDK's `parseDate`, which the core does not have, so its
+  label alone is held.
 
 ### Changed
 

@@ -233,5 +233,89 @@ OWWorldLanding LandingOf(const OWWorldGraph& graph, const OWJsonValue& options) 
     return LandingOf(graph, typed);
 }
 
+namespace {
+constexpr int64_t MaxSafe = 9007199254740991;  // 2^53 - 1: Number.MAX_SAFE_INTEGER
+}  // namespace
+
+OWMostLinked MostLinkedOf(const OWWorldGraph& graph, const OWMostLinkedOptions& options) {
+    OWMostLinked out;
+    if (options.per_type && (*options.per_type < 1 || *options.per_type > MaxSafe)) {
+        out.refused = "per_type";
+        return out;
+    }
+    const int64_t per = options.per_type.value_or(DefaultPerType);
+    out.per_type = per;
+
+    std::vector<std::pair<std::string, int64_t>> degrees = OWGraph::DegreeOf(graph);
+    std::map<std::string, int64_t> degree(degrees.begin(), degrees.end());
+    std::map<std::string, std::vector<OWLinked>> by_type;  // ordered by the type's bytes: code point order
+    for (const OWGraphNode& n : graph.nodes) {
+        auto d = degree.find(n.id);
+        if (d == degree.end() || d->second == 0 || n.known_of) continue;
+        std::optional<std::string> name;
+        if (n.name.IsString()) name = n.name.Text();
+        by_type[n.type].push_back({n.id, std::move(name), d->second});
+    }
+    for (auto& [type, list] : by_type) {
+        // Stable, as JavaScript's sort is: two nodes of one id and degree keep the graph's order.
+        std::stable_sort(list.begin(), list.end(), [](const OWLinked& a, const OWLinked& b) {
+            if (a.degree != b.degree) return a.degree > b.degree;
+            return a.id < b.id;
+        });
+        if (int64_t(list.size()) > per) list.resize(size_t(per));
+        out.by_type.emplace_back(type, std::move(list));
+    }
+    return out;
+}
+
+OWMostLinked MostLinkedOf(const OWWorldGraph& graph, const OWJsonValue& options) {
+    OWMostLinked out;
+    if (!options.IsNull() && !options.IsObject()) {
+        out.error = "most_linked_of: options is an object, such as {\"per_type\": 3}, or null";
+        return out;
+    }
+    OWMostLinkedOptions typed;
+    if (options.IsObject()) {
+        for (const std::string& key : options.Keys())
+            if (key != "per_type") {
+                out.refused = key;
+                return out;
+            }
+        const OWJsonValue* v = options.Find("per_type");
+        if (v && !v->IsNull()) {
+            const double d = v->IsNumber() ? v->AsDouble() : 0.0;
+            if (!v->IsNumber() || !std::isfinite(d) || std::floor(d) != d || d < 1 || d > double(MaxSafe)) {
+                out.refused = "per_type";
+                return out;
+            }
+            typed.per_type = int64_t(d);
+        }
+    }
+    return MostLinkedOf(graph, typed);
+}
+
 }  // namespace OWLanding
+
+OWJsonValue OWMostLinked::ToJson() const {
+    OWJsonValue out = OWJsonValue::Object();
+    if (!refused.empty()) {
+        out.Set("refused", Text(refused));
+        return out;
+    }
+    out.Set("per_type", Int(per_type));
+    OWJsonValue types = OWJsonValue::Object();
+    for (const auto& [type, list] : by_type) {
+        OWJsonValue entries = OWJsonValue::Array();
+        for (const OWLinked& e : list) {
+            OWJsonValue entry = OWJsonValue::Object();
+            entry.Set("id", Text(e.id));
+            entry.Set("name", e.name ? Text(*e.name) : OWJsonValue::Null());
+            entry.Set("degree", Int(e.degree));
+            entries.Push(std::move(entry));
+        }
+        types.Set(type, std::move(entries));
+    }
+    out.Set("by_type", std::move(types));
+    return out;
+}
 }  // namespace OnlyWorlds
