@@ -143,7 +143,44 @@ struct OW_API OWMapCarry {
     OWJsonValue ToJson() const;
 };
 
+// One Pin a reader knows (PinsKnownTo).
+struct OWPinKnown {
+    std::string pin;
+    // The Pin's `map` as written when it is a non-empty string, else none. Not checked against any Map.
+    std::optional<std::string> map;
+    std::string element_type;
+    std::string element_id;
+    // How the placed element reached the reader: OWMapSpace::PinWhole, or OWMapSpace::PinKnownOf for a stub it only
+    // knows of (`known_of: true`).
+    std::string how;
+};
+
+// The Pins PinsKnownTo leaves aside, by reason.
+struct OWPinsKnownOut {
+    int64_t no_link = 0;  // a Pin that places nothing
+};
+
+// What PinsKnownTo answers.
+struct OW_API OWPinsKnownTo {
+    // By Pin id in code point order.
+    std::vector<OWPinKnown> known;
+    // Pins that place an element the reader was not served: a count, never ids.
+    int64_t unknown = 0;
+    OWPinsKnownOut out;
+    // Empty unless the call was a mistake (pins or served that is not a list): it names the mistake (pins first) and
+    // nothing is read.
+    std::string error;
+
+    // The answer in the cases' shape, {known, unknown, out} (all three, in that order): each known Pin as
+    // {pin, map, element_type, element_id, how}, `out` with no_link only when one was counted.
+    OWJsonValue ToJson() const;
+};
+
 namespace OWMapSpace {
+
+// The two words of OWPinKnown::how.
+inline constexpr const char* PinWhole = "whole";
+inline constexpr const char* PinKnownOf = "known_of";
 
 // The reasons `out` counts, in the answer's order: no_point, no_markers, dangling, no_map.
 OW_API const std::vector<std::string>& OutReasons();
@@ -215,6 +252,25 @@ OW_API std::optional<double> NumberOf(const OWJsonValue* v);
 // SDK's isCarrySize reads it (WholeOf, which MapSpaceOf reads sizes by, stops at 2^53). A point outside the child is
 // carried as written; z is not carried. Pure. The npm SDK's carryOf (4.183.0), held to the fixture's `frame_cases`.
 OW_API OWMapCarry CarryOf(const OWJsonValue& map, double x, double y, const OWJsonValue& maps);
+
+// pinsKnownTo(pins, served): which of a map's Pins one reader knows, for a map drawn as one Character sees it. A rule
+// of the TypeScript SDK (4.200.0) and the Python package (`pins_known_to`), not of the standard; held to their shared
+// cases (tests/data/pins-known-to.cases.json).
+//
+// `pins` is a JSON list of elements, of which the rows whose `type` is exactly `pin` are read (so a whole world's list
+// can be passed). `served` is the list of elements as that reader was served them, stubs included: a list read with
+// the reader's own key, or the owner's read as that Character. Nothing else is read, so the answer cannot show a reader
+// more than the world told them. Whether a Pin has a point or its Map exists is not asked: that is MapSpaceOf's
+// reading, and a drawing keeps the Pins both name.
+//
+// A Pin is known when a row of `served` has the Pin's `element_type` as its `type` and the Pin's `element_id` as its
+// `id`, both as written (`Location` is no `location`, and the same id under another type is another element). `how` is
+// known_of when that row's `known_of` is the JSON `true`, else whole; of two served rows with one type and id, the last
+// decides. A Pin with only one of `element_type` and `element_id` (each a non-empty string) places nothing: it is
+// counted in `out.no_link` and never known. A row without a string `type` and a non-empty string `id` is no element and
+// is not counted; of two Pin rows with one id, the last is read. The answer carries ids and the two words only, never an
+// element's name or body. Pure.
+OW_API OWPinsKnownTo PinsKnownTo(const OWJsonValue& pins, const OWJsonValue& served);
 
 }  // namespace OWMapSpace
 }  // namespace OnlyWorlds
