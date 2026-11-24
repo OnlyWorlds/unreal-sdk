@@ -160,8 +160,9 @@ std::string Pattern(const std::string& p, int64_t i) {
 // The time each recipe may take: npm's line (the cases' underMs, 2 s) times this. npm's line stands here unchanged:
 // the core is compiled (build.cmd's /O2) with the matcher in npm's shape, one read of the text from its end, so the
 // matcher has no interpreter's ratio to answer for. Measured before this was set (three runs, a quiet machine): every
-// recipe 3 to 66 ms but one, address prefixes with no address, 242 to 285 ms, of which OWAddress::FindAll alone takes
-// 239 to 251 ms; so the slowest sits about seven times under the line, room for a loaded machine. What it catches is
+// recipe 3 to 66 ms but one, address prefixes with no address, 242 to 285 ms, of which OWAddress::FindAll alone took
+// 239 to 251 ms (about 3 ms since FindAll reads each candidate once, held by test_address.cpp); so the slowest sat
+// about seven times under the line, room for a loaded machine. What it catches is
 // a matcher many times slower than this one; in compiled code it need not catch every quadratic one (a tight loop may
 // take the long-name recipes' billion steps in about a second; estimated, not run).
 const double Factor = 1.0;

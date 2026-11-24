@@ -420,6 +420,22 @@ bool IsInAWord(std::string_view s, size_t i) {
 
 bool Parses(std::string_view text, size_t index, size_t end) { return Parse(text.substr(index, end - index)).ok; }
 
+// An id's four hyphens at their places in the text from byte at: checked before anything else, so an end that holds no
+// id costs four reads. The caller holds at + 36 within the text.
+bool HyphensAt(std::string_view s, size_t at) {
+    return s[at + 8] == '-' && s[at + 13] == '-' && s[at + 18] == '-' && s[at + 23] == '-';
+}
+
+// Whether an id at byte at is worth a parse: right after the prefix (a world's), not after a '/', or after /<word>/
+// whose word is one of the 22 types as written. An id after any other word is one Parse refuses (uppercase or
+// unknown_type), so it is passed over without a parse (the TypeScript SDK's worthParsing).
+bool WorthParsing(std::string_view s, size_t start, size_t at) {
+    if (at == start || s[at - 1] != '/') return true;
+    const size_t slash = s.rfind('/', at - 2);
+    const size_t from = slash == std::string_view::npos ? start : std::max(slash + 1, start);
+    return IsTypeWord(s.substr(from, at - 1 - from));
+}
+
 }  // namespace
 
 std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index) {
@@ -452,21 +468,29 @@ std::optional<OWAddressFound> ReadAt(std::string_view text, size_t index) {
         while (run < n && run - start <= path_max && IsPathChar(text[run])) ++run;
     }
 
+    // Every path Parse takes here ends in an id (a world's in the text form, an element's after a world), so an end whose
+    // last 36 characters are not an id is passed over without a parse, as the TypeScript SDK's readOwLinkAt does: a
+    // parse builds a reading whole, and a run of bare prefixes paid one at every length of each run.
     for (size_t p = run; p > low; --p) {
-        if (Parses(text, index, p)) {
+        if (p >= start + IdLength && HyphensAt(text, p - IdLength) && IsUuid(text.substr(p - IdLength, IdLength)) &&
+            WorthParsing(text, start, p - IdLength) && Parses(text, index, p)) {
             end = p;
             break;
         }
     }
     if (end == std::string_view::npos) return std::nullopt;
 
-    // A moment: its whole run of an optional minus and digits, taken only when it reads as a step.
+    // A moment: its whole run of an optional minus and digits, taken only when it reads as a step (a step Parse refuses
+    // is passed over without a parse).
     if (end < n && text[end] == '@') {
         size_t step_end = end + 1;
         if (step_end < n && text[step_end] == '-') ++step_end;
         const size_t digits = step_end;
         while (step_end < n && text[step_end] >= '0' && text[step_end] <= '9') ++step_end;
-        if (step_end > digits && Parses(text, index, step_end)) end = step_end;
+        int32_t step = 0;
+        if (step_end > digits && ParseStep(text.substr(end + 1, step_end - end - 1), step) &&
+            Parses(text, index, step_end))
+            end = step_end;
     }
 
     // A lens: an id, which ends where its 36 characters end.

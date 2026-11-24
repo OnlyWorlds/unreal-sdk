@@ -13,6 +13,8 @@
 #include "OWUnicode.h"
 
 #include <algorithm>
+#include <chrono>
+#include <cstdio>
 #include <memory>
 
 using namespace OnlyWorlds;
@@ -478,6 +480,39 @@ OW_TEST(address_find_all_finds_every_address_in_order_by_read_at_at_each_prefix)
     }
     t.Ok(OWAddress::FindAll("").empty(), "an empty text");
     t.Ok(OWAddress::FindAll("no address here, OW://object/" + Element).empty(), "the prefix as written, lowercase");
+}
+
+// A bare prefix is read once. What the TypeScript SDK's findOwLinks (4.203.0, its built dist/ on Node 22) took on each
+// text, in ms, the slower of two medians of five runs: the name finder's timed recipe "address prefixes with no
+// address" (60,000 "ow://character/", npm's test/fixtures/name-finder.cases.json) and 10,000 bare prefixes of both
+// forms. The core is compiled (build.cmd's /O2) with npm's scan, so npm's time is the measure; three times it leaves
+// room for a loaded machine and sits far under the shape this test exists to catch: a parse of a fresh substring at
+// every length of each run, 17 to 20 times npm on the recipe (239 to 293 ms, measured before the finder read each
+// candidate once; about 3 ms after, a fifth of npm's).
+OW_TEST(address_find_all_reads_each_bare_prefix_once) {
+    const double factor = 3.0;
+    struct Bare {
+        const char* name;
+        std::string piece;
+        int times;
+        double npmMs;
+    };
+    const Bare texts[] = {
+        {"recipe", "ow://character/", 60000, 14.3},
+        {"both forms", "ow://the-world/character/someone https://www.onlyworlds.com/w/ab/character/ ", 5000, 4.0},
+    };
+    for (const Bare& b : texts) {
+        std::string text;
+        text.reserve(b.piece.size() * b.times);
+        for (int i = 0; i < b.times; ++i) text += b.piece;
+        const auto t0 = std::chrono::steady_clock::now();
+        const size_t found = OWAddress::FindAll(text).size();
+        const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        const double line = b.npmMs * factor;
+        std::printf("      %.2f ms: FindAll on %s\n", ms, b.name);
+        t.Eq(found, size_t(0), std::string(b.name) + ": no address");
+        t.Ok(ms < line, std::string(b.name) + ": " + std::to_string(ms) + " ms, the line " + std::to_string(line) + " ms");
+    }
 }
 
 OW_TEST(address_read_at_the_sites_form_a_run_cut_inside_a_word_is_no_address) {
