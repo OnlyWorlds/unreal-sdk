@@ -270,5 +270,22 @@ bool IsLetterOrMark(char32_t cp) {
     return false;
 }
 
+bool IsDecimalDigit(char32_t cp) {
+    size_t lo = 0, hi = D::DecimalDigitCount;
+    while (lo < hi) {
+        size_t mid = (lo + hi) / 2;
+        if (cp < D::DecimalDigits[mid].first) hi = mid;
+        else if (cp > D::DecimalDigits[mid].last) lo = mid + 1;
+        else return true;
+    }
+    return false;
+}
+
+char32_t SimpleFold(char32_t cp) {
+    const D::FoldRow* end = D::Folds + D::FoldCount;
+    const D::FoldRow* r = std::lower_bound(D::Folds, end, cp, [](const D::FoldRow& row, char32_t k) { return row.cp < k; });
+    return r != end && r->cp == cp ? r->to : cp;
+}
+
 }  // namespace OWUnicode
 }  // namespace OnlyWorlds

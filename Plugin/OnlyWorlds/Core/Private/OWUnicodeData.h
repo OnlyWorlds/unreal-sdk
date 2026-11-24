@@ -31,5 +31,7 @@ extern const RangeRow NonspacingMarks[];
 extern const size_t NonspacingMarkCount;
 extern const RangeRow LettersAndMarks[];
 extern const size_t LetterAndMarkCount;
+extern const RangeRow DecimalDigits[];
+extern const size_t DecimalDigitCount;
 
 }}  // namespace OnlyWorlds::UnicodeData
