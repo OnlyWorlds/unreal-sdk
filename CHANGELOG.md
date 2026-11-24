@@ -34,6 +34,18 @@ the detail a maintainer needs; the history before this file is in the git log.
   exec output (without that link the loop never runs). The Output Log's form of the names, and of the reason when the
   folder is missing, is given. The note that the steps had never been run is replaced by what runs them now.
 
+- `OWWorld` reads names as written, as the folder format rules (2026-11-23), at both doors (`ReadFolder` and
+  `FromFiles`, so an `.owworld` too). A type folder is one of the 22 type words in lower case: `elements/Character/`,
+  and any other folder under `elements/` or `spatial/` that is not a type (`elements/vessel/`), was read as a type of
+  that name and is now not read, its files kept as bytes in `other_files` and the folder named in `errors`
+  (`elements/Character/: not a type folder ...`). An element file's extension is `.json` in lower case: `X.JSON` was
+  already not read, and is now named in `errors` too, so a reader on any file system says the same. Ids are compared
+  as written, as before and now held by a test: one UUID in capitals in one file and in lower case in another is two
+  elements, and so is one without hyphens, in braces or with a space before it. A world read and written back by this
+  package reads as before, and so does a new element added with a type word in lower case (`Add("character", ...)`);
+  one added as `Add("Character", ...)` is written to a folder no reader reads. The plugin's `UOWWorld` reads through
+  the core and follows it; `GetErrors` lists the new lines.
+
 ## [0.1.0] - 2026-11-23
 
 The first numbered release: the plugin as built so far, every call as [docs/reference.md](docs/reference.md) describes

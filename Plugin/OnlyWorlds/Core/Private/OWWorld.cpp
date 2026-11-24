@@ -1,7 +1,9 @@
 #include "OWWorld.h"
+#include "OWAddress.h"
 #include "OWUnicode.h"
 
 #include <algorithm>
+#include <set>
 #include <unordered_set>
 
 namespace OnlyWorlds {
@@ -21,6 +23,21 @@ std::string AsciiLower(std::string s) {
 bool EndsWith(const std::string& s, const std::string& tail) {
     return s.size() >= tail.size() && s.compare(s.size() - tail.size(), tail.size(), tail) == 0;
 }
+
+// Names are read as written (ruled 2026-11-23). A type folder is one of the 22 type words in lower case: any other
+// folder under elements/ or spatial/ (elements/Character/, elements/vessel/) is not read.
+bool IsTypeFolder(const std::string& name) {
+    for (const char* t : OWAddress::TypeWords)
+        if (name == t) return true;
+    return false;
+}
+
+// An element file's extension is .json in lower case: a name that ends so only in another case (X.JSON) is named and
+// not read, never left to a file system that folds the name.
+bool IsJsonInOtherCase(const std::string& name) { return !EndsWith(name, ".json") && EndsWith(AsciiLower(name), ".json"); }
+
+const char* const NotJsonLower = ": the extension is not .json in lower case; not read, kept as it is";
+const char* const NotTypeFolder = "/: not a type folder (one of the 22 type words, in lower case); not read, kept as it is";
 
 std::string StringField(const OWJsonValue& body, const char* key) {
     const OWJsonValue* v = body.IsObject() ? body.Find(key) : nullptr;
@@ -74,6 +91,11 @@ std::unique_ptr<OWWorld> OWWorld::ReadFolder(const std::string& path_in, bool ot
         for (const std::string& type : OWFiles::List(base, true)) {
             if (type[0] == '.') continue;
             std::string dir = base + "/" + type;
+            if (!IsTypeFolder(type)) {
+                w->errors.push_back(std::string(top) + "/" + type + NotTypeFolder);
+                if (other_parts) OWWorldArchive::CollectContent(dir, std::string(top) + "/" + type, w->other_files);
+                continue;
+            }
             for (const std::string& name : OWFiles::List(dir, false)) {
                 if (name[0] == '.') continue;
                 std::string rel = std::string(top) + "/" + type + "/" + name;
@@ -81,7 +103,10 @@ std::unique_ptr<OWWorld> OWWorld::ReadFolder(const std::string& path_in, bool ot
                 OWFiles::Read(dir + "/" + name, b);
                 if (EndsWith(name, ".json")) {
                     w->AddParsed(rel, type, std::move(b));
-                } else if (other_parts && !EndsWith(AsciiLower(name), ".meta")) {
+                    continue;
+                }
+                if (IsJsonInOtherCase(name)) w->errors.push_back(rel + NotJsonLower);
+                if (other_parts && !EndsWith(AsciiLower(name), ".meta")) {
                     w->other_files[rel] = std::move(b);
                 }
             }
@@ -102,6 +127,7 @@ std::unique_ptr<OWWorld> OWWorld::ReadFolder(const std::string& path_in, bool ot
 std::unique_ptr<OWWorld> OWWorld::FromFiles(const OWFileMap& files) {
     auto w = std::make_unique<OWWorld>();
     bool have_world = false;
+    std::set<std::string> no_type;  // each folder that is no type, named once
     for (const auto& kv : files) {
         const std::string& rel = kv.first;
         if (rel == World) {
@@ -111,12 +137,19 @@ std::unique_ptr<OWWorld> OWWorld::FromFiles(const OWFileMap& files) {
         }
         size_t a = rel.find('/');
         size_t b = a == std::string::npos ? a : rel.find('/', a + 1);
-        bool element = b != std::string::npos && rel.find('/', b + 1) == std::string::npos &&
-                       (rel.compare(0, a, "elements") == 0 || rel.compare(0, a, "spatial") == 0) &&
-                       rel[a + 1] != '.' && rel[b + 1] != '.' && EndsWith(rel, ".json");
-        if (element) {
-            w->AddParsed(rel, rel.substr(a + 1, b - a - 1), kv.second);
+        bool in_folder = b != std::string::npos && (rel.compare(0, a, "elements") == 0 || rel.compare(0, a, "spatial") == 0) &&
+                         rel[a + 1] != '.';
+        std::string type = in_folder ? rel.substr(a + 1, b - a - 1) : std::string();
+        if (in_folder && !IsTypeFolder(type)) {
+            if (no_type.insert(rel.substr(0, b)).second) w->errors.push_back(rel.substr(0, b) + NotTypeFolder);
+            w->other_files[rel] = kv.second;
+            continue;
+        }
+        bool direct = in_folder && rel.find('/', b + 1) == std::string::npos && rel[b + 1] != '.';
+        if (direct && EndsWith(rel, ".json")) {
+            w->AddParsed(rel, type, kv.second);
         } else {
+            if (direct && IsJsonInOtherCase(rel)) w->errors.push_back(rel + NotJsonLower);
             w->other_files[rel] = kv.second;
         }
     }

@@ -47,7 +47,10 @@ public:
 
     // Read a world folder: world.json, every elements/<type>/*.json (and the legacy spatial/<type>/), and, with
     // `other_parts`, media/ and records/ as bytes (so a write to a new folder gives the world whole; the same
-    // selection Pack makes). nullptr when there is no world.json.
+    // selection Pack makes). nullptr when there is no world.json. Names are read as written, at both doors: <type> is
+    // one of the 22 type words in lower case (elements/Character/ and elements/vessel/ are not read) and the extension
+    // is .json in lower case (X.JSON is not read); each is named in `errors` and kept in `other_files`. Ids are
+    // compared as written: one UUID in capitals in one file and in lower case in another is two elements.
     static std::unique_ptr<OWWorld> ReadFolder(const std::string& path, bool other_parts = true);
     // A world from files keyed by their path inside it (an OWArchiveRead's files).
     static std::unique_ptr<OWWorld> FromFiles(const OWFileMap& files);
@@ -60,8 +63,9 @@ public:
     bool info_edited = false;
     // Every element, in the order read (types and names in UTF-8 byte order).
     std::vector<OWElement> elements;
-    // Files of the world that are not elements (media/, records/, a file that does not parse, a body with no id), by
-    // path inside the world, kept as bytes so they write back whole.
+    // Files of the world that are not elements (media/, records/, a file that does not parse, a body with no id, a file
+    // in a folder that is no type, one whose extension is .json in another case), by path inside the world, kept as
+    // bytes so they write back whole.
     OWFileMap other_files;
     // What could not be read, one line each.
     std::vector<std::string> errors;
