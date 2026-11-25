@@ -4,7 +4,7 @@ Notable changes to the OnlyWorlds SDK for Unreal. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Where it stands.** 0.1.0 is the first release. `onlyworlds-unreal-0.1.0.zip`, on the repository's Releases page,
+**Where it stands.** 0.2.0 is the latest release. `onlyworlds-unreal-0.2.0.zip`, on the repository's Releases page,
 holds the plugin folder to drop into a project's `Plugins/`, as source the project compiles; the [README](README.md)
 has the install and a first run. What a game can do with it: open a world on disk (a world folder or an `.owworld`
 file) and read its elements of all 22 types as Blueprint structs; read and write a world over the onlyworlds.com API
@@ -14,6 +14,16 @@ OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine
 the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
+
+## [0.2.0] - 2026-11-25
+
+A world file now leaves out who wrote each element unless asked. A world folder's fixed names (`world.json`,
+`elements/`, `spatial/`) are read as written, and one held only in another case is refused with the name to fix.
+An element's declared type counts only when it is one of the 22 type slugs exactly, and a new element whose type is
+not one is refused, which closes a write outside `elements/`. Three readers follow the other OnlyWorlds SDKs in the
+C++ core (not yet Blueprint nodes): element names found in prose, which of a map's Pins one reader knows, and the
+most linked elements of each type. The README's Blueprint first run is built and run by a test. Pinned to
+schema-dist serial 146. `OWWorldArchive::Reasons` gains a cause, so a game module built against 0.1.0 rebuilds.
 
 ### Changed
 
@@ -83,6 +93,21 @@ the detail a maintainer needs; the history before this file is in the git log.
   escaped, as the TypeScript SDK writes it. An integer-like key (`"0"`, `"12"`) keeps its place in the object, where
   `JSON.stringify` would put it first. On Sikelia (20,913 element files, every one holding an author field) all
   20,913 are rewritten and none kept; the pack takes about half a second.
+- README, the Blueprint first run: its steps now say what the graph needs that they left out. The Blueprint is the
+  Level Blueprint or an Actor Blueprint placed in the level, and the For Each Loop is entered from Open World Folder's
+  exec output (without that link the loop never runs). The Output Log's form of the names, and of the reason when the
+  folder is missing, is given. The note that the steps had never been run is replaced by what runs them now.
+- `OWWorld` reads names as written, as the folder format rules (2026-11-23), at both doors (`ReadFolder` and
+  `FromFiles`, so an `.owworld` too). A type folder is one of the 22 type words in lower case: `elements/Character/`,
+  and any other folder under `elements/` or `spatial/` that is not a type (`elements/vessel/`), was read as a type of
+  that name and is now not read, its files kept as bytes in `other_files` and the folder named in `errors`
+  (`elements/Character/: not a type folder ...`). An element file's extension is `.json` in lower case: `X.JSON` was
+  already not read, and is now named in `errors` too, so a reader on any file system says the same. Ids are compared
+  as written, as before and now held by a test: one UUID in capitals in one file and in lower case in another is two
+  elements, and so is one without hyphens, in braces or with a space before it. A world read and written back by this
+  package reads as before, and so does a new element added with a type word in lower case (`Add("character", ...)`);
+  one added as `Add("Character", ...)` is written to a folder no reader reads. The plugin's `UOWWorld` reads through
+  the core and follows it; `GetErrors` lists the new lines.
 
 ### Added
 
@@ -130,25 +155,6 @@ the detail a maintainer needs; the history before this file is in the git log.
   The core already filled and closed up a label in one pass and found a day by walking the months, so nothing in it
   changed; the roundtrip case's read back is the TypeScript SDK's `parseDate`, which the core does not have, so its
   label alone is held.
-
-### Changed
-
-- README, the Blueprint first run: its steps now say what the graph needs that they left out. The Blueprint is the
-  Level Blueprint or an Actor Blueprint placed in the level, and the For Each Loop is entered from Open World Folder's
-  exec output (without that link the loop never runs). The Output Log's form of the names, and of the reason when the
-  folder is missing, is given. The note that the steps had never been run is replaced by what runs them now.
-
-- `OWWorld` reads names as written, as the folder format rules (2026-11-23), at both doors (`ReadFolder` and
-  `FromFiles`, so an `.owworld` too). A type folder is one of the 22 type words in lower case: `elements/Character/`,
-  and any other folder under `elements/` or `spatial/` that is not a type (`elements/vessel/`), was read as a type of
-  that name and is now not read, its files kept as bytes in `other_files` and the folder named in `errors`
-  (`elements/Character/: not a type folder ...`). An element file's extension is `.json` in lower case: `X.JSON` was
-  already not read, and is now named in `errors` too, so a reader on any file system says the same. Ids are compared
-  as written, as before and now held by a test: one UUID in capitals in one file and in lower case in another is two
-  elements, and so is one without hyphens, in braces or with a space before it. A world read and written back by this
-  package reads as before, and so does a new element added with a type word in lower case (`Add("character", ...)`);
-  one added as `Add("Character", ...)` is written to a folder no reader reads. The plugin's `UOWWorld` reads through
-  the core and follows it; `GetErrors` lists the new lines.
 
 ### Fixed
 
