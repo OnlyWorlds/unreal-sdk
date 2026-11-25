@@ -4,7 +4,7 @@ Notable changes to the OnlyWorlds SDK for Unreal. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Where it stands.** 0.2.0 is the latest release. `onlyworlds-unreal-0.2.0.zip`, on the repository's Releases page,
+**Where it stands.** 0.3.0 is the latest release. `onlyworlds-unreal-0.3.0.zip`, on the repository's Releases page,
 holds the plugin folder to drop into a project's `Plugins/`, as source the project compiles; the [README](README.md)
 has the install and a first run. What a game can do with it: open a world on disk (a world folder or an `.owworld`
 file) and read its elements of all 22 types as Blueprint structs; read and write a world over the onlyworlds.com API
@@ -14,6 +14,14 @@ OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine
 the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
+
+## [0.3.0] - 2026-11-25
+
+A world can be packed as a share, which leaves out what a reader should not get: elements marked hidden and files
+the folder reader would not serve (`bAsShare` on the two Blueprint pack nodes). The C++ core says which of a world's
+calendars speaks, by the World's `x_calendar`. A new element's file name is the one the other OnlyWorlds SDKs give it,
+and a new element whose type is not one of the 22 never gets a path outside `elements/`. Pinned to schema-dist serial
+147.
 
 ### Added
 
