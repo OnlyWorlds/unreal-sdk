@@ -15,6 +15,14 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Fixed
+
+- `OWWorld::ToFiles` leaves out a new element whose type is not one of the 22 type slugs, as it already left out one
+  whose two file names are both held. Since 0.2.0 `WriteFolder` and `Pack` refuse such an element, but `ToFiles`
+  still mapped it to a path built from its type (`elements/../escape/…` for the type `../escape`), so a caller that
+  wrote the map itself, or handed it to `OWWorldArchive::PackFiles`, could write outside `elements/`. Nor does such an
+  element take a name from a typed sibling.
+
 ## [0.2.0] - 2026-11-25
 
 A world file now leaves out who wrote each element unless asked. A world folder's fixed names (`world.json`,

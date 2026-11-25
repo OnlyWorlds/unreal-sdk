@@ -364,6 +364,10 @@ std::vector<std::pair<size_t, std::string>> OWWorld::NewPaths() const {
         const OWElement& e = elements[i];
         std::string id = e.Id();
         if (id.empty()) continue;  // WriteRefusal names it
+        if (!IsTypeFolder("elements", e.folder_type)) {  // no folder a reader reads: no path, no name taken from a sibling
+            out.emplace_back(i, std::string());
+            continue;
+        }
         std::string dir = std::string("elements/") + e.folder_type + "/";
         std::string path = dir + ElementFilename(id, e.Name());
         if (taken.count(AsciiLower(path))) path = dir + ElementFilename(id, e.Name(), true);

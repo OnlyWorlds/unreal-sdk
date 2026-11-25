@@ -103,3 +103,17 @@ OW_TEST(declared_type_writer_a_refused_type_stays_refused_after_to_files) {
     t.Ok(w->WriteRefusal().find("not one of the 22 type slugs") != std::string::npos, "still refused");
     t.Ok(!w->Pack("w").ok, "Pack too");
 }
+
+// ToFiles, which PackFiles and a caller's own writer take, leaves a refused element out, as it leaves out one whose two
+// file names are both held: no path outside elements/ ever reaches a map. A typed sibling keeps its short name.
+OW_TEST(declared_type_writer_to_files_leaves_out_an_element_the_writer_refuses_by_its_type) {
+    for (const char* type : {"Character", "CHARACTER", " character", "character ", "widget", "characters", "../escape",
+                             "../../escape", "character/../../escape", "..", ".", ""}) {
+        std::unique_ptr<OWWorld> w = WorldWith(type);
+        w->Add("character", OWJson::Parse(Bytes("{\"id\":\"0695db83-0000-7000-8000-00000000ab01\",\"name\":\"N\"}")).value);
+        std::string keys;
+        for (const auto& kv : w->ToFiles()) keys += kv.first + "\n";
+        t.Eq(keys, std::string("elements/character/n--0000ab01.json\nworld.json\n"),
+             std::string("'") + type + "': only the world and the typed sibling");
+    }
+}

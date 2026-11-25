@@ -106,7 +106,8 @@ public:
     // Every file of the world by its path inside it: world.json, each element, and other_files. `only_edited` gives
     // just the files an edit changed (to write back into the folder read). A held path never gets other bytes: an
     // edit to a world.json that could not be read is left out (its bytes as read), and so is a new element whose two
-    // names are both held (WriteRefusal names each).
+    // names are both held, or whose type is not one of the 22 (no folder a reader reads, and a path from it could
+    // leave elements/). WriteRefusal names each.
     OWFileMap ToFiles(bool only_edited = false);
     // Why WriteFolder and Pack would refuse to write this world, or "" when they would not: a world.json to be written
     // that could not be read (a writer never writes over such a file, the caller's id or not), or whose id is no
