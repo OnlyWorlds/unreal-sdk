@@ -138,6 +138,11 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ### Fixed
 
+- **A tool's `world.json` under a dot-folder inside the world no longer refuses a world file** (folder spec 4.7,
+  OW-5, ruled 2026-11-24). `OWWorldArchive::Read` refused `abbey/.atlas/world.json` as a second world
+  (`more_than_one`); a dot-folder is never a world, wherever it sits (`..atlas/`, `elements/character/.trash/` too), so
+  the second-world check no longer looks under one, as the folder reader never reads one. Every other check still
+  reads those entries. The fixture set's `pass-OW-5-dot-folder-inside` passes (`tests/test_dot_folder_world.cpp`).
 - **`OWAddress::FindAll` reads a prefix that holds no address once.** `ReadAt` parsed the text at every length of
   the path after a prefix, building a reading each time, so a text full of bare prefixes paid a whole `Parse` a
   character: 60,000 `ow://character/` took 239 to 293 ms in the core's test build (`build.cmd`, MSVC `/O2`), 17 to 20

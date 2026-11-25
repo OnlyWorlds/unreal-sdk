@@ -69,6 +69,17 @@ bool IsJunk(const std::string& name) {
     return false;
 }
 
+// Whether `rel` sits under a folder whose name starts with a dot, at any depth (its last segment, the file, not
+// counted). The names are already plain paths: OW-16 refused a segment that is exactly "." or "..".
+bool UnderADotFolder(const std::string& rel) {
+    size_t start = 0;
+    for (size_t slash = rel.find('/'); slash != std::string::npos; slash = rel.find('/', start)) {
+        if (slash > start && rel[start] == '.') return true;
+        start = slash + 1;
+    }
+    return false;
+}
+
 OWArchiveRead& Refuse(OWArchiveRead& r, const char* reason, std::string message) {
     r.ok = false;
     r.reason = reason;
@@ -226,13 +237,15 @@ OWArchiveRead Read(const OWBytes& raw, const OWArchiveBudget& budget) {
         r.prefix = *roots.begin();
     }
 
-    // OW-5: no world.json inside the world but its own, except a producer's under records/.
+    // OW-5: no world.json inside the world but its own, except a producer's under records/, and except under a folder
+    // whose name starts with a dot: a dot-folder is never a world, wherever it sits (ruled 2026-11-24; ..atlas/ too).
+    // Only this check skips them: every other check reads their entries.
     std::vector<std::string> inside;
     for (const std::string& n : candidates) {
         if (!StartsWith(n, r.prefix)) continue;
         inside.push_back(n);
         std::string rel = n.substr(r.prefix.size());
-        if (rel != World && EndsWith(rel, std::string("/") + World) && !StartsWith(rel, "records/"))
+        if (rel != World && EndsWith(rel, std::string("/") + World) && !StartsWith(rel, "records/") && !UnderADotFolder(rel))
             return Refuse(r, "more_than_one", "a second world.json inside the world: " + Show(n));
     }
 
