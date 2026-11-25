@@ -2,7 +2,7 @@
 // other mark; lowercased; every run outside a-z and 0-9 one hyphen; hyphens at both ends dropped; cut at 40 and the new
 // end's hyphens dropped. A name that leaves no slug gives the full id.
 //
-// The cases (tests/data/file-names.fixture.json) are the shared file-name set, held by their sha256: 37 names, each
+// The cases (tests/data/file-names.fixture.json) are the shared file-name set, held by their sha256: 38 names, each
 // slug the one the TypeScript package's folder writer and the Python package's slugify both give.
 
 #include "ow_test.h"
@@ -19,7 +19,7 @@ using owtest::P;
 
 namespace {
 
-const char* const FixtureSha256 = "8b19110baf6c4c96cbe08f741c219a9e3803a1b495144aaadd91715fd5b7c741";
+const char* const FixtureSha256 = "0da1846641e116b2ff39269261779854e794db117388bd912e5aff68a243a91d";
 
 const OWBytes& FixtureBytes() {
     static OWBytes bytes;
@@ -42,7 +42,7 @@ OW_TEST(file_names_every_case_is_the_sentences_slug) {
     const OWJsonValue* cases = r.ok ? r.value.Find("cases") : nullptr;
     t.Ok(cases != nullptr, "the set parses and holds cases");
     if (!cases) return;
-    t.Eq(cases->Items().size(), size_t(37), "37 cases");
+    t.Eq(cases->Items().size(), size_t(38), "38 cases");
     const std::string id = "019a9300-0000-7000-8000-0000000000c9";
     for (const OWJsonValue& c : cases->Items()) {
         const std::string& name = c.Find("element_name")->Text();

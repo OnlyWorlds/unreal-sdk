@@ -25,7 +25,7 @@ the detail a maintainer needs; the history before this file is in the git log.
 - A new element's file name drops only the combining diacritics (U+0300 to U+036F) from its name, as the TypeScript
   and Python packages do (the folder format's section 3.2). It dropped every nonspacing mark, so `a`, U+064E, `b`
   gave `ab--….json` where the packages give `a-b--….json`. An element read from a file keeps the name it was read
-  from. The shared file-name set (37 names and their slugs, `tests/data/file-names.fixture.json`, held by its
+  from. The shared file-name set (38 names and their slugs, `tests/data/file-names.fixture.json`, held by its
   sha256) is now a test.
 
 ## [0.2.0] - 2026-11-25
