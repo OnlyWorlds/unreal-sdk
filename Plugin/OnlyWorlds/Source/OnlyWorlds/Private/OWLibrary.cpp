@@ -31,10 +31,13 @@ namespace
 
 UOWWorld* UOWLibrary::OpenWorldFolder(const FString& Path, FString& Error)
 {
-	std::unique_ptr<OnlyWorlds::OWWorld> World = OnlyWorlds::OWWorld::ReadFolder(OWConvert::Path(Path));
+	const std::string Native = OWConvert::Path(Path);
+	std::unique_ptr<OnlyWorlds::OWWorld> World = OnlyWorlds::OWWorld::ReadFolder(Native);
 	if (!World)
 	{
-		Error = TEXT("no world.json in ") + Path;
+		// world.json, elements/ or spatial/ in another case (name_case) says so, both spellings named; else no world.json.
+		const std::string Why = OnlyWorlds::OWWorld::FolderFault(Native);
+		Error = Why.empty() ? TEXT("no world.json in ") + Path : Path + TEXT(" is refused, ") + Str(Why);
 		UE_LOG(LogOnlyWorlds, Log, TEXT("OpenWorldFolder: %s"), *Error);
 		return nullptr;
 	}
@@ -51,7 +54,8 @@ UOWWorld* UOWLibrary::OpenWorldFile(const FString& Path, FOWArchiveVerdict& Verd
 		UE_LOG(LogOnlyWorlds, Log, TEXT("OpenWorldFile: %s refused (%s: %s)"), *Path, *Verdict.Reason, *Verdict.Message);
 		return nullptr;
 	}
-	return Wrap(OnlyWorlds::OWWorld::FromFiles(R.files));
+	std::unique_ptr<OnlyWorlds::OWWorld> World = OnlyWorlds::OWWorld::FromFiles(R.files);
+	return World ? Wrap(std::move(World)) : nullptr;  // never null after an accepted read: the archive refuses first
 }
 
 FOWArchiveVerdict UOWLibrary::CheckWorldFile(const FString& Path)

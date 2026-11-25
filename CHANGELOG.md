@@ -32,7 +32,9 @@ the detail a maintainer needs; the history before this file is in the git log.
   disk can) reads the name as written. **`OWWorldArchive::Reasons` has 13 causes** (it was `[12]`; the twelfth is
   followed by `name_case`): a change to an exported symbol, so a game module built against the old header rebuilds.
   The core's runner reads a draft conformance set when `OW_OWWORLD_FIXTURES` names it, and counts the set from its
-  `verdicts.json` (no fixed number).
+  `verdicts.json` (no fixed number). On Blueprints, `OpenWorldFolder`'s `Error` names the cause and both spellings for
+  such a folder (it said "no world.json" for every refusal), and `OpenWorldFile`'s verdict carries `name_case` as its
+  `Reason`.
 - **Under the legacy `spatial/` only `map`, `pin`, `zone` and `marker` are read** (folder spec 4.8, ruled
   2026-11-25). Before, a folder under `spatial/` named by any of the 22 type words was read, so
   `spatial/character/c.json` was served as a Character. Now such a folder is no type folder there: it is named once in

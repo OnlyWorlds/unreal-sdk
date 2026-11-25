@@ -19,7 +19,7 @@ struct ONLYWORLDS_API FOWArchiveVerdict
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
 	bool bAccepted = false;
 
-	/** A refusal's one cause, from the folder format's list ("crc", "unsafe_path", ...); "" when accepted. */
+	/** A refusal's one cause, from the folder format's list ("name_case", "unsafe_path", ...); "" when accepted. */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
 	FString Reason;
 
@@ -40,7 +40,9 @@ class ONLYWORLDS_API UOWLibrary : public UBlueprintFunctionLibrary
 public:
 	/**
 	 * Open a world folder (the folder holding world.json). A relative path is taken from the project's folder.
-	 * nullptr, with Error set, when there is no world there.
+	 * nullptr, with Error set, when there is no world there, and when the folder holds world.json, elements/ or spatial/
+	 * in another case and not as written (Elements/, World.JSON): those names are read as written, so the world would
+	 * read as empty, and Error names the cause, name_case, and both spellings.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds")
 	static UOWWorld* OpenWorldFolder(const FString& Path, FString& Error);
