@@ -59,9 +59,11 @@ FOWArchiveVerdict UOWLibrary::CheckWorldFile(const FString& Path)
 	return VerdictOf(OnlyWorlds::OWWorldArchive::ReadFile(OWConvert::Path(Path)));
 }
 
-bool UOWLibrary::PackWorldFolder(const FString& Folder, const FString& ArchivePath, FString& Error)
+bool UOWLibrary::PackWorldFolder(const FString& Folder, const FString& ArchivePath, FString& Error,
+	bool bIncludeAuthorFields)
 {
-	OnlyWorlds::OWPacked P = OnlyWorlds::OWWorldArchive::Pack(OWConvert::Path(Folder), OWConvert::Path(ArchivePath));
+	OnlyWorlds::OWPacked P = OnlyWorlds::OWWorldArchive::Pack(OWConvert::Path(Folder), OWConvert::Path(ArchivePath),
+		false, false, bIncludeAuthorFields);
 	Error = P.ok ? FString() : Str(P.message);
 	return P.ok;
 }

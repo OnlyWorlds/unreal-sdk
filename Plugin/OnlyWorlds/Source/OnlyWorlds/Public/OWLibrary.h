@@ -53,7 +53,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds")
 	static FOWArchiveVerdict CheckWorldFile(const FString& Path);
 
-	/** Pack a world folder as a portable .owworld file (its api block stripped, private records left out). */
+	/** Pack a world folder as a portable .owworld file (its api block stripped, private records left out, and who wrote
+	 * each element left out: the five author fields, unless bIncludeAuthorFields, for a copy of your own folder). */
 	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds")
-	static bool PackWorldFolder(const FString& Folder, const FString& ArchivePath, FString& Error);
+	static bool PackWorldFolder(const FString& Folder, const FString& ArchivePath, FString& Error,
+		bool bIncludeAuthorFields = false);
 };

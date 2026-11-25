@@ -108,14 +108,14 @@ bool UOWWorld::WriteFolder(const FString& Path, bool bOnlyEdited, FString& Error
 	return bOk;
 }
 
-bool UOWWorld::PackToFile(const FString& ArchivePath, FString& Error)
+bool UOWWorld::PackToFile(const FString& ArchivePath, FString& Error, bool bIncludeAuthorFields)
 {
 	if (!World)
 	{
 		Error = TEXT("no world");
 		return false;
 	}
-	OnlyWorlds::OWPacked Packed = World->Pack(Utf8(FPaths::GetBaseFilename(ArchivePath)));
+	OnlyWorlds::OWPacked Packed = World->Pack(Utf8(FPaths::GetBaseFilename(ArchivePath)), false, false, bIncludeAuthorFields);
 	if (!Packed.ok)
 	{
 		Error = Str(Packed.message);

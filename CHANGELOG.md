@@ -26,7 +26,8 @@ the detail a maintainer needs; the history before this file is in the git log.
   present with `null` goes too. Such a file is written in section 5's form (`OWJson::ToBytes`); a file holding none
   of the five, a file that is no JSON object (an array, a write cut short, not UTF-8), and `world.json`, `media/` and
   `records/` keep their bytes. A trailing `include_author_fields` (on `PackWorld`, `PackFolder`, `Pack` and
-  `OWWorld::Pack`) carries them, for a byte copy of your own folder; `OWPacked::author_fields_left_out` lists the files
+  `OWWorld::Pack`, and an Include Author Fields input on both nodes, off by default) carries them, for a byte copy of
+  your own folder; `OWPacked::author_fields_left_out` lists the files
   rewritten, and `OWWorldArchive::StripAuthorFields(files)` and `WithoutAuthorFields(bytes, out)` do the same to a
   file map or one file (`OW_API`). `PackFiles` is unchanged: it writes what it is handed (OW-9). The Blueprint nodes
   take no new input yet, so from Blueprints a pack always leaves them out. Parity with the TypeScript SDK 4.203.1 (and
