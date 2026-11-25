@@ -1,11 +1,12 @@
 // OWWorldArchive::Read on every .owworld in the conformance set (schema-dist fixtures/owworld/, the pinned copy): the
-// fixture's bytes are the set's, the reader verdict and the reason as verdicts.json gives them, OW-10's strip, and
-// OW-9's round trip (read, pack, read again). As Unity's NUnit class and the Godot SDK's test_archive_fixtures do.
+// fixture's bytes are the set's, the reader verdict and the reason as verdicts.json gives them, the files a reader
+// leaves out by reason (OW-25), OW-10's strip, and OW-9's round trip (read, pack, read again). As Unity's NUnit class and the Godot SDK's test_archive_fixtures do.
 
 #include "ow_test.h"
 #include "sha256.h"
 
 #include "OWJson.h"
+#include "OWWorld.h"
 #include "OWWorldArchive.h"
 
 #include <algorithm>
@@ -61,6 +62,25 @@ void Case(owtest::T& t, const OWJsonValue& v) {
         t.Ok(!r.world.Has(key), key + " stripped from the world");
         OWJsonParseResult back = OWJson::Parse(r.files["world.json"]);
         t.Ok(back.ok && !back.value.Has(key), key + " not in the returned world.json");
+    }
+    const OWJsonValue* left = v.Find("left_out");
+    if (r.ok && left && left->IsObject() && !v.Has("side")) {
+        // A reader's left_out (OW-25): by reason, the files the world's reader skipped with that word, by path.
+        std::unique_ptr<OWWorld> w = OWWorld::FromFiles(r.files);
+        t.Ok(w != nullptr, "the files read as a world");
+        for (size_t i = 0; w && i < left->Keys().size(); ++i) {
+            const std::string& reason = left->Keys()[i];
+            std::vector<std::string> want, skipped;
+            for (const OWJsonValue& x : left->Items()[i].Items()) want.push_back(x.Text());
+            for (const std::string& e : w->errors) {
+                size_t at = e.find(": " + reason);
+                if (at != std::string::npos && at > 0) skipped.push_back(e.substr(0, at));
+            }
+            std::sort(want.begin(), want.end());
+            std::sort(skipped.begin(), skipped.end());
+            t.Ok(skipped == want, "left out as " + reason + " (" + std::to_string(skipped.size()) + " skipped, " +
+                                      std::to_string(want.size()) + " in the set)");
+        }
     }
     const OWJsonValue* rt = v.Find("roundtrip");
     if (r.ok && rt && rt->IsBool() && rt->AsBool()) {
