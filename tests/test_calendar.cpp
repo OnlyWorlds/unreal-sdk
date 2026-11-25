@@ -1,4 +1,4 @@
-// OWCalendar on the calendar profile's conformance fixture (schema-dist profiles/calendar.fixture.json, dist.131's
+// OWCalendar on the calendar profile's conformance fixture (schema-dist profiles/calendar.fixture.json, dist.146's
 // copy): every case by name, a refused value refused, each step's words and breakdown as the fixture gives them, and
 // the calendars found on a case's elements.
 // Then the readings the fixture leaves open (its gaps), as npm @onlyworlds/sdk 4.102.4 answers them (the profile's
@@ -23,8 +23,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.131's MANIFEST.json records it.
-const char* const DistSha256 = "0a013c3732eda70a42c4eab30555669af28983a5ba9f4a233addf0f06bedb4cd";
+// The fixture's sha256 as dist.146's MANIFEST.json records it.
+const char* const DistSha256 = "1caef0003392b60b9f0cf960232c009417c85d374ac8574c3b9fcec55adda7a9";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/calendar.fixture.json"; }
 
@@ -250,10 +250,10 @@ OW_TEST(calendar_fixture_is_the_pinned_one) {
             ++refused;
         }
     }
-    t.Eq(cases->Size(), size_t(78), "78 cases (the profile page says 78)");
-    t.Eq(read, size_t(35), "35 calendars");
+    t.Eq(cases->Size(), size_t(79), "79 cases (the profile page says 79)");
+    t.Eq(read, size_t(36), "36 calendars");
     t.Eq(refused, size_t(43), "43 values a reader must refuse");
-    t.Eq(steps, size_t(229), "229 steps");
+    t.Eq(steps, size_t(232), "232 steps");
 }
 
 OW_CASES(calendar_fixture_cases) {

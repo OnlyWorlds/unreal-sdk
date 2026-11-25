@@ -17,6 +17,11 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ### Changed
 
+- Schema pin to `v0.34.1-dist.146` (`7f29ae4`): canonical `00.34.01` unchanged; the generated files moved in their
+  stamp only. The address fixture gains one prose case (219 in all) and the calendar fixture one calendar (79 cases,
+  36 calendars), each answered with no change, in the core and in the plugin. The `.owworld` set's new cases (a fixed
+  name held only in another case, `spatial/`'s four types, a dot-folder inside a world, what a share may carry) each
+  get the set's verdict, now 109 generated fixtures.
 - **`world.json`, `elements/` and `spatial/` are read as written, and one held in another case is refused, never
   read as an empty world** (folder spec 4.8, ruled 2026-11-25). A folder holding `Elements/`, `World.JSON` or
   `Spatial/` and not the name itself gives `nullptr` from `OWWorld::ReadFolder`, as for no world.json, and

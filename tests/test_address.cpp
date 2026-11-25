@@ -1,5 +1,5 @@
 // OWAddress on the address profile's conformance fixture (schema-dist profiles/address.fixture.json, the pinned copy,
-// dist.128's, its seventy-six prose cases added at dist.123, dist.126 and dist.127, its two prose-all cases at dist.128): every format case through WriteJson, every parse case through Parse,
+// dist.146's, its seventy-seven prose cases added at dist.123, dist.126, dist.127 and dist.146, its two prose-all cases at dist.128): every format case through WriteJson, every parse case through Parse,
 // every prose case through ReadAt (an address found inside a line, serial 123), each refusal by the reason the fixture
 // names. Then the readings the fixture leaves open, as the TypeScript and Python packages and the Unity SDK answer them: the writer's refusal
 // order, a moment with a zero fraction, an empty string, an unknown key.
@@ -22,8 +22,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.128's MANIFEST.json records it.
-const char* const DistSha256 = "e4ae843895f22333b162c930121386f0d586cb8b1fb8a99f3debdb7e3c33f9c3";
+// The fixture's sha256 as dist.146's MANIFEST.json records it.
+const char* const DistSha256 = "922182d418225234184c5a7e3a3a152e2fde8059c0fe2aa98596a7faa0aab487";
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "019a1f3c-2b4e-7d10-8c3a-6f2e9b0d4a71";
@@ -202,10 +202,10 @@ OW_TEST(address_fixture_is_the_pinned_one) {
         prose_all += Str(c, "kind") == "prose-all";
         refusals += c.Has("refuse");
     }
-    t.Eq(cases->Size(), size_t(218), "218 cases");
+    t.Eq(cases->Size(), size_t(219), "219 cases");
     t.Eq(format, size_t(36), "36 format cases");
     t.Eq(parse, size_t(104), "104 parse cases");
-    t.Eq(prose, size_t(76), "76 prose cases (57 at dist.123, four more at dist.126, fifteen at dist.127), each through ReadAt");
+    t.Eq(prose, size_t(77), "77 prose cases (57 at dist.123, four more at dist.126, fifteen at dist.127, one at dist.146), each through ReadAt");
     t.Eq(prose_all, size_t(2), "2 prose-all cases (dist.128), each through FindAll");
     t.Eq(refusals, size_t(75), "20 format refusals and 55 parse refusals");
 }
