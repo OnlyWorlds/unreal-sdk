@@ -114,6 +114,14 @@ void Case(owtest::T& t, const OWJsonValue& c) {
         for (const OWJsonValue& id : found->Items()) want += (id.IsString() ? id.Text() : std::string("?")) + " ";
         for (const OWWorldCalendar& w : OWCalendar::WorldCalendars(elements->Items())) got += w.id + " ";
         t.Eq(got, want, name + ": the calendars found");
+        // The World's keys, and the element whose calendar speaks (null: none does).
+        if (const OWJsonValue* world = c.Find("world")) {
+            const OWJsonValue* speaks = c.Find("speaks");
+            t.Ok(speaks != nullptr, name + ": the calendar that speaks");
+            std::optional<OWWorldCalendar> spoken = OWCalendar::SpeakingCalendar(*world, elements->Items());
+            std::string wantSpeaks = speaks && speaks->IsString() ? speaks->Text() : std::string("none");
+            t.Eq(spoken ? spoken->id : std::string("none"), wantSpeaks, name + ": which calendar speaks");
+        }
     }
     const OWJsonValue* steps = c.Find("steps");
     t.Ok(steps && steps->IsArray() && steps->Size() > 0, name + ": its steps");

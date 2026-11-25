@@ -110,6 +110,16 @@ OW_API std::optional<OWCalendarConfig> ReadConfig(const OWJsonValue& value);
 // supertype. A value that does not read is skipped.
 OW_API std::vector<OWWorldCalendar> WorldCalendars(const std::vector<OWJsonValue>& elements);
 
+extern OW_API const char* const WorldKey;  // "x_calendar": the World's key that names its calendar
+
+// Which calendar speaks for a world (the calendar profile's "Which calendar speaks"). `world` is the World's own keys
+// (world.json, or the body GET /world returns). Its `x_calendar` names the element whose calendar speaks, by an id
+// matched as written: when an element of `elements` with that id carries a calendar that reads, the first such one
+// speaks; anything else named (an id no element has, the id in another letter case, an element with no calendar or one
+// that does not read, a value that is no string) leaves none, never another in its place. Named none (the key absent
+// or null): the world's only calendar, or none when it holds several. A tool may keep its person's own pick over this.
+OW_API std::optional<OWWorldCalendar> SpeakingCalendar(const OWJsonValue& world, const std::vector<OWJsonValue>& elements);
+
 // Euclidean floor division and its modulo (b > 0).
 OW_API int64_t FloorDiv(int64_t a, int64_t b);
 OW_API int64_t FloorMod(int64_t a, int64_t b);

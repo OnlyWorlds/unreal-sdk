@@ -476,6 +476,27 @@ std::vector<OWWorldCalendar> WorldCalendars(const std::vector<OWJsonValue>& elem
     return out;
 }
 
+const char* const WorldKey = "x_calendar";
+
+std::optional<OWWorldCalendar> SpeakingCalendar(const OWJsonValue& world, const std::vector<OWJsonValue>& elements) {
+    const OWJsonValue* named = Prop(&world, WorldKey);
+    if (Nullish(named)) {
+        std::vector<OWWorldCalendar> all = WorldCalendars(elements);
+        if (all.size() == 1) return std::move(all[0]);
+        return std::nullopt;
+    }
+    if (!named->IsString()) return std::nullopt;
+    // Only an element whose id is that string, as written: WorldCalendars gives a non-string id as "".
+    std::vector<OWJsonValue> holding;
+    for (const OWJsonValue& el : elements) {
+        const OWJsonValue* id = Prop(&el, "id");
+        if (IsString(id) && id->Text() == named->Text()) holding.push_back(el);
+    }
+    std::vector<OWWorldCalendar> found = WorldCalendars(holding);
+    if (found.empty()) return std::nullopt;
+    return std::move(found[0]);
+}
+
 // -- arithmetic ---------------------------------------------------------------------------------------------------
 
 int64_t FloorDiv(int64_t a, int64_t b) {

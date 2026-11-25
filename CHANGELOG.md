@@ -24,6 +24,11 @@ the detail a maintainer needs; the history before this file is in the git log.
   not JSON, no id, not in a type folder, in a deeper folder, or one of two files holding the same id), and names them
   in `OWPacked::hidden_left_out` and, apart, `unread_left_out`. The world-file set's two share cases (OW-23) are a
   test.
+- Which calendar speaks for a world (the calendar profile's paragraph of that name): `OWCalendar::SpeakingCalendar(world,
+  elements)` in the core reads the World's `x_calendar`, the id of the element whose calendar speaks, matched as
+  written. A name that holds no calendar the reader reads gives none, never another in its place; with none named, the
+  world's only calendar speaks, and with several, none. The calendar fixture's world cases are checked in
+  `tests/test_calendar.cpp`. No Blueprint node for it yet.
 
 ### Fixed
 
