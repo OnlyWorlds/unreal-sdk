@@ -20,6 +20,9 @@ the detail a maintainer needs; the history before this file is in the git log.
 - **The plugin names its engine, its platform and its icon.** `OnlyWorlds.uplugin` carries `EngineVersion` 5.8.0,
   a `PlatformAllowList` of Win64 on its module (the one platform it is built and tested on), a docs and a support
   link, and `Resources/Icon128.png`, for the editor's Plugins window.
+- **A plugin packaged with Epic's `BuildPlugin` keeps its core.** `Config/FilterPlugin.ini` lists `Core/`, the plain
+  C++ core the module compiles in. Without it the package `BuildPlugin` writes left `Core/` out, though the plugin's
+  public headers include it. The release zip on GitHub always carried it.
 - **A file nested past 200 is refused by name, `too_deep`** (the folder format's OW-25): the depth of its deepest object
   or array, the file's top value at 1, objects and arrays both counted, so a plain value inside the 200th is read. The
   core's parser draws the line (`OWJson::MaxDepth`, `OWJson::TooDeep`, `OWJsonParseResult::too_deep`); its old line
