@@ -148,6 +148,14 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ### Fixed
 
+- **A new element whose type is not one of the 22 type slugs, exactly, is refused, and so can no longer be written
+  outside `elements/`.** `OWWorld::Add(type, body)` took any type, and the file went to `elements/<type>/`:
+  `"Character"` or `"widget"` wrote a folder no reader reads, `""` wrote the file loose in `elements/`, and a type
+  such as `"../escape"` wrote it beside `elements/`, `"../../x"` outside the world folder. Now `WriteRefusal` names the
+  cause and the 22, so `WriteFolder` returns false with nothing written and `Pack` is not ok with the same words, as
+  the TypeScript SDK's and the Python package's folder writers refuse an unknown type (after a `ToFiles` too).
+  `ToFiles` itself still lists such a path; a caller writing its map by hand asks `WriteRefusal` first.
+
 - **A write into a type folder spelled in another case is refused.** `OWWorld::WriteFolder` put a new Character into
   `elements/character/`, which on Windows and macOS is the folder's `elements/Character/`, where no reader reads it (a
   type folder is read as written, folder spec 4.8, ruled 2026-11-23). It now returns false and writes nothing when a

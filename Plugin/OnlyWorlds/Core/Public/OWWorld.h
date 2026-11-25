@@ -111,7 +111,9 @@ public:
     // Why WriteFolder and Pack would refuse to write this world, or "" when they would not: a world.json to be written
     // that could not be read (a writer never writes over such a file, the caller's id or not), or whose id is no
     // non-empty string; a new or edited element with no id; a new element whose short name and full-id name (section
-    // 3.2) are both held, by an element or by a file the reader could not read. A writer mints no id (folder spec 4.1;
+    // 3.2) are both held, by an element or by a file the reader could not read; a new element whose type is not one of
+    // the 22 type slugs as written ("Character", "widget", "", a path such as "../x": its file would go to a folder no
+    // reader reads, or outside elements/). A writer mints no id (folder spec 4.1;
     // 3.4, format 0.3.22: a draft world conforms as any other, its id the tool's own until a host gives one), so the
     // caller sets it.
     std::string WriteRefusal(bool only_edited = false) const;

@@ -407,6 +407,19 @@ std::string OWWorld::WriteRefusal(bool only_edited) const {
         const OWJsonValue* id = e.body.Find("id");
         if ((e.edited || e.source_path.empty()) && !(id && id->IsString() && !id->Text().empty()))
             return "a new or edited " + e.folder_type + " has no id (a non-empty string), and a writer mints none: set it first";
+        // A new element's file goes to elements/<folder_type>/, and a reader reads a type folder only when it is one of
+        // the 22 as written (section 4.8): any other type ("Character", "widget", "", a path such as "../x", which would
+        // put the file outside elements/) is refused. An element read from a file always has one of the 22 here.
+        if (!IsTypeFolder("elements", e.folder_type)) {
+            if (e.folder_type.empty())
+                return "a new element (" + e.Id() + ") has no type, and a writer has no type folder to put it in: Add it "
+                       "with one of the 22 type slugs";
+            std::string words;
+            for (const char* w : OWAddress::TypeWords) words += (words.empty() ? "" : ", ") + std::string(w);
+            return "a new element (" + e.Id() + ") has the type '" + e.folder_type + "', which is not one of the 22 type "
+                   "slugs as the standard spells them (" + words + "): a reader reads no other type folder, so nothing is "
+                   "written";
+        }
     }
     for (const auto& [i, path] : NewPaths()) {
         if (!path.empty()) continue;
