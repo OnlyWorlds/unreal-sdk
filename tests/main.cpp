@@ -11,6 +11,7 @@
 #include "OWVersion.h"
 #include "OWUnicode.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -63,7 +64,13 @@ int main(int argc, char** argv) {
     std::filesystem::path exe = std::filesystem::absolute(argv[0]);
     std::string root = OnlyWorlds::OWFiles::Absolute(exe.parent_path().parent_path().u8string());
     g_paths.root = root;
+    // The conformance set: the vendored copy, or a draft copy (a folder holding verdicts.json) named by
+    // OW_OWWORLD_FIXTURES, as the Unity SDK's runner takes it.
     g_paths.fixtures = root + "/codegen/schema-dist/fixtures/owworld";
+    if (std::string draft = Env("OW_OWWORLD_FIXTURES", ""); !draft.empty() && OnlyWorlds::OWFiles::IsFile(draft + "/verdicts.json")) {
+        std::replace(draft.begin(), draft.end(), '\\', '/');
+        g_paths.fixtures = draft;
+    }
     g_paths.example = root + "/codegen/schema-dist/example/hyperion";
     // Optional inputs that are not in the repository, each named by the environment only; a test whose input is not
     // given skips and says which variable to set.

@@ -201,6 +201,8 @@ plugin in `Plugin/`; the commands are in the reference. The tests need no networ
 against a fake transport. A few tests read two large real worlds when `OW_SIKELIA` and `OW_MOPPETOPIA` name their
 folders, and one reads Unicode's `NormalizationTest.txt` (15.1.0) when `OW_NORMALIZATION_TEST` names it; without them
 the core's runner skips those tests and the automation tests warn and do not run them, never passing them. The
+core's runner reads the vendored `.owworld` conformance set, or a draft copy when `OW_OWWORLD_FIXTURES` names a folder
+holding its `verdicts.json`. The
 plugin's tests are compiled only inside this repository, so a copy of the plugin in your project lists none.
 
 ## OnlyWorlds

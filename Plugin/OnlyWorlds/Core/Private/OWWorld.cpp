@@ -9,6 +9,7 @@
 namespace OnlyWorlds {
 
 const char* const OWWorld::ElementFolders[2] = {"elements", "spatial"};
+const char* const OWWorld::FixedNames[3] = {"world.json", "elements", "spatial"};
 
 namespace {
 
@@ -72,12 +73,46 @@ void OWElement::Set(const std::string& key, OWJsonValue value) {
     edited = true;
 }
 
+// -- the fixed names ----------------------------------------------------------------------------------------------------
+
+std::string OWWorld::FixedNameFault(const std::vector<std::string>& names) {
+    return FixedNameFault(names, std::vector<std::string>(std::begin(FixedNames), std::end(FixedNames)));
+}
+
+std::string OWWorld::FixedNameFault(const std::vector<std::string>& names, const std::vector<std::string>& wanted) {
+    for (const std::string& want : wanted) {
+        if (std::find(names.begin(), names.end(), want) != names.end()) continue;
+        const std::string key = OWUnicode::Fold(want);
+        std::vector<std::string> others;
+        for (const std::string& n : names)
+            if (OWUnicode::Fold(n) == key) others.push_back(n);
+        if (others.empty()) continue;
+        std::sort(others.begin(), others.end());
+        others.erase(std::unique(others.begin(), others.end()), others.end());
+        std::string list;
+        for (const std::string& o : others) list += (list.empty() ? "'" : ", '") + o + "'";
+        return "name_case: it holds " + list + " and no '" + want + "', and the name is read as written, so '" + others[0] +
+               "' is not " + want + " and the world would read without it (folder spec section 4.8); rename it '" + want + "'";
+    }
+    return "";
+}
+
+std::string OWWorld::FolderFault(const std::string& path) {
+    if (!OWFiles::IsDir(path)) return "";
+    std::vector<std::string> names = OWFiles::List(path, false);
+    for (const std::string& d : OWFiles::List(path, true)) names.push_back(d);
+    return FixedNameFault(names);
+}
+
 // -- reading ------------------------------------------------------------------------------------------------------------
 
 std::unique_ptr<OWWorld> OWWorld::ReadFolder(const std::string& path_in, bool other_parts) {
     std::string path = path_in;
     std::replace(path.begin(), path.end(), '\\', '/');
     while (!path.empty() && path.back() == '/') path.pop_back();
+    // Section 4.8: the root is listed and compared, so the lookups below find world.json, elements and spatial only as
+    // written, on a disk that folds case too.
+    if (!FolderFault(path).empty()) return nullptr;
     OWBytes bytes;
     if (!OWFiles::Read(path + "/" + World, bytes)) return nullptr;
     auto w = std::make_unique<OWWorld>();
@@ -125,6 +160,9 @@ std::unique_ptr<OWWorld> OWWorld::ReadFolder(const std::string& path_in, bool ot
 }
 
 std::unique_ptr<OWWorld> OWWorld::FromFiles(const OWFileMap& files) {
+    std::vector<std::string> tops;
+    for (const auto& kv : files) tops.push_back(kv.first.substr(0, kv.first.find('/')));
+    if (!FixedNameFault(tops).empty()) return nullptr;
     auto w = std::make_unique<OWWorld>();
     bool have_world = false;
     std::set<std::string> no_type;  // each folder that is no type, named once
@@ -340,6 +378,10 @@ std::string OWWorld::WriteRefusal(bool only_edited) const {
 bool OWWorld::WriteFolder(const std::string& path, bool only_edited, std::string* error) {
     if (std::string why = WriteRefusal(only_edited); !why.empty()) {
         if (error) *error = why;
+        return false;
+    }
+    if (std::string why = FolderFault(path); !why.empty()) {
+        if (error) *error = "nothing written to the world folder " + path + ", " + why;
         return false;
     }
     std::unordered_set<std::string> made;  // each folder made once, not once per file

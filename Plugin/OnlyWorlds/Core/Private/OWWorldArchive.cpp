@@ -1,5 +1,6 @@
 #include "OWWorldArchive.h"
 #include "OWUnicode.h"
+#include "OWWorld.h"
 
 #include <algorithm>
 #include <charconv>
@@ -14,8 +15,9 @@ namespace OWWorldArchive {
 const char* const MediaType = "application/vnd.onlyworlds.world+zip";
 const char* const Marker = "mimetype";
 const char* const Extension = "owworld";
-const char* const Reasons[12] = {"unsafe_path", "too_big", "too_many", "not_a_world", "more_than_one", "not_openable",
-                                 "duplicate",   "collision", "link",   "method",      "name",          "marker"};
+const char* const Reasons[13] = {"unsafe_path", "too_big", "too_many", "not_a_world", "more_than_one", "not_openable",
+                                 "duplicate",   "collision", "link",   "method",      "name",          "marker",
+                                 "name_case"};
 
 namespace {
 
@@ -206,7 +208,16 @@ OWArchiveRead Read(const OWBytes& raw, const OWArchiveBudget& budget) {
         for (const std::string& n : candidates)
             if (std::count(n.begin(), n.end(), '/') == 1 && EndsWith(n, std::string("/") + World) && n[0] != '.')
                 roots.insert(n.substr(0, n.find('/') + 1));
-        if (roots.empty()) return Refuse(r, "not_a_world", "no world.json at the root or in one top-level folder");
+        if (roots.empty()) {
+            // Section 4.8 (ruled 2026-11-25): a world.json in another case, where a world would sit, is said as its cause.
+            std::string cased;
+            for (const std::string& n : candidates)
+                if (std::count(n.begin(), n.end(), '/') <= 1 && n[0] != '.' &&
+                    !OWWorld::FixedNameFault({n.substr(n.rfind('/') + 1)}, {World}).empty())
+                    cased += (cased.empty() ? "" : ", ") + Show(n);
+            if (!cased.empty()) return Refuse(r, "name_case", "world.json in another case and no world.json: " + cased);
+            return Refuse(r, "not_a_world", "no world.json at the root or in one top-level folder");
+        }
         if (roots.size() > 1) {
             std::string list;
             for (const std::string& x : roots) list += (list.empty() ? "" : ", ") + Show(x);
@@ -223,6 +234,18 @@ OWArchiveRead Read(const OWBytes& raw, const OWArchiveBudget& budget) {
         std::string rel = n.substr(r.prefix.size());
         if (rel != World && EndsWith(rel, std::string("/") + World) && !StartsWith(rel, "records/"))
             return Refuse(r, "more_than_one", "a second world.json inside the world: " + Show(n));
+    }
+
+    // Section 4.8 (ruled 2026-11-25): world.json, elements/ and spatial/ are read as written, and one held in another
+    // case without the name itself refuses the archive, never reads as an empty world (OW-18 refuses the two side by
+    // side; this, the one alone). Before one byte is inflated, as the reference checker orders it.
+    {
+        std::vector<std::string> tops;
+        for (const std::string& n : inside) {
+            std::string rel = n.substr(r.prefix.size());
+            tops.push_back(rel.substr(0, rel.find('/')));
+        }
+        if (std::string why = OWWorld::FixedNameFault(tops); !why.empty()) return Refuse(r, "name_case", why);
     }
 
     // OW-14: every entry inflated within what it declares, its CRC and length right.
@@ -488,6 +511,12 @@ OWPacked PackFolder(const std::string& folder_in, bool keep_api, bool include_pr
     while (!folder.empty() && (folder.back() == '/' || folder.back() == '\\')) folder.pop_back();
     if (!OWFiles::IsDir(folder)) {
         out.message = "no world folder at " + folder;
+        return out;
+    }
+    // Section 4.8: a folder its own reader refuses is never packed, so the file system's fold never turns Elements/
+    // into elements/ in the archive (Windows, macOS), nor packs a world without it (Linux).
+    if (std::string why = OWWorld::FolderFault(folder); !why.empty()) {
+        out.message = "the world folder " + folder + " is refused, " + why;
         return out;
     }
     OWFileMap files;

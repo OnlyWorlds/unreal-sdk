@@ -88,9 +88,10 @@ OW_TEST(archive_the_set_is_the_pinned_one) {
         auto ends = [&](const char* x) { std::string s = x; return f.size() >= s.size() && f.compare(f.size() - s.size(), s.size(), s) == 0; };
         if (ends(".owworld") || ends(".zip")) ++on_disk;
     }
-    t.Eq(on_disk, generated, "every generated fixture is on disk, and nothing else");
-    t.Eq(generated, size_t(96), "the set's 96 generated fixtures (dist.78)");
-    std::printf("       the set: %zu fixtures in verdicts.json, %zu generated, %zu on disk\n", fixtures->Size(), generated, on_disk);
+    t.Eq(on_disk, generated, "every generated fixture is on disk, and nothing else (the count is verdicts.json's)");
+    t.Ok(generated > 0, "a set with no fixtures checks nothing");
+    std::printf("       the set: %zu fixtures in verdicts.json, %zu generated, %zu on disk, at %s\n", fixtures->Size(), generated,
+                on_disk, P().fixtures.c_str());
 }
 
 OW_CASES(archive_fixture_cases) {
@@ -121,5 +122,10 @@ OW_TEST(archive_reasons_are_the_spec_list) {
     for (const OWJsonValue& r : reasons->Items()) theirs.push_back(r.Text());
     std::sort(mine.begin(), mine.end());
     std::sort(theirs.begin(), theirs.end());
-    t.Ok(mine == theirs, "the twelve causes, the same list");
+    // Thirteen causes: section 4.7's twelve and section 4.8's name_case (ruled 2026-11-25). A set from before the serial
+    // that adds it (serial 145 lists twelve) holds every cause but that one; a set from after it, the same thirteen.
+    t.Eq(mine.size(), size_t(13), "the thirteen causes");
+    t.Ok(std::includes(mine.begin(), mine.end(), theirs.begin(), theirs.end()), "every cause the set lists is one of ours");
+    if (std::find(theirs.begin(), theirs.end(), "name_case") != theirs.end()) t.Ok(mine == theirs, "the same list");
+    else t.Eq(theirs.size() + 1, mine.size(), "the set's list is ours but name_case");
 }

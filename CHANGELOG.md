@@ -17,6 +17,22 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ### Changed
 
+- **`world.json`, `elements/` and `spatial/` are read as written, and one held in another case is refused, never
+  read as an empty world** (folder spec 4.8, ruled 2026-11-25). A folder holding `Elements/`, `World.JSON` or
+  `Spatial/` and not the name itself gives `nullptr` from `OWWorld::ReadFolder`, as for no world.json, and
+  `OWWorld::FolderFault(path)` says why (the cause `name_case` and both spellings). Before, on Windows and macOS the
+  folder was read as if the name were right, and on Linux it read with no elements: one folder, two worlds. Every
+  other door asks the same question of a listing, never of the file system: `OWWorld::FromFiles` (`nullptr` the same
+  way; `OWWorld::FixedNameFault` over the first segments says why), `OWWorldArchive::Read` (cause `name_case`:
+  a world file holding `abbey/Elements/` alone was accepted as empty, and `abbey/World.JSON` refused as
+  `not_a_world`), `PackFolder` and `Pack` (on Windows they wrote `Elements/` into the archive as `elements/`; now not
+  ok, the message naming the cause), and `OWWorld::WriteFolder` (false, nothing written: on Windows the files landed
+  inside `Elements/`, where no reader looks). Names are compared by `OWUnicode::Fold` (OW-18's NFC and simple case
+  folding), so `ſpatial/` is `spatial/` in another case; a folder that holds both spellings (only a case-sensitive
+  disk can) reads the name as written. **`OWWorldArchive::Reasons` has 13 causes** (it was `[12]`; the twelfth is
+  followed by `name_case`): a change to an exported symbol, so a game module built against the old header rebuilds.
+  The core's runner reads a draft conformance set when `OW_OWWORLD_FIXTURES` names it, and counts the set from its
+  `verdicts.json` (no fixed number).
 - **A pack leaves out who wrote each element.** `OWWorldArchive::PackWorld`, and so `PackFolder`, `Pack`,
   `OWWorld::Pack` and the two Blueprint nodes (`PackWorldFolder`, `UOWWorld::PackToFile`), now remove the five author
   fields (`created_by`, `changed_by`, `changed_via`, `changed_client`, `doors`: which member and which tool wrote an

@@ -47,13 +47,29 @@ public:
 
     // Read a world folder: world.json, every elements/<type>/*.json (and the legacy spatial/<type>/), and, with
     // `other_parts`, media/ and records/ as bytes (so a write to a new folder gives the world whole; the same
-    // selection Pack makes). nullptr when there is no world.json. Names are read as written, at both doors: <type> is
+    // selection Pack makes). nullptr when there is no world.json, and when the folder holds world.json, elements/ or
+    // spatial/ in another case and not as written (FolderFault says why). Names are read as written, at both doors: <type> is
     // one of the 22 type words in lower case (elements/Character/ and elements/vessel/ are not read) and the extension
     // is .json in lower case (X.JSON is not read); each is named in `errors` and kept in `other_files`. Ids are
     // compared as written: one UUID in capitals in one file and in lower case in another is two elements.
     static std::unique_ptr<OWWorld> ReadFolder(const std::string& path, bool other_parts = true);
-    // A world from files keyed by their path inside it (an OWArchiveRead's files).
+    // A world from files keyed by their path inside it (an OWArchiveRead's files). nullptr, as ReadFolder answers, when
+    // a first-level name is world.json, elements or spatial in another case and the name itself is absent (FixedNameFault
+    // over the first segments says why).
     static std::unique_ptr<OWWorld> FromFiles(const OWFileMap& files);
+
+    // The three fixed names of a world, read as written (folder spec section 4.8, ruled 2026-11-25).
+    static const char* const FixedNames[3];
+    // Why a level of a world holding `names` (as written) is refused, or "": a name of `wanted` (the three fixed names
+    // when not given) absent as written while one or more of `names` is it in another case, compared by OW-18's fold
+    // (OWUnicode::Fold: NFC, then simple case folding), so a long s makes "spatial". The reason begins with the cause,
+    // "name_case: ", and names both spellings. A level holding both (only a disk that keeps case can) has no fault: the
+    // name as written is read, the other left unread. One listing answers it for ReadFolder, FromFiles, the archive
+    // reader, PackFolder and WriteFolder, never the file system's lookup, which folds case on Windows and macOS.
+    static std::string FixedNameFault(const std::vector<std::string>& names);
+    static std::string FixedNameFault(const std::vector<std::string>& names, const std::vector<std::string>& wanted);
+    // FixedNameFault for a folder on disk, from its root's listing (files and folders); "" for a folder not there.
+    static std::string FolderFault(const std::string& path);
 
     // The folder read from ("" for a world from files).
     std::string root;
@@ -92,7 +108,9 @@ public:
     // 3.4, format 0.3.22: a draft world conforms as any other, its id the tool's own until a host gives one), so the
     // caller sets it.
     std::string WriteRefusal(bool only_edited = false) const;
-    // False, nothing written and `error` WriteRefusal's line, when it refuses.
+    // False, nothing written and `error` WriteRefusal's line, when it refuses; and when the folder holds world.json,
+    // elements/ or spatial/ in another case and not as written (FolderFault's line): on a disk that folds case the
+    // files would land inside Elements/, where no reader reads them.
     bool WriteFolder(const std::string& path, bool only_edited = false, std::string* error = nullptr);
     // The world as a portable .owworld (OWWorldArchive::PackWorld: api stripped, private records and the author fields
     // left out, unless asked). Not ok, its message WriteRefusal's, when it refuses.
