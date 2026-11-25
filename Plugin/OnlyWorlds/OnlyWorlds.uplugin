@@ -7,12 +7,18 @@
 	"Category": "OnlyWorlds",
 	"CreatedBy": "OnlyWorlds",
 	"CreatedByURL": "https://onlyworlds.com",
+	"DocsURL": "https://github.com/OnlyWorlds/unreal-sdk#readme",
+	"SupportURL": "https://github.com/OnlyWorlds/unreal-sdk/issues",
+	"EngineVersion": "5.8.0",
 	"CanContainContent": false,
 	"Modules": [
 		{
 			"Name": "OnlyWorlds",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64"
+			]
 		}
 	]
 }
