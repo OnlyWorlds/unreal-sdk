@@ -2511,6 +2511,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Ability")
 	static FString GetAbilityJson(const FOWAbility& Ability);
 
+	/** A Ability out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Ability")
+	static bool AbilityFromJson(const FString& Json, FOWAbility& Ability, FString& Reason);
+
 	/** Every Collective of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Collective")
 	static TArray<FOWCollective> GetAllCollectives(const UOWWorld* World);
@@ -2522,6 +2526,10 @@ public:
 	/** The Collective as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Collective")
 	static FString GetCollectiveJson(const FOWCollective& Collective);
+
+	/** A Collective out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Collective")
+	static bool CollectiveFromJson(const FString& Json, FOWCollective& Collective, FString& Reason);
 
 	/** Every Character of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Character")
@@ -2535,6 +2543,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Character")
 	static FString GetCharacterJson(const FOWCharacter& Character);
 
+	/** A Character out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Character")
+	static bool CharacterFromJson(const FString& Json, FOWCharacter& Character, FString& Reason);
+
 	/** Every Construct of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Construct")
 	static TArray<FOWConstruct> GetAllConstructs(const UOWWorld* World);
@@ -2546,6 +2558,10 @@ public:
 	/** The Construct as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Construct")
 	static FString GetConstructJson(const FOWConstruct& Construct);
+
+	/** A Construct out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Construct")
+	static bool ConstructFromJson(const FString& Json, FOWConstruct& Construct, FString& Reason);
 
 	/** Every Creature of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Creature")
@@ -2559,6 +2575,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Creature")
 	static FString GetCreatureJson(const FOWCreature& Creature);
 
+	/** A Creature out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Creature")
+	static bool CreatureFromJson(const FString& Json, FOWCreature& Creature, FString& Reason);
+
 	/** Every Event of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Event")
 	static TArray<FOWEvent> GetAllEvents(const UOWWorld* World);
@@ -2570,6 +2590,10 @@ public:
 	/** The Event as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Event")
 	static FString GetEventJson(const FOWEvent& Event);
+
+	/** A Event out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Event")
+	static bool EventFromJson(const FString& Json, FOWEvent& Event, FString& Reason);
 
 	/** Every Family of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Family")
@@ -2583,6 +2607,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Family")
 	static FString GetFamilyJson(const FOWFamily& Family);
 
+	/** A Family out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Family")
+	static bool FamilyFromJson(const FString& Json, FOWFamily& Family, FString& Reason);
+
 	/** Every Institution of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Institution")
 	static TArray<FOWInstitution> GetAllInstitutions(const UOWWorld* World);
@@ -2594,6 +2622,10 @@ public:
 	/** The Institution as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Institution")
 	static FString GetInstitutionJson(const FOWInstitution& Institution);
+
+	/** A Institution out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Institution")
+	static bool InstitutionFromJson(const FString& Json, FOWInstitution& Institution, FString& Reason);
 
 	/** Every Language of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Language")
@@ -2607,6 +2639,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Language")
 	static FString GetLanguageJson(const FOWLanguage& Language);
 
+	/** A Language out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Language")
+	static bool LanguageFromJson(const FString& Json, FOWLanguage& Language, FString& Reason);
+
 	/** Every Law of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Law")
 	static TArray<FOWLaw> GetAllLaws(const UOWWorld* World);
@@ -2618,6 +2654,10 @@ public:
 	/** The Law as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Law")
 	static FString GetLawJson(const FOWLaw& Law);
+
+	/** A Law out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Law")
+	static bool LawFromJson(const FString& Json, FOWLaw& Law, FString& Reason);
 
 	/** Every Location of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Location")
@@ -2631,6 +2671,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Location")
 	static FString GetLocationJson(const FOWLocation& Location);
 
+	/** A Location out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Location")
+	static bool LocationFromJson(const FString& Json, FOWLocation& Location, FString& Reason);
+
 	/** Every Map of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Map")
 	static TArray<FOWMap> GetAllMaps(const UOWWorld* World);
@@ -2642,6 +2686,10 @@ public:
 	/** The Map as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Map")
 	static FString GetMapJson(const FOWMap& Map);
+
+	/** A Map out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Map")
+	static bool MapFromJson(const FString& Json, FOWMap& Map, FString& Reason);
 
 	/** Every Marker of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Marker")
@@ -2655,6 +2703,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Marker")
 	static FString GetMarkerJson(const FOWMarker& Marker);
 
+	/** A Marker out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Marker")
+	static bool MarkerFromJson(const FString& Json, FOWMarker& Marker, FString& Reason);
+
 	/** Every Narrative of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Narrative")
 	static TArray<FOWNarrative> GetAllNarratives(const UOWWorld* World);
@@ -2666,6 +2718,10 @@ public:
 	/** The Narrative as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Narrative")
 	static FString GetNarrativeJson(const FOWNarrative& Narrative);
+
+	/** A Narrative out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Narrative")
+	static bool NarrativeFromJson(const FString& Json, FOWNarrative& Narrative, FString& Reason);
 
 	/** Every Object of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Object")
@@ -2679,6 +2735,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Object")
 	static FString GetObjectJson(const FOWObject& Object);
 
+	/** A Object out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Object")
+	static bool ObjectFromJson(const FString& Json, FOWObject& Object, FString& Reason);
+
 	/** Every Phenomenon of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Phenomenon")
 	static TArray<FOWPhenomenon> GetAllPhenomena(const UOWWorld* World);
@@ -2690,6 +2750,10 @@ public:
 	/** The Phenomenon as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Phenomenon")
 	static FString GetPhenomenonJson(const FOWPhenomenon& Phenomenon);
+
+	/** A Phenomenon out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Phenomenon")
+	static bool PhenomenonFromJson(const FString& Json, FOWPhenomenon& Phenomenon, FString& Reason);
 
 	/** Every Pin of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Pin")
@@ -2703,6 +2767,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Pin")
 	static FString GetPinJson(const FOWPin& Pin);
 
+	/** A Pin out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Pin")
+	static bool PinFromJson(const FString& Json, FOWPin& Pin, FString& Reason);
+
 	/** Every Relation of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Relation")
 	static TArray<FOWRelation> GetAllRelations(const UOWWorld* World);
@@ -2714,6 +2782,10 @@ public:
 	/** The Relation as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Relation")
 	static FString GetRelationJson(const FOWRelation& Relation);
+
+	/** A Relation out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Relation")
+	static bool RelationFromJson(const FString& Json, FOWRelation& Relation, FString& Reason);
 
 	/** Every Species of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Species")
@@ -2727,6 +2799,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Species")
 	static FString GetSpeciesJson(const FOWSpecies& Species);
 
+	/** A Species out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Species")
+	static bool SpeciesFromJson(const FString& Json, FOWSpecies& Species, FString& Reason);
+
 	/** Every Title of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Title")
 	static TArray<FOWTitle> GetAllTitles(const UOWWorld* World);
@@ -2738,6 +2814,10 @@ public:
 	/** The Title as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Title")
 	static FString GetTitleJson(const FOWTitle& Title);
+
+	/** A Title out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Title")
+	static bool TitleFromJson(const FString& Json, FOWTitle& Title, FString& Reason);
 
 	/** Every Trait of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Trait")
@@ -2751,6 +2831,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Trait")
 	static FString GetTraitJson(const FOWTrait& Trait);
 
+	/** A Trait out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Trait")
+	static bool TraitFromJson(const FString& Json, FOWTrait& Trait, FString& Reason);
+
 	/** Every Zone of the world, in the order read. */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Zone")
 	static TArray<FOWZone> GetAllZones(const UOWWorld* World);
@@ -2762,4 +2846,8 @@ public:
 	/** The Zone as the JSON text a write node takes (CreateElement, UpsertElement, PatchElement, a BulkWrite item): every schema field, an unset one as keel serves it ("", null, []), never world, the id left out when "". A struct holds no extension key (x_*): UpsertElement of this text alone writes the element whole and clears the extensions keel holds for it. Merge it into the element as read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them too (and replaces every field it sends, link lists whole). */
 	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Zone")
 	static FString GetZoneJson(const FOWZone& Zone);
+
+	/** A Zone out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct has and the text lacks stays unset. */
+	UFUNCTION(BlueprintPure, Category = "OnlyWorlds|Zone")
+	static bool ZoneFromJson(const FString& Json, FOWZone& Zone, FString& Reason);
 };

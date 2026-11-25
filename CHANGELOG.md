@@ -15,6 +15,16 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- `UOWElements::<Type>FromJson(Json, <Type>, Reason)`, one pure Blueprint node per element type (`CharacterFromJson`,
+  …): an element's JSON text, as the client's read nodes answer it, into the same `FOW<Type>` struct `Find<Type>`
+  gives from a world on disk, so a Blueprint on the onlyworlds.com API breaks the same struct. Refused, with the
+  reason and an empty struct: text that is not JSON, and JSON that is not an object. Generated with the structs.
+  Tests: `OnlyWorlds.Models.FromJson.Doors`, `.World` (every element of Sikelia and Moppetopia, its text through the
+  node, equal to `Find<Type>`'s struct), `.Refused`, and `OnlyWorldsLive.Models.CharacterFromJson` (a Moppetopia
+  Character read over its public key and broken).
+
 ## [0.3.0] - 2026-11-25
 
 A world can be packed as a share, which leaves out what a reader should not get: elements marked hidden and files

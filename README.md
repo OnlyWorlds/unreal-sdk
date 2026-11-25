@@ -10,8 +10,9 @@ It has two roads, and they give different things:
 - **A world on disk** (a world folder, or one `.owworld` file): `OpenWorldFolder` or `OpenWorldFile`, then
   `GetAll<Types>` (`GetAllCharacters`, …), gives every element as a Blueprint struct (`FOWCharacter`, …), with no
   server. This is the road for a Blueprint graph.
-- **The onlyworlds.com API**: the client's Blueprint nodes (**Read World**, **List Elements**, the writes) answer each
-  element as JSON text, and no Blueprint call turns that text into a struct yet; in C++, `OWFromJson` does.
+- **The onlyworlds.com API**: the client's Blueprint nodes (**Read Element**, **List Elements**, the writes) answer each
+  element as JSON text, and `<Type>FromJson` (`CharacterFromJson`, …) turns that text into the same struct a world on
+  disk gives; in C++, `OWFromJson` does.
 
 An Unreal Engine code plugin, with a struct for each of the 22 element types. It writes worlds back too, over the API
 and on disk; a world read from disk and written back unedited is byte-equal.
@@ -110,7 +111,8 @@ functions directly: the plugin's module exports them (`OW_API`).
 
 On Blueprints the same read is the **Read World** node: give it a config whose `ApiKey` is `0000000001`, and
 `OnSuccess` hands you the world as JSON text, not a struct. The API's reads and element writes each have a node like
-it, with `OnSuccess` and `OnFailure`.
+it, with `OnSuccess` and `OnFailure`. An element read that way becomes its struct with `<Type>FromJson`: wire **Read
+Element**'s `Json` into **Character From Json**, then break the `FOWCharacter` as you would one from a folder.
 
 ### On Blueprints, from a world on disk
 

@@ -10,8 +10,9 @@ written). What it reads and writes:
   codegen/schema-dist/schema.json        the 22 types: base fields, then each type's own, with their kinds
   and, under Plugin/OnlyWorlds/Source/OnlyWorlds/:
   -> Public/OWModels.h                   USTRUCT(BlueprintType) FOW<Type> per type, and UOWElements, the Blueprint
-                                         library that reads them out of a UOWWorld and gives one as the JSON text a
-                                         write node takes (Get<Type>Json)
+                                         library that reads them out of a UOWWorld, gives one as the JSON text a
+                                         write node takes (Get<Type>Json), and makes one of the JSON text a read
+                                         node answers (<Type>FromJson)
   -> Public/OWModelsJson.h               OWFromJson(body, struct) and OWToJson(struct) per type, for C++ callers
   -> Private/OWModels.cpp                all of them, on the core's OWJsonValue (helpers: OWModelRead.h, OWModelWrite.h)
 
@@ -174,7 +175,13 @@ def emit_h(schema: dict, tag: str) -> str:
                 "read first (UOWElementJson::MergeElementJson) and upsert that to keep them; PatchElement keeps them "
                 "too (and replaces every field it sends, link lists whole). */",
                 f'\tUFUNCTION(BlueprintPure, Category = "OnlyWorlds|{p}")',
-                f"\tstatic FString Get{p}Json(const {s}& {p});", ""]
+                f"\tstatic FString Get{p}Json(const {s}& {p});", "",
+                f"\t/** A {p} out of the JSON text a read node answers (ReadElement's Json, one of a page's or ListAll's "
+                "Elements), as Find gives one from a world on disk. False with Reason, the struct empty, when the text "
+                "is not a JSON object. Keys the struct has no member for (x_*, world) are left out; a key the struct "
+                "has and the text lacks stays unset. */",
+                f'\tUFUNCTION(BlueprintPure, Category = "OnlyWorlds|{p}")',
+                f"\tstatic bool {p}FromJson(const FString& Json, {s}& {p}, FString& Reason);", ""]
     out[-1:] = ["};", ""]
     return "\n".join(out)
 
@@ -218,7 +225,11 @@ def emit_cpp(schema: dict, tag: str) -> str:
                 f'\tconst OnlyWorlds::OWJsonValue* Body = OWModelRead::Find(World, Id, "{slug}");',
                 "\tif (!Body) return false;", f"\t{p} = {s}();", f"\tOWFromJson(*Body, {p});", "\treturn true;", "}", "",
                 f"FString UOWElements::Get{p}Json(const {s}& {p})", "{",
-                f"\treturn OWModelWrite::Text(OWToJson({p}));", "}", ""]
+                f"\treturn OWModelWrite::Text(OWToJson({p}));", "}", "",
+                f"bool UOWElements::{p}FromJson(const FString& Json, {s}& {p}, FString& Reason)", "{",
+                f"\t{p} = {s}();", "\tOnlyWorlds::OWJsonValue Body;",
+                "\tif (!OWModelRead::Body(Json, Body, Reason)) return false;", f"\tOWFromJson(Body, {p});",
+                "\treturn true;", "}", ""]
     return "\n".join(out)
 
 

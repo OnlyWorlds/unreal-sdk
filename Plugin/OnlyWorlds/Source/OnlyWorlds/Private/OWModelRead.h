@@ -25,4 +25,9 @@ namespace OWModelRead
 	void Each(const UOWWorld* World, const char* Type, TFunctionRef<void(const OnlyWorlds::OWJsonValue&)> Fn);
 	/** The body of the element with this id, when it is of type Type. */
 	const OnlyWorlds::OWJsonValue* Find(const UOWWorld* World, const FString& Id, const char* Type);
+	/**
+	 * An element's JSON text, as a read node answers it, parsed to a body. False with Why when the text is not JSON
+	 * ("not JSON: " and the parser's reason) or not an object ("not a JSON object").
+	 */
+	bool Body(const FString& Json, OnlyWorlds::OWJsonValue& Out, FString& Why);
 }

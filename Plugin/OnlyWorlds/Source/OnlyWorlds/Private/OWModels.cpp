@@ -1320,6 +1320,15 @@ FString UOWElements::GetAbilityJson(const FOWAbility& Ability)
 	return OWModelWrite::Text(OWToJson(Ability));
 }
 
+bool UOWElements::AbilityFromJson(const FString& Json, FOWAbility& Ability, FString& Reason)
+{
+	Ability = FOWAbility();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Ability);
+	return true;
+}
+
 TArray<FOWCollective> UOWElements::GetAllCollectives(const UOWWorld* World)
 {
 	TArray<FOWCollective> Out;
@@ -1339,6 +1348,15 @@ bool UOWElements::FindCollective(const UOWWorld* World, const FString& Id, FOWCo
 FString UOWElements::GetCollectiveJson(const FOWCollective& Collective)
 {
 	return OWModelWrite::Text(OWToJson(Collective));
+}
+
+bool UOWElements::CollectiveFromJson(const FString& Json, FOWCollective& Collective, FString& Reason)
+{
+	Collective = FOWCollective();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Collective);
+	return true;
 }
 
 TArray<FOWCharacter> UOWElements::GetAllCharacters(const UOWWorld* World)
@@ -1362,6 +1380,15 @@ FString UOWElements::GetCharacterJson(const FOWCharacter& Character)
 	return OWModelWrite::Text(OWToJson(Character));
 }
 
+bool UOWElements::CharacterFromJson(const FString& Json, FOWCharacter& Character, FString& Reason)
+{
+	Character = FOWCharacter();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Character);
+	return true;
+}
+
 TArray<FOWConstruct> UOWElements::GetAllConstructs(const UOWWorld* World)
 {
 	TArray<FOWConstruct> Out;
@@ -1381,6 +1408,15 @@ bool UOWElements::FindConstruct(const UOWWorld* World, const FString& Id, FOWCon
 FString UOWElements::GetConstructJson(const FOWConstruct& Construct)
 {
 	return OWModelWrite::Text(OWToJson(Construct));
+}
+
+bool UOWElements::ConstructFromJson(const FString& Json, FOWConstruct& Construct, FString& Reason)
+{
+	Construct = FOWConstruct();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Construct);
+	return true;
 }
 
 TArray<FOWCreature> UOWElements::GetAllCreatures(const UOWWorld* World)
@@ -1404,6 +1440,15 @@ FString UOWElements::GetCreatureJson(const FOWCreature& Creature)
 	return OWModelWrite::Text(OWToJson(Creature));
 }
 
+bool UOWElements::CreatureFromJson(const FString& Json, FOWCreature& Creature, FString& Reason)
+{
+	Creature = FOWCreature();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Creature);
+	return true;
+}
+
 TArray<FOWEvent> UOWElements::GetAllEvents(const UOWWorld* World)
 {
 	TArray<FOWEvent> Out;
@@ -1423,6 +1468,15 @@ bool UOWElements::FindEvent(const UOWWorld* World, const FString& Id, FOWEvent& 
 FString UOWElements::GetEventJson(const FOWEvent& Event)
 {
 	return OWModelWrite::Text(OWToJson(Event));
+}
+
+bool UOWElements::EventFromJson(const FString& Json, FOWEvent& Event, FString& Reason)
+{
+	Event = FOWEvent();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Event);
+	return true;
 }
 
 TArray<FOWFamily> UOWElements::GetAllFamilies(const UOWWorld* World)
@@ -1446,6 +1500,15 @@ FString UOWElements::GetFamilyJson(const FOWFamily& Family)
 	return OWModelWrite::Text(OWToJson(Family));
 }
 
+bool UOWElements::FamilyFromJson(const FString& Json, FOWFamily& Family, FString& Reason)
+{
+	Family = FOWFamily();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Family);
+	return true;
+}
+
 TArray<FOWInstitution> UOWElements::GetAllInstitutions(const UOWWorld* World)
 {
 	TArray<FOWInstitution> Out;
@@ -1465,6 +1528,15 @@ bool UOWElements::FindInstitution(const UOWWorld* World, const FString& Id, FOWI
 FString UOWElements::GetInstitutionJson(const FOWInstitution& Institution)
 {
 	return OWModelWrite::Text(OWToJson(Institution));
+}
+
+bool UOWElements::InstitutionFromJson(const FString& Json, FOWInstitution& Institution, FString& Reason)
+{
+	Institution = FOWInstitution();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Institution);
+	return true;
 }
 
 TArray<FOWLanguage> UOWElements::GetAllLanguages(const UOWWorld* World)
@@ -1488,6 +1560,15 @@ FString UOWElements::GetLanguageJson(const FOWLanguage& Language)
 	return OWModelWrite::Text(OWToJson(Language));
 }
 
+bool UOWElements::LanguageFromJson(const FString& Json, FOWLanguage& Language, FString& Reason)
+{
+	Language = FOWLanguage();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Language);
+	return true;
+}
+
 TArray<FOWLaw> UOWElements::GetAllLaws(const UOWWorld* World)
 {
 	TArray<FOWLaw> Out;
@@ -1507,6 +1588,15 @@ bool UOWElements::FindLaw(const UOWWorld* World, const FString& Id, FOWLaw& Law)
 FString UOWElements::GetLawJson(const FOWLaw& Law)
 {
 	return OWModelWrite::Text(OWToJson(Law));
+}
+
+bool UOWElements::LawFromJson(const FString& Json, FOWLaw& Law, FString& Reason)
+{
+	Law = FOWLaw();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Law);
+	return true;
 }
 
 TArray<FOWLocation> UOWElements::GetAllLocations(const UOWWorld* World)
@@ -1530,6 +1620,15 @@ FString UOWElements::GetLocationJson(const FOWLocation& Location)
 	return OWModelWrite::Text(OWToJson(Location));
 }
 
+bool UOWElements::LocationFromJson(const FString& Json, FOWLocation& Location, FString& Reason)
+{
+	Location = FOWLocation();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Location);
+	return true;
+}
+
 TArray<FOWMap> UOWElements::GetAllMaps(const UOWWorld* World)
 {
 	TArray<FOWMap> Out;
@@ -1549,6 +1648,15 @@ bool UOWElements::FindMap(const UOWWorld* World, const FString& Id, FOWMap& Map)
 FString UOWElements::GetMapJson(const FOWMap& Map)
 {
 	return OWModelWrite::Text(OWToJson(Map));
+}
+
+bool UOWElements::MapFromJson(const FString& Json, FOWMap& Map, FString& Reason)
+{
+	Map = FOWMap();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Map);
+	return true;
 }
 
 TArray<FOWMarker> UOWElements::GetAllMarkers(const UOWWorld* World)
@@ -1572,6 +1680,15 @@ FString UOWElements::GetMarkerJson(const FOWMarker& Marker)
 	return OWModelWrite::Text(OWToJson(Marker));
 }
 
+bool UOWElements::MarkerFromJson(const FString& Json, FOWMarker& Marker, FString& Reason)
+{
+	Marker = FOWMarker();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Marker);
+	return true;
+}
+
 TArray<FOWNarrative> UOWElements::GetAllNarratives(const UOWWorld* World)
 {
 	TArray<FOWNarrative> Out;
@@ -1591,6 +1708,15 @@ bool UOWElements::FindNarrative(const UOWWorld* World, const FString& Id, FOWNar
 FString UOWElements::GetNarrativeJson(const FOWNarrative& Narrative)
 {
 	return OWModelWrite::Text(OWToJson(Narrative));
+}
+
+bool UOWElements::NarrativeFromJson(const FString& Json, FOWNarrative& Narrative, FString& Reason)
+{
+	Narrative = FOWNarrative();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Narrative);
+	return true;
 }
 
 TArray<FOWObject> UOWElements::GetAllObjects(const UOWWorld* World)
@@ -1614,6 +1740,15 @@ FString UOWElements::GetObjectJson(const FOWObject& Object)
 	return OWModelWrite::Text(OWToJson(Object));
 }
 
+bool UOWElements::ObjectFromJson(const FString& Json, FOWObject& Object, FString& Reason)
+{
+	Object = FOWObject();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Object);
+	return true;
+}
+
 TArray<FOWPhenomenon> UOWElements::GetAllPhenomena(const UOWWorld* World)
 {
 	TArray<FOWPhenomenon> Out;
@@ -1633,6 +1768,15 @@ bool UOWElements::FindPhenomenon(const UOWWorld* World, const FString& Id, FOWPh
 FString UOWElements::GetPhenomenonJson(const FOWPhenomenon& Phenomenon)
 {
 	return OWModelWrite::Text(OWToJson(Phenomenon));
+}
+
+bool UOWElements::PhenomenonFromJson(const FString& Json, FOWPhenomenon& Phenomenon, FString& Reason)
+{
+	Phenomenon = FOWPhenomenon();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Phenomenon);
+	return true;
 }
 
 TArray<FOWPin> UOWElements::GetAllPins(const UOWWorld* World)
@@ -1656,6 +1800,15 @@ FString UOWElements::GetPinJson(const FOWPin& Pin)
 	return OWModelWrite::Text(OWToJson(Pin));
 }
 
+bool UOWElements::PinFromJson(const FString& Json, FOWPin& Pin, FString& Reason)
+{
+	Pin = FOWPin();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Pin);
+	return true;
+}
+
 TArray<FOWRelation> UOWElements::GetAllRelations(const UOWWorld* World)
 {
 	TArray<FOWRelation> Out;
@@ -1675,6 +1828,15 @@ bool UOWElements::FindRelation(const UOWWorld* World, const FString& Id, FOWRela
 FString UOWElements::GetRelationJson(const FOWRelation& Relation)
 {
 	return OWModelWrite::Text(OWToJson(Relation));
+}
+
+bool UOWElements::RelationFromJson(const FString& Json, FOWRelation& Relation, FString& Reason)
+{
+	Relation = FOWRelation();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Relation);
+	return true;
 }
 
 TArray<FOWSpecies> UOWElements::GetAllSpecies(const UOWWorld* World)
@@ -1698,6 +1860,15 @@ FString UOWElements::GetSpeciesJson(const FOWSpecies& Species)
 	return OWModelWrite::Text(OWToJson(Species));
 }
 
+bool UOWElements::SpeciesFromJson(const FString& Json, FOWSpecies& Species, FString& Reason)
+{
+	Species = FOWSpecies();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Species);
+	return true;
+}
+
 TArray<FOWTitle> UOWElements::GetAllTitles(const UOWWorld* World)
 {
 	TArray<FOWTitle> Out;
@@ -1717,6 +1888,15 @@ bool UOWElements::FindTitle(const UOWWorld* World, const FString& Id, FOWTitle& 
 FString UOWElements::GetTitleJson(const FOWTitle& Title)
 {
 	return OWModelWrite::Text(OWToJson(Title));
+}
+
+bool UOWElements::TitleFromJson(const FString& Json, FOWTitle& Title, FString& Reason)
+{
+	Title = FOWTitle();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Title);
+	return true;
 }
 
 TArray<FOWTrait> UOWElements::GetAllTraits(const UOWWorld* World)
@@ -1740,6 +1920,15 @@ FString UOWElements::GetTraitJson(const FOWTrait& Trait)
 	return OWModelWrite::Text(OWToJson(Trait));
 }
 
+bool UOWElements::TraitFromJson(const FString& Json, FOWTrait& Trait, FString& Reason)
+{
+	Trait = FOWTrait();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Trait);
+	return true;
+}
+
 TArray<FOWZone> UOWElements::GetAllZones(const UOWWorld* World)
 {
 	TArray<FOWZone> Out;
@@ -1759,4 +1948,13 @@ bool UOWElements::FindZone(const UOWWorld* World, const FString& Id, FOWZone& Zo
 FString UOWElements::GetZoneJson(const FOWZone& Zone)
 {
 	return OWModelWrite::Text(OWToJson(Zone));
+}
+
+bool UOWElements::ZoneFromJson(const FString& Json, FOWZone& Zone, FString& Reason)
+{
+	Zone = FOWZone();
+	OnlyWorlds::OWJsonValue Body;
+	if (!OWModelRead::Body(Json, Body, Reason)) return false;
+	OWFromJson(Body, Zone);
+	return true;
 }

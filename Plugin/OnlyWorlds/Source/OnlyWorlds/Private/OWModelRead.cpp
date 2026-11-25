@@ -5,6 +5,9 @@
 
 #include <charconv>
 #include <cmath>
+#include <string>
+#include <string_view>
+#include <utility>
 
 namespace OWModelRead
 {
@@ -66,5 +69,24 @@ namespace OWModelRead
 		OnlyWorlds::OWWorld* W = World ? World->Native() : nullptr;
 		const OnlyWorlds::OWElement* E = W ? W->Get(OWConvert::Utf8(Id)) : nullptr;
 		return E && E->Type() == Type ? &E->body : nullptr;
+	}
+
+	bool Body(const FString& Json, OnlyWorlds::OWJsonValue& Out, FString& Why)
+	{
+		Why.Reset();
+		const std::string Text = OWConvert::Utf8(Json);
+		OnlyWorlds::OWJsonParseResult Parsed = OnlyWorlds::OWJson::Parse(std::string_view(Text));
+		if (!Parsed.ok)
+		{
+			Why = TEXT("not JSON: ") + OWConvert::Str(Parsed.error);
+			return false;
+		}
+		if (!Parsed.value.IsObject())
+		{
+			Why = TEXT("not a JSON object");
+			return false;
+		}
+		Out = std::move(Parsed.value);
+		return true;
 	}
 }
