@@ -77,8 +77,11 @@ std::string OWElement::Id() const { return StringField(body, "id"); }
 std::string OWElement::Name() const { return StringField(body, "name"); }
 
 std::string OWElement::Type() const {
+    // Folder spec 4.1 (ruled 2026-11-22): a declared type is a string exactly one of the 22 type slugs; anything else
+    // ("Location", " location", "widget", 7, a list) declares nothing, and the folder fills it. Under spatial/ too: a
+    // body there may declare any of the 22, as the elements/ arm reads it.
     std::string declared = StringField(body, "type");
-    return declared.empty() ? folder_type : declared;
+    return IsTypeFolder("elements", declared) ? declared : folder_type;
 }
 
 void OWElement::Set(const std::string& key, OWJsonValue value) {

@@ -34,7 +34,8 @@ struct OW_API OWElement {
     // The body's id ("" when it has none).
     std::string Id() const;
     std::string Name() const;
-    // The declared type when the body has one, else the folder's (folder spec 4.1: never override a declared one).
+    // The declared type when the body declares one, else the folder's (folder spec 4.1: never override a declared one). A
+    // declared type is a string exactly one of the 22 type slugs; "Location", "widget" or 7 declares nothing.
     std::string Type() const;
     // Set a field; the element is then written in section 5's form.
     void Set(const std::string& key, OWJsonValue value);

@@ -35,6 +35,14 @@ the detail a maintainer needs; the history before this file is in the git log.
   `verdicts.json` (no fixed number). On Blueprints, `OpenWorldFolder`'s `Error` names the cause and both spellings for
   such a folder (it said "no world.json" for every refusal), and `OpenWorldFile`'s verdict carries `name_case` as its
   `Reason`.
+- **A body's `type` counts only when it is one of the 22 type slugs, exactly** (folder spec 4.1, ruled 2026-11-22).
+  `OWElement::Type()` served any non-empty string in the body's `type`: a file in `elements/character/` saying
+  `"type": "Location"` was served as a `Location`, and `OfType` looked for it under that word. Now anything but one of
+  the 22 as written (another case, a space around it, an unknown word, a plural) declares nothing, and the folder's type
+  is served (a number, a list or `null` already did). One of the 22 still wins over the folder, under `spatial/` too
+  (any of the 22 there, not only the four the layout held). The body keeps what it says. The cases are the Python
+  package's and the TypeScript SDK's shared `declared-type.cases.json` (21), vendored as
+  `tests/data/declared-type.cases.json` with its sha256 held, at both doors (`ReadFolder`, `FromFiles`).
 - **Under the legacy `spatial/` only `map`, `pin`, `zone` and `marker` are read** (folder spec 4.8, ruled
   2026-11-25). Before, a folder under `spatial/` named by any of the 22 type words was read, so
   `spatial/character/c.json` was served as a Character. Now such a folder is no type folder there: it is named once in
