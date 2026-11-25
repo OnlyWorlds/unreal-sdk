@@ -323,8 +323,9 @@ std::string OWWorld::Slugify(const std::string& name) {
     std::string slug;
     bool pending = false;
     for (char32_t c : OWUnicode::CompatDecompose(OWUnicode::Decode(name))) {
-        // A combining mark belongs to the letter before it: dropped, not a break.
-        if (OWUnicode::IsNonspacingMark(c)) continue;
+        // The combining diacritics (U+0300 to U+036F) belong to the letter before them: dropped, not a break.
+        // Every other mark is outside a-z and 0-9 like any other character (section 3.2, as the packages do).
+        if (c >= 0x300 && c <= 0x36F) continue;
         if (c >= 'A' && c <= 'Z') c = c - 'A' + 'a';
         bool alnum = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
         if (alnum) {
