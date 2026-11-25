@@ -3,8 +3,7 @@
 // npm SDK's and the Python package's shared fixture (tests/data/author-fields.fixture.json, the same bytes, held by its
 // sha256): every case's entries byte for byte and its count, through every door (the file map, PackWorld, PackFolder
 // from disk, Pack, a world read and packed). Then the edges the fixture does not hold, each with the npm SDK 4.203.1's
-// verdict (measured on its build) unless the label says the core keeps the file's bytes: an integer JavaScript would
-// round, a file nested past 200. Ported from @onlyworlds/sdk 4.203.1 (6794d27), test/world-file.test.mjs.
+// verdict (measured on its build) unless the label says the core keeps the file's bytes: a file nested past 200. Ported from @onlyworlds/sdk 4.203.1 (6794d27), test/world-file.test.mjs.
 
 #include "ow_test.h"
 #include "sha256.h"
@@ -24,8 +23,9 @@ using owtest::P;
 
 namespace {
 
-// The npm SDK's test/fixtures/author-fields.fixture.json at 4.203.1 (6794d27); the Python package holds the same bytes.
-const char* const FixtureSha256 = "6943ce5a8c2cd7bf69f82facb6f1d545d87d68f5ea0104cc4d711d94e035898a";
+// The npm SDK's test/fixtures/author-fields.fixture.json at 4.203.2 (55aad63), case 8 an integer no double holds;
+// the Python package holds the same bytes.
+const char* const FixtureSha256 = "33835ede8b407868da8fef2857699c53e763879ad4bef7909376c75b31c48645";
 const char* const WorldJson = "{\n  \"id\": \"0192a000-aaaa-7bbb-8ccc-000000000001\",\n  \"name\": \"W\"\n}\n";
 const char* const Edge = "elements/object/edge.json";
 
@@ -144,8 +144,8 @@ std::vector<EdgeCase> Edges() {
          "{\n  \"id\": \"d\",\n  \"n\": 9007199254740991,\n  \"m\": 0\n}\n"},
         {"an integer past 2^53 that JavaScript writes the same", R"({"id":"c","n":18014398509481984,"created_by":"u"})",
          "{\n  \"id\": \"c\",\n  \"n\": 18014398509481984\n}\n"},
-        // The npm SDK rewrites these two as 12345678901234567000 and 9007199254740992; the core keeps an integer as
-        // written, so a rewrite would write another number than npm's: the file keeps its bytes.
+        // The file keeps its bytes, as in the npm SDK since 4.203.2 (measured on 4.205.0): a rewrite would write a
+        // value the file does not hold.
         {"an integer JavaScript would round keeps its bytes", R"({"id":"a","n":12345678901234567891,"created_by":"u"})", ""},
         {"an integer one past 2^53 keeps its bytes", R"({"id":"b","n":9007199254740993,"created_by":"u"})", ""},
         {"an integer no double holds keeps its bytes", "{\"id\":\"e\",\"n\":" + std::string(400, '9') + ",\"created_by\":\"u\"}", ""},
@@ -218,7 +218,7 @@ OW_TEST(author_fields_the_fixture_is_the_shared_file) {
     std::vector<std::string> core(std::begin(OWWorldArchive::AuthorFields), std::end(OWWorldArchive::AuthorFields));
     t.Eq(Join(names), Join({"created_by", "changed_by", "changed_via", "changed_client", "doors"}), "the five, in order");
     t.Eq(Join(core), Join(names), "the core's five");
-    t.Eq(Get(*Doc(), "cases").Size(), size_t(7), "7 cases");
+    t.Eq(Get(*Doc(), "cases").Size(), size_t(8), "8 cases");
 }
 
 OW_CASES(author_fields_cases) {

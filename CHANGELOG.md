@@ -63,9 +63,8 @@ the detail a maintainer needs; the history before this file is in the git log.
   `OWWorld::Pack`, and an Include Author Fields input on both nodes, off by default) carries them, for a byte copy of
   your own folder; `OWPacked::author_fields_left_out` lists the files
   rewritten, and `OWWorldArchive::StripAuthorFields(files)` and `WithoutAuthorFields(bytes, out)` do the same to a
-  file map or one file (`OW_API`). `PackFiles` is unchanged: it writes what it is handed (OW-9). The Blueprint nodes
-  take no new input yet, so from Blueprints a pack always leaves them out. Parity with the TypeScript SDK 4.203.1 (and
-  4.109.0): `tests/data/author-fields.fixture.json` (7 cases, the same bytes as the TypeScript SDK's and the Python
+  file map or one file (`OW_API`). `PackFiles` is unchanged: it writes what it is handed (OW-9). Parity with the TypeScript SDK 4.203.2 (and
+  4.109.0): `tests/data/author-fields.fixture.json` (8 cases, the same bytes as the TypeScript SDK's and the Python
   package's) is vendored byte for byte with its sha256 held, and every case passes through every door, each entry
   compared byte for byte, with the count.
 
@@ -73,8 +72,8 @@ the detail a maintainer needs; the history before this file is in the git log.
   byte order mark read past, RFC 8259, one value and nothing after it), at most 200 deep (the parser itself reads to
   512), every number one a double holds. **Where the core would write a number other than JavaScript does, a file
   keeps its bytes, which is the safe side for every reader:** the core keeps an integer as written, so a file holding
-  an integer past 2^53 that JavaScript reads rounded (`12345678901234567891`, which the TypeScript SDK writes back as
-  `12345678901234567000`) keeps its bytes, the author fields included, as a number no double holds (`1e400`), which
+  an integer past 2^53 that JavaScript reads rounded (`12345678901234567891`, `9007199254740993`) keeps its
+  bytes, as in the TypeScript SDK since 4.203.2, the author fields included, as a number no double holds (`1e400`), which
   the core reads and would write back as read, does in both. A lone surrogate's escape is kept and written back
   escaped, as the TypeScript SDK writes it. An integer-like key (`"0"`, `"12"`) keeps its place in the object, where
   `JSON.stringify` would put it first. On Sikelia (20,913 element files, every one holding an author field) all
