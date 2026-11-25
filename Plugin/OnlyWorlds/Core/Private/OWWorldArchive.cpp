@@ -15,9 +15,9 @@ namespace OWWorldArchive {
 const char* const MediaType = "application/vnd.onlyworlds.world+zip";
 const char* const Marker = "mimetype";
 const char* const Extension = "owworld";
-const char* const Reasons[13] = {"unsafe_path", "too_big", "too_many", "not_a_world", "more_than_one", "not_openable",
+const char* const Reasons[14] = {"unsafe_path", "too_big", "too_many", "not_a_world", "more_than_one", "not_openable",
                                  "duplicate",   "collision", "link",   "method",      "name",          "marker",
-                                 "name_case"};
+                                 "name_case", "too_deep"};
 
 namespace {
 
@@ -273,6 +273,8 @@ OWArchiveRead Read(const OWBytes& raw, const OWArchiveBudget& budget) {
     // OW-3: the world's own world.json is a JSON object whose id is a non-empty string once trimmed.
     r.held_world_json = content[r.prefix + World];
     OWJsonParseResult parsed = OWJson::Parse(r.held_world_json);
+    // OW-25: the world's own file counted as an element file is; one past 200 is refused by its own cause.
+    if (!parsed.ok && parsed.too_deep) return Refuse(r, "too_deep", "world.json: " + parsed.error);
     if (!parsed.ok) return Refuse(r, "not_a_world", "world.json does not parse: " + parsed.error);
     if (!parsed.value.IsObject()) return Refuse(r, "not_a_world", "world.json is not an object");
     const OWJsonValue* id = parsed.value.Find("id");

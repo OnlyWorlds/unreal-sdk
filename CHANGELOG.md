@@ -22,7 +22,9 @@ the detail a maintainer needs; the history before this file is in the git log.
   core's parser draws the line (`OWJson::MaxDepth`, `OWJson::TooDeep`, `OWJsonParseResult::too_deep`); its old line
   was 512. An element file past it is skipped into `errors` as `<path>: too_deep: ...`, its bytes kept in
   `other_files`, as the TypeScript SDK's folder reader skips it; a share leaves it out as unread, and a world.json
-  nested that deep is no world. Tests: `tests/test_too_deep.cpp`.
+  nested that deep is no world: a `.owworld` whose world.json is past 200 is refused with its own cause, `too_deep`,
+  now in `OWWorldArchive::Reasons` (fourteen causes). The count is made in the text as each object or array opens,
+  so every value of a key given twice counts. Tests: `tests/test_too_deep.cpp`.
 
 - `UOWElements::<Type>FromJson(Json, <Type>, Reason)`, one pure Blueprint node per element type (`CharacterFromJson`,
   …): an element's JSON text, as the client's read nodes answer it, into the same `FOW<Type>` struct `Find<Type>`
