@@ -58,8 +58,12 @@ public:
     // - Where several names start at one place, the longest whole one is taken ("Iron Gate" over "Iron").
     // - A name two elements share is never answered, and nothing inside it is: the text stays plain there. One
     //   element listed twice (by id), or found by two of its own names, is one element.
-    // - Nothing is read inside an address (what OWAddress::FindAll finds) or a Markdown link `[label](target)`, and no
-    //   name is read across the edge of one.
+    // - Nothing is read inside an address (what OWAddress::FindAll finds), a Markdown link `[label](target)`, a bare
+    //   web address (`http://` or `https://` in any ASCII case, to the next white space or `<`) or an autolink
+    //   (`<scheme:...>`), and no name is read across the edge of one. Find(text, true), for a text known to be
+    //   Markdown, also reads nothing inside an inline code span, a fenced code block, an HTML tag or comment, or a
+    //   reference definition's line. An indented code block, a fence inside a quote or a list, and a definition's
+    //   title on the next line are read as prose.
     // - Text is compared as written: no Unicode normalisation, and a space in a name matches that one space.
     //
     // The work for one text grows with its length alone, whatever the names and however many: the text is read once,
@@ -77,6 +81,10 @@ public:
     // own, never a word character). A byte that does not begin a whole UTF-8 sequence reads as one character, one byte
     // wide, that is no word character.
     std::vector<OWNameFound> Find(std::string_view text) const;
+    // Find(text), told whether the text is Markdown: true passes over its code, HTML and reference definitions too
+    // (the TypeScript SDK's find(text, { markdown: true }), 4.208.0); false answers as Find(text), so a rich-text
+    // node's literal backticks stay prose.
+    std::vector<OWNameFound> Find(std::string_view text, bool markdown) const;
 
     // Every name two or more elements hold, in the order each name was first met. Find never answers one of these, so
     // a tool reads this list to say why a name stays plain. A name too short to be looked for is not on it.

@@ -17,6 +17,12 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ### Added
 
+- **The name finder passes over web addresses, and over Markdown's code, HTML and definitions when told the text is
+  Markdown.** In any text a bare web address (`http://` or `https://` in any ASCII case, to the next white space or
+  `<`) and an autolink (`<scheme:…>`) are passed over. `OWNameFinder::Find(text, true)` also reads nothing inside an
+  inline code span, a fenced code block, an HTML tag or comment, or a reference definition's line; `Find(text)` keeps
+  a rich-text node's literal backticks as prose. Parity with the TypeScript SDK 4.208.0, its version 3 cases (84, 16
+  with the option, 14 timed) vendored byte for byte.
 - **The plugin names its engine, its platform and its icon.** `OnlyWorlds.uplugin` carries `EngineVersion` 5.8.0,
   a `PlatformAllowList` of Win64 on its module (the one platform it is built and tested on), a docs and a support
   link, and `Resources/Icon128.png`, for the editor's Plugins window.

@@ -23,9 +23,15 @@ using owtest::P;
 
 namespace {
 
-// The npm SDK's test/fixtures/name-finder.cases.json at 4.198.0 (542060a), version 2; the Python package holds the
+// The npm SDK's test/fixtures/name-finder.cases.json at 4.208.0 (0fd5411), version 3; the Python package holds the
 // same bytes.
-const char* const CasesSha256 = "8e91e79981830511055976011f9fc6d4f4b62fb0183c29bad61c2d05fd4b13e4";
+const char* const CasesSha256 = "9c6fcf52eaa7a435b88f7524fdd1020a696b97ecc31d2a1efcf9431a49384b57";
+
+// A case or a timed recipe with markdown: true is found with the option on the call (version 3).
+bool Markdown(const OWJsonValue& c) {
+    const OWJsonValue* m = c.Find("markdown");
+    return m && m->IsBool() && m->AsBool();
+}
 
 std::string CasesPath() { return P().root + "/tests/data/name-finder.cases.json"; }
 
@@ -172,11 +178,15 @@ const double Factor = 1.0;
 OW_TEST(name_finder_cases_file_is_the_pinned_one) {
     t.Eq(owtest::Sha256Hex(CasesBytes()), std::string(CasesSha256), "the cases file's sha256 (the npm SDK's bytes)");
     const OWJsonValue& doc = *Cases();
-    t.Eq(Int(doc, "version"), int64_t(2), "version");
+    t.Eq(Int(doc, "version"), int64_t(3), "version");
     const OWJsonValue* cases = doc.Find("cases");
     const OWJsonValue* timed = doc.Find("timed");
-    t.Eq(cases ? cases->Size() : 0, size_t(62), "cases");
-    t.Eq(timed ? timed->Size() : 0, size_t(10), "timed recipes");
+    t.Eq(cases ? cases->Size() : 0, size_t(84), "cases");
+    size_t markdown = 0;
+    if (cases)
+        for (const OWJsonValue& c : cases->Items()) markdown += Markdown(c) ? 1 : 0;
+    t.Eq(markdown, size_t(16), "cases with the markdown option");
+    t.Eq(timed ? timed->Size() : 0, size_t(14), "timed recipes");
     t.Eq(Int(doc, "underMs"), int64_t(2000), "underMs");
 }
 
@@ -191,7 +201,7 @@ OW_CASES(name_finder_cases) {
                            OWNameFinder find = OWNameFinder::Of(elements, CaseOf(Str(*cp, "case")), NamesOf);
                            t.Eq(find.Error(), std::string(), "no mistake");
                            const std::string text = Str(*cp, "text");
-                           t.Eq(AnswerText(elements, text, find.Find(text)), WantText(*cp->Find("want")), "find(text)");
+                           t.Eq(AnswerText(elements, text, find.Find(text, Markdown(*cp))), WantText(*cp->Find("want")), "find(text)");
                            t.Eq(SharedText(elements, find.Shared()), WantSharedText(*cp->Find("shared")), "shared");
                        }});
     }
@@ -240,7 +250,7 @@ OW_TEST(name_finder_the_timed_recipes) {
         }
         OWNameFinder find = OWNameFinder::Of(elements, OWNameCase::Exact);
         const auto t0 = std::chrono::steady_clock::now();
-        const std::vector<OWNameFound> found = find.Find(text);
+        const std::vector<OWNameFound> found = find.Find(text, Markdown(recipe));
         const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
         const std::string name = Str(recipe, "name");
         // The address finder's share, read alone on the same text (it runs inside Find too).

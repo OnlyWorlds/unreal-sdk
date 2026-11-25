@@ -5,6 +5,8 @@
 #include "OWUnicode.h"
 
 #include <algorithm>
+#include <cstdint>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -110,11 +112,219 @@ void MarkdownLinks(std::string_view text, std::vector<std::pair<size_t, size_t>>
     }
 }
 
-// The stretches no name is read in, in bytes: every address and every Markdown link, in order, none overlapping.
-std::vector<std::pair<size_t, size_t>> PassedOver(std::string_view text) {
-    std::vector<std::pair<size_t, size_t>> spans;
+// The new scanners (the TypeScript SDK 4.208.0) read code points, since a bare web address ends at any of Unicode's
+// White_Space; their spans are code point places. Every character they test is in the BMP, so a place here and a
+// UTF-16 unit there answer alike.
+using Points = std::vector<char32_t>;
+using Spans = std::vector<std::pair<size_t, size_t>>;
+
+int64_t PointAt(const Points& t, int64_t i) { return i >= 0 && i < static_cast<int64_t>(t.size()) ? static_cast<int64_t>(t[static_cast<size_t>(i)]) : -1; }
+
+int64_t FindFrom(const Points& t, char32_t c, int64_t from) {
+    for (int64_t i = from < 0 ? 0 : from; i < static_cast<int64_t>(t.size()); ++i)
+        if (t[static_cast<size_t>(i)] == c) return i;
+    return -1;
+}
+
+int64_t FindFrom(const Points& t, const char* s, int64_t from) {
+    const int64_t n = static_cast<int64_t>(t.size());
+    const int64_t len = static_cast<int64_t>(std::char_traits<char>::length(s));
+    for (int64_t i = from < 0 ? 0 : from; i + len <= n; ++i) {
+        int64_t k = 0;
+        while (k < len && t[static_cast<size_t>(i + k)] == static_cast<char32_t>(s[k])) ++k;
+        if (k == len) return i;
+    }
+    return -1;
+}
+
+// Unicode's White_Space code points: the end of a bare web address and of an autolink.
+bool IsWhiteSpace(int64_t c) {
+    return (c >= 0x09 && c <= 0x0d) || c == 0x20 || c == 0x85 || c == 0xa0 || c == 0x1680 || (c >= 0x2000 && c <= 0x200a)
+        || c == 0x2028 || c == 0x2029 || c == 0x202f || c == 0x205f || c == 0x3000;
+}
+
+bool IsAsciiLetter(int64_t c) { return (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a); }
+
+bool IsSchemeChar(int64_t c) { return IsAsciiLetter(c) || (c >= 0x30 && c <= 0x39) || c == '+' || c == '.' || c == '-'; }
+
+// True when `word` is spelled at `at`, its letters in ASCII case alone.
+bool SpelledAt(const Points& t, int64_t at, const char* word) {
+    for (int64_t k = 0; word[k] != 0; ++k)
+        if ((PointAt(t, at + k) | 0x20) != word[k]) return false;
+    return true;
+}
+
+// Every bare web address and every autolink, in any text. A bare address starts at `http://` or `https://` (the
+// scheme in any ASCII case) and runs to just before the first white space or `<`. An autolink is `<`, a scheme (an
+// ASCII letter, then 1 to 31 of letters, digits, `+`, `.` or `-`), `:`, then anything but white space, a control
+// character, `<` or `>`, up to the closing `>`.
+void WebAddresses(const Points& t, Spans& spans) {
+    const int64_t n = static_cast<int64_t>(t.size());
+    int64_t floorAt = 0;
+    int64_t p = FindFrom(t, "://", 0);
+    while (p != -1) {
+        int64_t at = -1;
+        if (p - 5 >= floorAt && SpelledAt(t, p - 5, "https")) at = p - 5;
+        else if (p - 4 >= floorAt && SpelledAt(t, p - 4, "http")) at = p - 4;
+        if (at == -1) { p = FindFrom(t, "://", p + 1); continue; }
+        int64_t end = p + 3;
+        while (end < n && !IsWhiteSpace(t[static_cast<size_t>(end)]) && t[static_cast<size_t>(end)] != '<') ++end;
+        spans.emplace_back(static_cast<size_t>(at), static_cast<size_t>(end));
+        floorAt = end;
+        p = FindFrom(t, "://", end);
+    }
+    int64_t open = FindFrom(t, U'<', 0);
+    while (open != -1) {
+        int64_t i = open + 1;
+        if (IsAsciiLetter(PointAt(t, i))) {
+            int64_t k = 1;
+            ++i;
+            while (i < n && k < 32 && IsSchemeChar(t[static_cast<size_t>(i)])) { ++i; ++k; }
+            if (k >= 2 && PointAt(t, i) == ':') {
+                ++i;
+                int64_t c = PointAt(t, i);
+                while (i < n && c != '>' && c != '<' && c >= 0x20 && c != 0x7f && !IsWhiteSpace(c)) c = PointAt(t, ++i);
+                if (i < n && c == '>') {
+                    spans.emplace_back(static_cast<size_t>(open), static_cast<size_t>(i + 1));
+                    open = FindFrom(t, U'<', i + 1);
+                    continue;
+                }
+            }
+        }
+        open = FindFrom(t, U'<', open + 1);
+    }
+}
+
+struct Fence { int64_t ch = 0, length = 0, after = 0; };
+
+// A line's fence, after at most three spaces: a run of three or more backticks or tildes.
+bool FenceOf(const Points& t, int64_t start, int64_t end, Fence& f) {
+    int64_t i = start;
+    while (i < end && i - start < 3 && t[static_cast<size_t>(i)] == ' ') ++i;
+    const int64_t ch = PointAt(t, i);
+    if (ch != '`' && ch != '~') return false;
+    int64_t j = i;
+    while (j < end && static_cast<int64_t>(t[static_cast<size_t>(j)]) == ch) ++j;
+    if (j - i < 3) return false;
+    f = {ch, j - i, j};
+    return true;
+}
+
+// The Markdown stretches no name is read in (Find's `markdown`). Fenced code blocks first: a line whose fence opens
+// one (a backtick fence holds no backtick in the rest of its line) runs to a later line holding only a fence of the
+// same character, at least as long, and spaces or tabs after it, or to the end of the text. Outside them: an inline
+// code span (a run of backticks to the next run of exactly as many; a run with none is prose), an HTML comment (`<!--`
+// to the first `-->`), an HTML tag (`<`, an optional `/`, an ASCII letter, to the first `>`), and a reference
+// definition's line (after at most three spaces, `[`, a label, and the line's first `]` followed by `:`).
+void MarkdownStretches(const Points& t, Spans& spans) {
+    const int64_t n = static_cast<int64_t>(t.size());
+    std::vector<std::pair<int64_t, int64_t>> lines;
+    for (int64_t start = 0;;) {
+        const int64_t nl = FindFrom(t, U'\n', start);
+        if (nl == -1) { lines.emplace_back(start, n); break; }
+        lines.emplace_back(start, nl);
+        start = nl + 1;
+    }
+    std::vector<std::pair<int64_t, int64_t>> outside;
+    int64_t segStart = 0;
+    int64_t bracket = -2;  // the next ] at or after the place last asked about, searched for once per place passed
+    const int64_t lineCount = static_cast<int64_t>(lines.size());
+    for (int64_t k = 0; k < lineCount; ++k) {
+        const int64_t ls = lines[static_cast<size_t>(k)].first, le = lines[static_cast<size_t>(k)].second;
+        Fence open;
+        const bool fence = FenceOf(t, ls, le, open);
+        const int64_t tick = fence && open.ch == '`' ? FindFrom(t, U'`', open.after) : -1;
+        if (!fence || (tick != -1 && tick < le)) {
+            int64_t i = ls;
+            while (i < le && i - ls < 3 && t[static_cast<size_t>(i)] == ' ') ++i;
+            if (PointAt(t, i) == '[') {
+                if (bracket != -1 && bracket < i + 1) bracket = FindFrom(t, U']', i + 1);
+                const int64_t close = bracket;
+                if (close != -1 && close < le && close > i + 1 && PointAt(t, close + 1) == ':')
+                    spans.emplace_back(static_cast<size_t>(ls), static_cast<size_t>(le));
+            }
+            continue;
+        }
+        int64_t m = k + 1;
+        for (; m < lineCount; ++m) {
+            const int64_t cs = lines[static_cast<size_t>(m)].first, ce = lines[static_cast<size_t>(m)].second;
+            Fence shut;
+            if (!FenceOf(t, cs, ce, shut) || shut.ch != open.ch || shut.length < open.length) continue;
+            int64_t j = shut.after;
+            while (j < ce && (t[static_cast<size_t>(j)] == ' ' || t[static_cast<size_t>(j)] == '\t' || t[static_cast<size_t>(j)] == '\r')) ++j;
+            if (j == ce) break;
+        }
+        const int64_t blockEnd = m < lineCount ? lines[static_cast<size_t>(m)].second : n;
+        if (ls > segStart) outside.emplace_back(segStart, ls);
+        spans.emplace_back(static_cast<size_t>(ls), static_cast<size_t>(blockEnd));
+        segStart = blockEnd;
+        k = m;
+    }
+    if (segStart < n) outside.emplace_back(segStart, n);
+    for (const auto& [s, e] : outside) {
+        // Inline code spans: every maximal backtick run, then each opening run to the next run of its length.
+        std::vector<std::pair<int64_t, int64_t>> runs;  // (at, length)
+        int64_t r0 = FindFrom(t, U'`', s);
+        while (r0 != -1 && r0 < e) {
+            int64_t j = r0;
+            while (j < e && t[static_cast<size_t>(j)] == '`') ++j;
+            runs.emplace_back(r0, j - r0);
+            r0 = FindFrom(t, U'`', j);
+        }
+        std::unordered_map<int64_t, std::vector<size_t>> byLength;
+        for (size_t idx = 0; idx < runs.size(); ++idx) byLength[runs[idx].second].push_back(idx);
+        std::unordered_map<int64_t, size_t> cursor;
+        size_t r = 0;
+        while (r < runs.size()) {
+            const int64_t at = runs[r].first, len = runs[r].second;
+            const std::vector<size_t>& list = byLength[len];
+            size_t& c = cursor[len];
+            while (c < list.size() && list[c] <= r) ++c;
+            if (c < list.size()) {
+                spans.emplace_back(static_cast<size_t>(at), static_cast<size_t>(runs[list[c]].first + len));
+                r = list[c] + 1;
+            } else {
+                ++r;
+            }
+        }
+        // HTML comments and tags.
+        int64_t gt = -2, commentEnd = -2;
+        int64_t lt = FindFrom(t, U'<', s);
+        while (lt != -1 && lt < e) {
+            if (PointAt(t, lt + 1) == '!' && PointAt(t, lt + 2) == '-' && PointAt(t, lt + 3) == '-') {
+                if (commentEnd != -1 && commentEnd < lt + 4) commentEnd = FindFrom(t, "-->", lt + 4);
+                if (commentEnd != -1 && commentEnd + 3 <= e) {
+                    spans.emplace_back(static_cast<size_t>(lt), static_cast<size_t>(commentEnd + 3));
+                    lt = FindFrom(t, U'<', commentEnd + 3);
+                    continue;
+                }
+            } else {
+                const int64_t name = PointAt(t, lt + 1) == '/' ? lt + 2 : lt + 1;
+                if (IsAsciiLetter(PointAt(t, name))) {
+                    if (gt != -1 && gt < name) gt = FindFrom(t, U'>', name);
+                    if (gt != -1 && gt < e) {
+                        spans.emplace_back(static_cast<size_t>(lt), static_cast<size_t>(gt + 1));
+                        lt = FindFrom(t, U'<', gt + 1);
+                        continue;
+                    }
+                }
+            }
+            lt = FindFrom(t, U'<', lt + 1);
+        }
+    }
+}
+
+// The stretches no name is read in, as code point places, in order, none overlapping: every address and every
+// Markdown link (found in bytes, each byte they start or end at starting a code point), every bare web address and
+// autolink, and with `markdown` the Markdown stretches too.
+Spans PassedOver(std::string_view text, const Points& cps, const std::vector<size_t>& at, bool markdown) {
+    Spans spans;
     MarkdownLinks(text, spans);
     for (const OWAddressFound& a : OWAddress::FindAll(text)) spans.emplace_back(a.start, a.end);
+    auto place = [&](size_t byte) { return static_cast<size_t>(std::lower_bound(at.begin(), at.end(), byte) - at.begin()); };
+    for (auto& s : spans) s = {place(s.first), place(s.second)};
+    WebAddresses(cps, spans);
+    if (markdown) MarkdownStretches(cps, spans);
     std::sort(spans.begin(), spans.end());
     std::vector<std::pair<size_t, size_t>> out;
     for (const auto& s : spans) {
@@ -271,17 +481,16 @@ OWNameFinder OWNameFinder::Of(const OWJsonValue& elements, OWNameCase name_case,
     return OWNameFinder(std::move(impl));
 }
 
-std::vector<OWNameFound> OWNameFinder::Find(std::string_view text) const {
+std::vector<OWNameFound> OWNameFinder::Find(std::string_view text) const { return Find(text, false); }
+
+std::vector<OWNameFound> OWNameFinder::Find(std::string_view text, bool markdown) const {
     std::vector<OWNameFound> found;
     const Impl& m = *impl_;
     if (!m.error.empty() || m.hits.empty()) return found;
-    std::vector<std::pair<size_t, size_t>> spans = PassedOver(text);
     std::vector<char32_t> cps;
     std::vector<size_t> at;
     Decode(text, cps, at);
-    // Each span's bytes as code point places: every byte an address or a link's bracket starts or ends at starts one.
-    auto place = [&](size_t byte) { return static_cast<size_t>(std::lower_bound(at.begin(), at.end(), byte) - at.begin()); };
-    for (auto& s : spans) s = {place(s.first), place(s.second)};
+    std::vector<std::pair<size_t, size_t>> spans = PassedOver(text, cps, at, markdown);
     const size_t length = cps.size();
     // Where a whole name starts and the longest one that does, as the backward pass meets them: last place first.
     std::vector<size_t> starts;
