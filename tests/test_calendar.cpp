@@ -24,7 +24,7 @@ using owtest::P;
 namespace {
 
 // The fixture's sha256 as dist.146's MANIFEST.json records it.
-const char* const DistSha256 = "1caef0003392b60b9f0cf960232c009417c85d374ac8574c3b9fcec55adda7a9";
+const char* const DistSha256 = "1ae922bc7af243453cac62053a31b2d10180e0ebb4843639dde9479f16e87206";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/calendar.fixture.json"; }
 
@@ -235,7 +235,7 @@ std::string Plain(const std::string& extra = "") {
 OW_TEST(calendar_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the calendar fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.131's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.147's");
     // And the vendored manifest says the same.
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
@@ -258,10 +258,10 @@ OW_TEST(calendar_fixture_is_the_pinned_one) {
             ++refused;
         }
     }
-    t.Eq(cases->Size(), size_t(79), "79 cases (the profile page says 79)");
-    t.Eq(read, size_t(36), "36 calendars");
+    t.Eq(cases->Size(), size_t(91), "91 cases (the profile page says 91)");
+    t.Eq(read, size_t(48), "48 calendars");
     t.Eq(refused, size_t(43), "43 values a reader must refuse");
-    t.Eq(steps, size_t(232), "232 steps");
+    t.Eq(steps, size_t(256), "256 steps");
 }
 
 OW_CASES(calendar_fixture_cases) {

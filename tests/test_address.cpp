@@ -23,7 +23,7 @@ using owtest::P;
 namespace {
 
 // The fixture's sha256 as dist.146's MANIFEST.json records it.
-const char* const DistSha256 = "922182d418225234184c5a7e3a3a152e2fde8059c0fe2aa98596a7faa0aab487";
+const char* const DistSha256 = "4846f5dda7607efd9651bebb2f0b89b0df264b9d74496b01a35cca4c52d83895";
 
 const std::string World = "0199c3a1-7b2e-7c3d-8e4f-5a6b7c8d9e0f";
 const std::string Element = "019a1f3c-2b4e-7d10-8c3a-6f2e9b0d4a71";
@@ -188,7 +188,7 @@ std::string Written(const std::string& json) { return OWAddress::WriteJson(J(jso
 OW_TEST(address_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the address fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.128's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.147's");
     auto doc = Fixture();
     t.Eq(Str(*doc, "profile"), std::string("address"), "the address profile's fixture");
     const OWJsonValue* cases = doc->Find("cases");
@@ -202,12 +202,12 @@ OW_TEST(address_fixture_is_the_pinned_one) {
         prose_all += Str(c, "kind") == "prose-all";
         refusals += c.Has("refuse");
     }
-    t.Eq(cases->Size(), size_t(219), "219 cases");
+    t.Eq(cases->Size(), size_t(230), "230 cases");
     t.Eq(format, size_t(36), "36 format cases");
-    t.Eq(parse, size_t(104), "104 parse cases");
-    t.Eq(prose, size_t(77), "77 prose cases (57 at dist.123, four more at dist.126, fifteen at dist.127, one at dist.146), each through ReadAt");
+    t.Eq(parse, size_t(109), "109 parse cases");
+    t.Eq(prose, size_t(83), "83 prose cases (57 at dist.123, four more at dist.126, fifteen at dist.127, one at dist.146, six at dist.147), each through ReadAt");
     t.Eq(prose_all, size_t(2), "2 prose-all cases (dist.128), each through FindAll");
-    t.Eq(refusals, size_t(75), "20 format refusals and 55 parse refusals");
+    t.Eq(refusals, size_t(80), "20 format refusals and 60 parse refusals");
 }
 
 // The prose loop walks each case's code point index into a byte offset. Where the text before the index is ASCII the

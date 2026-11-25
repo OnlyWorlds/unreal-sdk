@@ -30,6 +30,14 @@ the detail a maintainer needs; the history before this file is in the git log.
   world's only calendar speaks, and with several, none. The calendar fixture's world cases are checked in
   `tests/test_calendar.cpp`. No Blueprint node for it yet.
 
+### Changed
+
+- Schema pin to `v0.34.1-dist.147` (`9d7fb97`): canonical `00.34.01` unchanged; the generated files moved in their
+  stamp only. The calendar fixture gains twelve cases naming which calendar speaks (91 cases, 48 calendars, 256
+  steps), answered by `OWCalendar::SpeakingCalendar`; the address fixture gains eleven (230: 109 parse, 83 prose),
+  each answered with no change in the core. The `.owworld` set gains its two fold cases, now 111 generated fixtures,
+  each with the set's verdict.
+
 ### Fixed
 
 - `OWWorld::ToFiles` leaves out a new element whose type is not one of the 22 type slugs, as it already left out one
