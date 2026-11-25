@@ -81,8 +81,8 @@ bool FOWArchiveSetTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("every generated fixture is on disk, and nothing else"), OnDisk.Num() + Zips.Num(), NumGenerated);
 	TestEqual(TEXT("the set's 111 generated fixtures"), NumGenerated, 111);
 
-	// The core's fourteen causes: section 4.7's twelve, section 4.8's name_case and OW-25's too_deep. A set from before a
-	// serial that adds one holds all of them but the later ones (serial 145 lists twelve); a set from after both, the same.
+	// The core's thirteen causes: section 4.7's twelve and section 4.8's name_case. A set from before the serial that adds
+	// it (serial 145 lists twelve) holds all of them but that one; a set from after it, the same thirteen.
 	const OWJsonValue* Reasons = Verdicts().Find("reasons");
 	TSet<FString> Theirs, Mine;
 	if (Reasons && Reasons->IsArray())
@@ -90,7 +90,7 @@ bool FOWArchiveSetTest::RunTest(const FString& Parameters)
 		for (const OWJsonValue& R : Reasons->Items()) Theirs.Add(OWConvert::Str(R.Text()));
 	}
 	for (const char* R : OnlyWorlds::OWWorldArchive::Reasons) Mine.Add(OWConvert::Str(R));
-	TestTrue(TEXT("the reasons are the spec's list"), Mine.Num() == 14 && Mine.Includes(Theirs) && Theirs.Num() >= 12);
+	TestTrue(TEXT("the reasons are the spec's list"), Mine.Num() == 13 && Mine.Includes(Theirs) && Theirs.Num() >= 12);
 	return true;
 }
 

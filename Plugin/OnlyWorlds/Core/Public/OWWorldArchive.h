@@ -68,9 +68,8 @@ extern OW_API const char* const MediaType;  // application/vnd.onlyworlds.world+
 extern OW_API const char* const Marker;     // mimetype
 extern OW_API const char* const Extension;  // owworld
 
-// The one list of refusal causes (section 4.7; name_case, a fixed name in another case, section 4.8; too_deep, a
-// world.json past 200, OW-25).
-extern OW_API const char* const Reasons[14];
+// The one list of refusal causes (section 4.7; name_case, a fixed name in another case, section 4.8).
+extern OW_API const char* const Reasons[13];
 
 // Read an archive's bytes as a conforming reader does. Nothing is extracted; an entry is never inflated more than one
 // byte past what it declares.

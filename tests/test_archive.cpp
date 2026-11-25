@@ -10,7 +10,6 @@
 #include "OWWorldArchive.h"
 
 #include <algorithm>
-#include <iterator>
 #include <cstdio>
 #include <memory>
 
@@ -143,14 +142,10 @@ OW_TEST(archive_reasons_are_the_spec_list) {
     for (const OWJsonValue& r : reasons->Items()) theirs.push_back(r.Text());
     std::sort(mine.begin(), mine.end());
     std::sort(theirs.begin(), theirs.end());
-    // Fourteen causes: section 4.7's twelve, section 4.8's name_case and OW-25's too_deep (a world.json past 200; both
-    // ruled 2026-11-25). A set from before the serial that adds one holds every cause but the later ones (serial 145
-    // lists twelve, 147 thirteen); a set from after both, the same fourteen.
-    t.Eq(mine.size(), size_t(14), "the fourteen causes");
+    // Thirteen causes: section 4.7's twelve and section 4.8's name_case (ruled 2026-11-25). A set from before the serial
+    // that adds it (serial 145 lists twelve) holds every cause but that one; a set from after it, the same thirteen.
+    t.Eq(mine.size(), size_t(13), "the thirteen causes");
     t.Ok(std::includes(mine.begin(), mine.end(), theirs.begin(), theirs.end()), "every cause the set lists is one of ours");
-    std::vector<std::string> missing;
-    std::set_difference(mine.begin(), mine.end(), theirs.begin(), theirs.end(), std::back_inserter(missing));
-    bool later = true;
-    for (const std::string& m : missing) later = later && (m == "name_case" || m == "too_deep");
-    t.Ok(later, "the set's list is ours but for causes a later serial adds");
+    if (std::find(theirs.begin(), theirs.end(), "name_case") != theirs.end()) t.Ok(mine == theirs, "the same list");
+    else t.Eq(theirs.size() + 1, mine.size(), "the set's list is ours but name_case");
 }
