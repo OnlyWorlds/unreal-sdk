@@ -222,7 +222,35 @@ void PackReal(owtest::T& t, const std::string& root, const std::string& label, b
         for (auto it = files.begin(); it != files.end();)
             it = it->first.compare(0, prefix.size(), prefix) == 0 ? files.erase(it) : std::next(it);
     }
-    t.Ok(r.files == files, label + ": every packed file is the world's bytes, private producers left out, and no other");
+    // By default the author fields are left out (StripAuthorFields): a file the pack lists has lost them and is the same
+    // object otherwise, and every other packed file is the world's bytes. Asked, every packed file is the world's bytes.
+    size_t stripped = 0, holding = 0;
+    std::set<std::string> listed(packed.author_fields_left_out.begin(), packed.author_fields_left_out.end());
+    for (const auto& [rel, bytes] : files) {
+        auto at = r.files.find(rel);
+        if (at == r.files.end() || !listed.count(rel)) {
+            if ((rel.compare(0, 9, "elements/") == 0 || rel.compare(0, 8, "spatial/") == 0))
+                for (const char* field : OWWorldArchive::AuthorFields)
+                    if (std::string(bytes.begin(), bytes.end()).find(std::string("\"") + field + "\"") != std::string::npos) {
+                        ++holding;
+                        break;
+                    }
+            continue;
+        }
+        OWJsonParseResult was = OWJson::Parse(bytes), now = OWJson::Parse(at->second);
+        for (const char* field : OWWorldArchive::AuthorFields) was.value.Erase(field);
+        // Compared in section 5's spelling: a rewrite writes 2.0 as 2 (258 of Sikelia's files hold such a number).
+        if (was.ok && now.ok && OWJson::Stringify(now.value) == OWJson::Stringify(was.value) && at->second != bytes) ++stripped;
+    }
+    t.Eq(stripped, listed.size(), label + ": every file listed lost the author fields and is the same object otherwise");
+    OWFileMap bare = files;
+    t.Eq(OWWorldArchive::StripAuthorFields(bare).size(), listed.size(), label + ": the pack lists what StripAuthorFields rewrites");
+    t.Ok(r.files == bare, label + ": every other packed file is the world's bytes, private producers left out, and no other");
+    std::printf("       %s: %zu files without their author fields, %zu kept with them (a number JavaScript writes otherwise)\n",
+                label.c_str(), stripped, holding);
+    OWArchiveRead asked = OWWorldArchive::Read((from_folder ? OWWorldArchive::PackFolder(root, false, false, true)
+                                                            : w.Pack(top, false, false, true)).bytes);
+    t.Ok(asked.ok && asked.files == files, label + ": asked, every packed file is the world's bytes");
     std::unique_ptr<OWWorld> again = OWWorld::FromFiles(r.files);
     t.Eq(again->elements.size(), owtest::CountElementFiles(root), label + ": every element in the archive");
     std::printf("       %s: %zu entries, %.1f MB, packed in %lld ms, read back (every rule, every CRC) in %lld ms; "

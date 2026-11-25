@@ -152,8 +152,10 @@ which the world's owner can remove at any time.
 
 **A world on disk.** `UOWLibrary::OpenWorldFolder` reads a world folder, `OpenWorldFile` an `.owworld` file (one zip
 that holds a folder), and `GetAll<Types>` (`GetAllCharacters`, …) gives its elements as structs. `PackWorldFolder` and
-`UOWWorld::PackToFile` make an `.owworld` file, and a pack is a copy: it carries every element, hidden ones included,
-since the plugin has no share yet (a pack that leaves out what a reader may not see). This repository
+`UOWWorld::PackToFile` make an `.owworld` file. A pack carries every element, hidden ones included, since the plugin
+has no share yet (a pack that leaves out what a reader may not see), but not who wrote each one: the five author
+fields (`created_by`, `changed_by`, `changed_via`, `changed_client`, `doors`) are left out of every element file that
+is one JSON object, since a `.owworld` is a file handed on (in C++, `include_author_fields` keeps them). This repository
 carries a small example world, Hyperion, at `codegen/schema-dist/example/hyperion`.
 
 **A player link** (`https://www.onlyworlds.com/join#ow_j_…`, made by a world's owner for one Character) needs no

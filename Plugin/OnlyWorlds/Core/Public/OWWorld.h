@@ -94,9 +94,10 @@ public:
     std::string WriteRefusal(bool only_edited = false) const;
     // False, nothing written and `error` WriteRefusal's line, when it refuses.
     bool WriteFolder(const std::string& path, bool only_edited = false, std::string* error = nullptr);
-    // The world as a portable .owworld (OWWorldArchive::PackWorld: api stripped, private records left out, unless asked).
-    // Not ok, its message WriteRefusal's, when it refuses.
-    OWPacked Pack(const std::string& top, bool keep_api = false, bool include_private = false);
+    // The world as a portable .owworld (OWWorldArchive::PackWorld: api stripped, private records and the author fields
+    // left out, unless asked). Not ok, its message WriteRefusal's, when it refuses.
+    OWPacked Pack(const std::string& top, bool keep_api = false, bool include_private = false,
+                  bool include_author_fields = false);
 
     // Section 3.2's filename for an element: <slug>--<id tail>.json, or <full id>.json when the name gives no slug;
     // with `full_id`, the collision fallback <slug>--<full id>.json.

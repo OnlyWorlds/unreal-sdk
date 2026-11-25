@@ -15,6 +15,36 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Changed
+
+- **A pack leaves out who wrote each element.** `OWWorldArchive::PackWorld`, and so `PackFolder`, `Pack`,
+  `OWWorld::Pack` and the two Blueprint nodes (`PackWorldFolder`, `UOWWorld::PackToFile`), now remove the five author
+  fields (`created_by`, `changed_by`, `changed_via`, `changed_client`, `doors`: which member and which tool wrote an
+  element, a membership id and a door, nothing to someone the world is handed to) from every file under `elements/`
+  and the legacy `spatial/` that is one JSON object, whatever its name, extension or depth: a `.owworld` is a file
+  handed on (folder spec 4.2). Only top-level keys go (an `x_` value that holds one of the names stays), and a key
+  present with `null` goes too. Such a file is written in section 5's form (`OWJson::ToBytes`); a file holding none
+  of the five, a file that is no JSON object (an array, a write cut short, not UTF-8), and `world.json`, `media/` and
+  `records/` keep their bytes. A trailing `include_author_fields` (on `PackWorld`, `PackFolder`, `Pack` and
+  `OWWorld::Pack`) carries them, for a byte copy of your own folder; `OWPacked::author_fields_left_out` lists the files
+  rewritten, and `OWWorldArchive::StripAuthorFields(files)` and `WithoutAuthorFields(bytes, out)` do the same to a
+  file map or one file (`OW_API`). `PackFiles` is unchanged: it writes what it is handed (OW-9). The Blueprint nodes
+  take no new input yet, so from Blueprints a pack always leaves them out. Parity with the TypeScript SDK 4.203.1 (and
+  4.109.0): `tests/data/author-fields.fixture.json` (7 cases, the same bytes as the TypeScript SDK's and the Python
+  package's) is vendored byte for byte with its sha256 held, and every case passes through every door, each entry
+  compared byte for byte, with the count.
+
+  "One JSON object" is read as the TypeScript SDK reads a file it did not write: the core's strict parser (UTF-8, a
+  byte order mark read past, RFC 8259, one value and nothing after it), at most 200 deep (the parser itself reads to
+  512), every number one a double holds. **Where the core would write a number other than JavaScript does, a file
+  keeps its bytes, which is the safe side for every reader:** the core keeps an integer as written, so a file holding
+  an integer past 2^53 that JavaScript reads rounded (`12345678901234567891`, which the TypeScript SDK writes back as
+  `12345678901234567000`) keeps its bytes, the author fields included, as a number no double holds (`1e400`), which
+  the core reads and would write back as read, does in both. A lone surrogate's escape is kept and written back
+  escaped, as the TypeScript SDK writes it. An integer-like key (`"0"`, `"12"`) keeps its place in the object, where
+  `JSON.stringify` would put it first. On Sikelia (20,913 element files, every one holding an author field) all
+  20,913 are rewritten and none kept; the pack takes about half a second.
+
 ### Added
 
 - The README's Blueprint first run ("On Blueprints, from a world on disk") built in code and run. The host's editor

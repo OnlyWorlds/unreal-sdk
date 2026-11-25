@@ -52,6 +52,9 @@ struct OWPacked {
     OWBytes bytes;
     // Producer directories under records/ left out as private (section 4.5 rule 11), by name.
     std::vector<std::string> left_out;
+    // The files written without their author fields (OWWorldArchive::StripAuthorFields), by path inside the world, in
+    // UTF-8 byte order; empty when they were asked to travel, and for PackFiles.
+    std::vector<std::string> author_fields_left_out;
 };
 
 namespace OWWorldArchive {
@@ -84,20 +87,41 @@ OW_API void CollectRecords(const std::string& folder, OWFileMap& into);
 // deflated (an empty one stored). Nothing is filtered: what a caller hands in is what it asked for.
 OW_API OWPacked PackFiles(const OWFileMap& files, const std::string& top);
 
+// Which member and which tool wrote an element (a membership id, a door): nothing to someone the world is handed to,
+// so a pack leaves them out unless asked. The TypeScript SDK's AUTHOR_FIELDS, in its order.
+extern OW_API const char* const AuthorFields[5];
+
+// A file without its author fields, in section 5's form (OWJson::ToBytes), into `out`; false, `out` untouched, when its
+// bytes travel as they are: it holds none of the five at its top level, or it is not one JSON object as the TypeScript
+// SDK reads a file it did not write (strict UTF-8, a byte order mark read past, one value and only white space after
+// it, at most 200 deep, every number one a double holds), or a number in it would be written back other than as
+// JSON.stringify writes it (an integer past 2^53 that JavaScript reads rounded, which this core keeps as written).
+// Only top-level keys go: an x_ value that holds one of the names stays.
+OW_API bool WithoutAuthorFields(const OWBytes& bytes, OWBytes& out);
+
+// Leave the author fields out of every file under elements/ or spatial/ in `files` that WithoutAuthorFields rewrites,
+// in place. Returns their paths, in UTF-8 byte order. What PackWorld does unless asked; PackFiles never does.
+OW_API std::vector<std::string> StripAuthorFields(OWFileMap& files);
+
 // Pack a world's files as a portable .owworld under `top`: world.json's api block stripped unless keep_api (then the
-// file is a private copy, OW-10), and, unless include_private, every producer directory records/RECORDS.json marks
-// private left out whole (section 4.5 rule 11; named in left_out). Refused when world.json is not an object with an
-// id, or when the manifest cannot say which producers are private.
-OW_API OWPacked PackWorld(const OWFileMap& files, const std::string& top, bool keep_api = false, bool include_private = false);
+// file is a private copy, OW-10); unless include_private, every producer directory records/RECORDS.json marks
+// private left out whole (section 4.5 rule 11; named in left_out); and unless include_author_fields, the author
+// fields left out of every element-folder file (StripAuthorFields; named in author_fields_left_out): a .owworld is a
+// file handed on (folder spec 4.2). Refused when world.json is not an object with an id, or when the manifest cannot
+// say which producers are private.
+OW_API OWPacked PackWorld(const OWFileMap& files, const std::string& top, bool keep_api = false, bool include_private = false,
+                          bool include_author_fields = false);
 
 // Pack a world folder as a portable .owworld: world.json (its api block stripped unless keep_api: a private copy),
 // elements/, spatial/ and media/ without dot-names and .meta files, and records/ whole but for Unity's own .meta
-// files and, unless include_private, the producers records/RECORDS.json marks private.
-OW_API OWPacked PackFolder(const std::string& folder, bool keep_api = false, bool include_private = false);
+// files and, unless include_private, the producers records/RECORDS.json marks private; the author fields left out
+// unless include_author_fields (PackWorld).
+OW_API OWPacked PackFolder(const std::string& folder, bool keep_api = false, bool include_private = false,
+                           bool include_author_fields = false);
 
 // PackFolder, written to `archive_path` (refused when that lies inside the folder).
 OW_API OWPacked Pack(const std::string& folder, const std::string& archive_path, bool keep_api = false,
-              bool include_private = false);
+              bool include_private = false, bool include_author_fields = false);
 
 }  // namespace OWWorldArchive
 }  // namespace OnlyWorlds

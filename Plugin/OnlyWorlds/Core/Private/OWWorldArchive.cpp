@@ -2,7 +2,9 @@
 #include "OWUnicode.h"
 
 #include <algorithm>
+#include <charconv>
 #include <set>
+#include <system_error>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -366,7 +368,76 @@ void CollectRecords(const std::string& folder, OWFileMap& into) {
         CollectProducer(records + "/" + name, "records/" + name, into);
 }
 
-OWPacked PackWorld(const OWFileMap& files_in, const std::string& top, bool keep_api, bool include_private) {
+const char* const AuthorFields[5] = {"created_by", "changed_by", "changed_via", "changed_client", "doors"};
+
+namespace {
+
+// The deepest nesting the npm SDK reads a file it did not write to (OUTSIDE_JSON_MAX_DEPTH): an object or an array at
+// the top is 1. The core's parser reads to 512.
+constexpr int OutsideJsonMaxDepth = 200;
+
+// Whether a number's text, which the core writes back in section 5's spelling (OWJson::CanonicalNumber), is written
+// as JSON.stringify writes it after JSON.parse. A number with a fraction or an exponent is read to the nearest double
+// either way, so it is, unless it is past the largest double (the core keeps its text, JavaScript has no form for it).
+// An integer the core writes as written, where JavaScript writes the double it reads: past 2^53 the two can differ.
+bool WrittenAsJavaScriptWrites(const std::string& text) {
+    double d = 0;
+    auto res = std::from_chars(text.data(), text.data() + text.size(), d);
+    if (res.ec == std::errc::result_out_of_range) {
+        // Too large keeps its text in the core; too small is 0 in both. An integer is never too small.
+        return text.find_first_of(".eE") != std::string::npos && OWJson::CanonicalNumber(text) == "0";
+    }
+    if (res.ec != std::errc()) return false;
+    return OWJson::CanonicalNumber(text) == OWJson::NumberToString(d);
+}
+
+// Whether a parsed value nests at most OutsideJsonMaxDepth deep and holds only numbers written as JavaScript writes
+// them. A loop with its own stack, never recursion.
+bool AsTheNpmReaderReadsIt(const OWJsonValue& top) {
+    std::vector<std::pair<const OWJsonValue*, int>> stack{{&top, 1}};
+    while (!stack.empty()) {
+        auto [v, depth] = stack.back();
+        stack.pop_back();
+        if (v->IsNumber()) {
+            if (!WrittenAsJavaScriptWrites(v->Text())) return false;
+        } else if (v->IsArray() || v->IsObject()) {
+            if (depth > OutsideJsonMaxDepth) return false;
+            for (const OWJsonValue& child : v->Items()) stack.push_back({&child, depth + 1});
+        }
+    }
+    return true;
+}
+
+}  // namespace
+
+bool WithoutAuthorFields(const OWBytes& bytes, OWBytes& out) {
+    // The core's parser is the npm SDK's grammar: strict UTF-8 (a byte order mark read past), RFC 8259, no raw control
+    // character in a string, one value and only white space after it; a key given twice keeps its first place and its
+    // last value; a lone surrogate's escape is kept and written back escaped. Then the npm reader's depth and numbers.
+    OWJsonParseResult r = OWJson::Parse(bytes);
+    if (!r.ok || !r.value.IsObject()) return false;
+    bool present = false;
+    for (const char* field : AuthorFields) present = present || r.value.Has(field);
+    if (!present || !AsTheNpmReaderReadsIt(r.value)) return false;
+    for (const char* field : AuthorFields) r.value.Erase(field);
+    out = OWJson::ToBytes(r.value);
+    return true;
+}
+
+std::vector<std::string> StripAuthorFields(OWFileMap& files) {
+    std::vector<std::string> left;
+    for (auto& [rel, bytes] : files) {  // std::map: UTF-8 byte order
+        if (!StartsWith(rel, "elements/") && !StartsWith(rel, "spatial/")) continue;
+        OWBytes bare;
+        if (!WithoutAuthorFields(bytes, bare)) continue;
+        bytes = std::move(bare);
+        left.push_back(rel);
+    }
+    return left;
+}
+
+OWPacked PackWorld(const OWFileMap& files_in, const std::string& top, bool keep_api, bool include_private,
+                   bool include_author_fields) {
     OWPacked out;
     auto world = files_in.find(World);
     if (world == files_in.end()) {
@@ -403,12 +474,15 @@ OWPacked PackWorld(const OWFileMap& files_in, const std::string& top, bool keep_
             }
         }
     }
+    std::vector<std::string> authored;
+    if (!include_author_fields) authored = StripAuthorFields(files);
     out = PackFiles(files, top);
     out.left_out = left_out;
+    out.author_fields_left_out = authored;
     return out;
 }
 
-OWPacked PackFolder(const std::string& folder_in, bool keep_api, bool include_private) {
+OWPacked PackFolder(const std::string& folder_in, bool keep_api, bool include_private, bool include_author_fields) {
     OWPacked out;
     std::string folder = folder_in;
     while (!folder.empty() && (folder.back() == '/' || folder.back() == '\\')) folder.pop_back();
@@ -426,12 +500,13 @@ OWPacked PackFolder(const std::string& folder_in, bool keep_api, bool include_pr
     CollectRecords(folder, files);
     std::string top = OWFiles::LastSegment(OWFiles::Absolute(folder));
     if (top.empty() || top.find(':') != std::string::npos) top = "world";
-    out = PackWorld(files, top, keep_api, include_private);
+    out = PackWorld(files, top, keep_api, include_private, include_author_fields);
     if (!out.ok) out.message += " (" + folder + ")";
     return out;
 }
 
-OWPacked Pack(const std::string& folder, const std::string& archive_path, bool keep_api, bool include_private) {
+OWPacked Pack(const std::string& folder, const std::string& archive_path, bool keep_api, bool include_private,
+              bool include_author_fields) {
     std::string abs_folder = OWUnicode::Fold(OWFiles::Absolute(folder));
     std::string abs_archive = OWUnicode::Fold(OWFiles::Absolute(archive_path));
     if (StartsWith(abs_archive, abs_folder + "/")) {
@@ -439,7 +514,7 @@ OWPacked Pack(const std::string& folder, const std::string& archive_path, bool k
         bad.message = "the archive " + archive_path + " would be written inside the folder it packs";
         return bad;
     }
-    OWPacked p = PackFolder(folder, keep_api, include_private);
+    OWPacked p = PackFolder(folder, keep_api, include_private, include_author_fields);
     if (!p.ok) return p;
     if (!OWFiles::Write(archive_path, p.bytes)) {
         p.ok = false;
