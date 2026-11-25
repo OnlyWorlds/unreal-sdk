@@ -138,6 +138,13 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ### Fixed
 
+- **A write into a type folder spelled in another case is refused.** `OWWorld::WriteFolder` put a new Character into
+  `elements/character/`, which on Windows and macOS is the folder's `elements/Character/`, where no reader reads it (a
+  type folder is read as written, folder spec 4.8, ruled 2026-11-23). It now returns false and writes nothing when a
+  file would go into a type folder (under `elements/` or `spatial/`) that the target folder, or the write's own files,
+  hold in another spelling; the error names both folders (`OWWorld::TypeFolderFault`). A folder that already holds
+  both spellings (only a case-sensitive disk can) is written as each is spelled, and another type's folder in another
+  case does not stop the write.
 - **A tool's `world.json` under a dot-folder inside the world no longer refuses a world file** (folder spec 4.7,
   OW-5, ruled 2026-11-24). `OWWorldArchive::Read` refused `abbey/.atlas/world.json` as a second world
   (`more_than_one`); a dot-folder is never a world, wherever it sits (`..atlas/`, `elements/character/.trash/` too), so

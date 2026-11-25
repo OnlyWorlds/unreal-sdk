@@ -153,6 +153,58 @@ OW_TEST(fixed_names_a_write_into_a_folder_holding_elements_in_another_case_is_re
     OWFiles::RemoveTree(root);
 }
 
+// A type folder is read as written (ruled 2026-11-23), so a write into elements/Character/ is read by no one: refused,
+// nothing written, the folders named in the error.
+OW_TEST(fixed_names_a_write_into_a_type_folder_in_another_case_is_refused) {
+    std::string root = Root("type-case");
+    WriteTree(root, {{"world.json", WorldJson}, {"elements/Character/old.json", Element(IdA, "Old")}});
+    SayTheDisk(root);
+    auto w = OWWorld::ReadFolder(root);
+    if (!w) {
+        t.Fail("the world did not read");
+        return;
+    }
+    w->Add("character", OWJson::Parse(Bytes(Element(IdB, "Bo"))).value);
+    std::string error;
+    t.Ok(!w->WriteFolder(root, true, &error), "an edited write: refused");
+    t.Ok(error.find("elements/Character/") != std::string::npos && error.find("elements/character/") != std::string::npos,
+         "the error names both folders (" + error + ")");
+    t.Ok(!w->WriteFolder(root, false, &error), "a whole write: refused");
+    t.Eq(Joined(root), std::string("world.json elements/Character/old.json"),
+         "nothing written (on a disk that folds case, elements/character/ would land in Character/)");
+    OWFiles::RemoveTree(root);
+}
+
+// The same when the world itself carries the folder in another case (read from an archive) and the target is new: on a
+// disk that ignores case the two spellings would become one folder as they are written.
+OW_TEST(fixed_names_a_write_whose_own_files_hold_a_type_folder_in_two_spellings_is_refused) {
+    std::string root = Root("type-case-new");
+    OWFiles::RemoveTree(root);
+    auto w = OWWorld::FromFiles(Map({{"world.json", WorldJson}, {"elements/Character/old.json", Element(IdA, "Old")}}));
+    w->Add("character", OWJson::Parse(Bytes(Element(IdB, "Bo"))).value);
+    std::string error;
+    t.Ok(!w->WriteFolder(root, false, &error), "refused");
+    t.Ok(!OWFiles::IsDir(root + "/elements"), "nothing written");
+    OWFiles::RemoveTree(root);
+}
+
+OW_TEST(fixed_names_another_types_folder_in_another_case_does_not_stop_a_write) {
+    std::string root = Root("type-other");
+    WriteTree(root, {{"world.json", WorldJson}, {"elements/Location/old.json", Element(IdA, "Old")}});
+    auto w = OWWorld::ReadFolder(root);
+    if (!w) {
+        t.Fail("the world did not read");
+        return;
+    }
+    w->Add("character", OWJson::Parse(Bytes(Element(IdB, "Bo"))).value);
+    std::string error;
+    t.Ok(w->WriteFolder(root, true, &error), "written (" + error + ")");
+    auto back = OWWorld::ReadFolder(root);
+    t.Ok(back && back->Get(IdB) != nullptr, "read back");
+    t.Ok(w->WriteFolder(root, false, &error), "a whole write back carries Location/ as it is (" + error + ")");
+    OWFiles::RemoveTree(root);
+}
+
 OW_TEST(fixed_names_a_write_into_a_new_folder_writes_as_before) {
     std::string root = Root("fresh");
     OWFiles::RemoveTree(root);

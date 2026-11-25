@@ -70,6 +70,12 @@ public:
     static std::string FixedNameFault(const std::vector<std::string>& names, const std::vector<std::string>& wanted);
     // FixedNameFault for a folder on disk, from its root's listing (files and folders); "" for a folder not there.
     static std::string FolderFault(const std::string& path);
+    // Why writing `rels` (paths inside the world) into the folder `path` would put a file into a type folder (the second
+    // level under elements/ and spatial/) that is held in another spelling, by the folder's own listing or by another
+    // of `rels`, or "": on a disk that ignores case the two are one folder, and a type folder is read as written
+    // (ruled 2026-11-23), so the file would be read by no one. Compared by OW-18's fold; the reason names both
+    // folders. A folder holding both spellings already (only a disk that keeps case can) is written as each is spelled.
+    static std::string TypeFolderFault(const std::string& path, const std::vector<std::string>& rels);
 
     // The folder read from ("" for a world from files).
     std::string root;
@@ -110,7 +116,8 @@ public:
     std::string WriteRefusal(bool only_edited = false) const;
     // False, nothing written and `error` WriteRefusal's line, when it refuses; and when the folder holds world.json,
     // elements/ or spatial/ in another case and not as written (FolderFault's line): on a disk that folds case the
-    // files would land inside Elements/, where no reader reads them.
+    // files would land inside Elements/, where no reader reads them; and when a file would go into a type folder held
+    // in another spelling (TypeFolderFault's line: elements/character/ beside elements/Character/).
     bool WriteFolder(const std::string& path, bool only_edited = false, std::string* error = nullptr);
     // The world as a portable .owworld (OWWorldArchive::PackWorld: api stripped, private records and the author fields
     // left out, unless asked). Not ok, its message WriteRefusal's, when it refuses.

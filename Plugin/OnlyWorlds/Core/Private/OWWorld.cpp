@@ -117,6 +117,34 @@ std::string OWWorld::FolderFault(const std::string& path) {
     return FixedNameFault(names);
 }
 
+std::string OWWorld::TypeFolderFault(const std::string& path, const std::vector<std::string>& rels) {
+    for (const char* top : ElementFolders) {
+        std::set<std::string> held;  // the type folders the target lists, as written
+        if (OWFiles::IsDir(path + "/" + top))
+            for (const std::string& d : OWFiles::List(path + "/" + top, true)) held.insert(d);
+        std::set<std::string> written;  // the type folders this write puts files into
+        for (const std::string& rel : rels) {
+            size_t a = rel.find('/');
+            size_t b = a == std::string::npos ? a : rel.find('/', a + 1);
+            if (b != std::string::npos && rel.compare(0, a, top) == 0) written.insert(rel.substr(a + 1, b - a - 1));
+        }
+        std::set<std::string> all = held;
+        all.insert(written.begin(), written.end());
+        for (const std::string& name : written) {
+            const std::string key = OWUnicode::Fold(name);
+            for (const std::string& other : all) {
+                if (other == name || OWUnicode::Fold(other) != key || (held.count(name) && held.count(other))) continue;
+                const std::string& first = name < other ? name : other;
+                const std::string& second = name < other ? other : name;
+                return std::string(top) + "/" + first + "/ and " + top + "/" + second +
+                       "/ are one folder on a disk that ignores case, and a type folder is read as written (folder spec "
+                       "section 4.8), so a file written into " + top + "/" + name + "/ would be read by no one; rename the folder";
+            }
+        }
+    }
+    return "";
+}
+
 // -- reading ------------------------------------------------------------------------------------------------------------
 
 std::unique_ptr<OWWorld> OWWorld::ReadFolder(const std::string& path_in, bool other_parts) {
@@ -397,8 +425,15 @@ bool OWWorld::WriteFolder(const std::string& path, bool only_edited, std::string
         if (error) *error = "nothing written to the world folder " + path + ", " + why;
         return false;
     }
+    const OWFileMap files = ToFiles(only_edited);
+    std::vector<std::string> rels;
+    for (const auto& kv : files) rels.push_back(kv.first);
+    if (std::string why = TypeFolderFault(path, rels); !why.empty()) {
+        if (error) *error = "nothing written to the world folder " + path + ": " + why;
+        return false;
+    }
     std::unordered_set<std::string> made;  // each folder made once, not once per file
-    for (const auto& kv : ToFiles(only_edited)) {
+    for (const auto& kv : files) {
         std::string full = path + "/" + kv.first;
         std::string dir = full.substr(0, full.rfind('/'));
         if (made.insert(dir).second && !OWFiles::MakeDirs(dir)) {
