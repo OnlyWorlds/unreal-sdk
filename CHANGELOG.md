@@ -33,6 +33,14 @@ the detail a maintainer needs; the history before this file is in the git log.
   followed by `name_case`): a change to an exported symbol, so a game module built against the old header rebuilds.
   The core's runner reads a draft conformance set when `OW_OWWORLD_FIXTURES` names it, and counts the set from its
   `verdicts.json` (no fixed number).
+- **Under the legacy `spatial/` only `map`, `pin`, `zone` and `marker` are read** (folder spec 4.8, ruled
+  2026-11-25). Before, a folder under `spatial/` named by any of the 22 type words was read, so
+  `spatial/character/c.json` was served as a Character. Now such a folder is no type folder there: it is named once in
+  `OWWorld::errors` (with the four) and its files are kept as bytes in `other_files`, so a write or a pack still
+  carries them, at both doors (`ReadFolder`, `FromFiles`, so an `.owworld` too). `spatial/Pin/` was already no type
+  folder; its line now names the four. The pack still leaves the author fields out of such a file, as the ruling asks
+  of every file under `spatial/`. The fixture set's `pass-OW-24-spatial-untyped` and `-type-case` serve nothing from
+  `spatial/` (`tests/test_spatial_four.cpp`, which reads them where the set holds them).
 - **A pack leaves out who wrote each element.** `OWWorldArchive::PackWorld`, and so `PackFolder`, `Pack`,
   `OWWorld::Pack` and the two Blueprint nodes (`PackWorldFolder`, `UOWWorld::PackToFile`), now remove the five author
   fields (`created_by`, `changed_by`, `changed_via`, `changed_client`, `doors`: which member and which tool wrote an

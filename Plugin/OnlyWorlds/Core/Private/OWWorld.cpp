@@ -25,9 +25,18 @@ bool EndsWith(const std::string& s, const std::string& tail) {
     return s.size() >= tail.size() && s.compare(s.size() - tail.size(), tail.size(), tail) == 0;
 }
 
-// Names are read as written (ruled 2026-11-23). A type folder is one of the 22 type words in lower case: any other
-// folder under elements/ or spatial/ (elements/Character/, elements/vessel/) is not read.
-bool IsTypeFolder(const std::string& name) {
+// The four types the dated spatial/ layout held, the only type folders read under it (ruled 2026-11-25).
+const char* const SpatialTypes[4] = {"map", "pin", "zone", "marker"};
+
+// Names are read as written (ruled 2026-11-23). A type folder is one of the 22 type words in lower case, and under
+// spatial/ one of the four it held: any other folder (elements/Character/, elements/vessel/, spatial/character/,
+// spatial/Pin/) is not read.
+bool IsTypeFolder(const std::string& top, const std::string& name) {
+    if (top == "spatial") {
+        for (const char* t : SpatialTypes)
+            if (name == t) return true;
+        return false;
+    }
     for (const char* t : OWAddress::TypeWords)
         if (name == t) return true;
     return false;
@@ -39,6 +48,10 @@ bool IsJsonInOtherCase(const std::string& name) { return !EndsWith(name, ".json"
 
 const char* const NotJsonLower = ": the extension is not .json in lower case; not read, kept as it is";
 const char* const NotTypeFolder = "/: not a type folder (one of the 22 type words, in lower case); not read, kept as it is";
+const char* const NotSpatialFolder =
+    "/: not a type folder under spatial/ (map, pin, zone, marker, in lower case); not read, kept as it is";
+
+const char* NotTypeFolderWhy(const std::string& top) { return top == "spatial" ? NotSpatialFolder : NotTypeFolder; }
 
 std::string StringField(const OWJsonValue& body, const char* key) {
     const OWJsonValue* v = body.IsObject() ? body.Find(key) : nullptr;
@@ -126,8 +139,8 @@ std::unique_ptr<OWWorld> OWWorld::ReadFolder(const std::string& path_in, bool ot
         for (const std::string& type : OWFiles::List(base, true)) {
             if (type[0] == '.') continue;
             std::string dir = base + "/" + type;
-            if (!IsTypeFolder(type)) {
-                w->errors.push_back(std::string(top) + "/" + type + NotTypeFolder);
+            if (!IsTypeFolder(top, type)) {
+                w->errors.push_back(std::string(top) + "/" + type + NotTypeFolderWhy(top));
                 if (other_parts) OWWorldArchive::CollectContent(dir, std::string(top) + "/" + type, w->other_files);
                 continue;
             }
@@ -178,8 +191,8 @@ std::unique_ptr<OWWorld> OWWorld::FromFiles(const OWFileMap& files) {
         bool in_folder = b != std::string::npos && (rel.compare(0, a, "elements") == 0 || rel.compare(0, a, "spatial") == 0) &&
                          rel[a + 1] != '.';
         std::string type = in_folder ? rel.substr(a + 1, b - a - 1) : std::string();
-        if (in_folder && !IsTypeFolder(type)) {
-            if (no_type.insert(rel.substr(0, b)).second) w->errors.push_back(rel.substr(0, b) + NotTypeFolder);
+        if (in_folder && !IsTypeFolder(rel.substr(0, a), type)) {
+            if (no_type.insert(rel.substr(0, b)).second) w->errors.push_back(rel.substr(0, b) + NotTypeFolderWhy(rel.substr(0, a)));
             w->other_files[rel] = kv.second;
             continue;
         }

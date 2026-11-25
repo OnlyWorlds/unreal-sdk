@@ -42,10 +42,10 @@ struct OW_API OWElement {
 
 class OW_API OWWorld {
 public:
-    // The element folders: elements/, and spatial/, the format's dated layout for the spatial types (section 4).
+    // The element folders: elements/, and spatial/, the format's dated layout, map, pin, zone and marker only (section 4.8).
     static const char* const ElementFolders[2];
 
-    // Read a world folder: world.json, every elements/<type>/*.json (and the legacy spatial/<type>/), and, with
+    // Read a world folder: world.json, every elements/<type>/*.json (and the legacy spatial/{map,pin,zone,marker}/), and, with
     // `other_parts`, media/ and records/ as bytes (so a write to a new folder gives the world whole; the same
     // selection Pack makes). nullptr when there is no world.json, and when the folder holds world.json, elements/ or
     // spatial/ in another case and not as written (FolderFault says why). Names are read as written, at both doors: <type> is
