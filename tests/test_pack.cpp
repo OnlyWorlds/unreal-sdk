@@ -153,6 +153,71 @@ OW_TEST(pack_private_records_left_out_unless_asked) {
     OWFiles::RemoveTree(root);
 }
 
+// The share (folder spec section 4.8, OW-23): the copy side's world packed again as a share gives the share side's files
+// and names what the side's left_out names, the hidden apart from the unread; packed as a copy, the copy side's.
+OW_TEST(pack_share_leaves_hidden_and_unread_out) {
+    OWJsonValue doc = VerdictsDoc();
+    OWArchiveRead copy = OWWorldArchive::ReadFile(P().fixtures + "/pass-OW-23-copy-carries-unread.owworld");
+    OWArchiveRead share = OWWorldArchive::ReadFile(P().fixtures + "/pass-OW-23-share-leaves-unread-out.owworld");
+    t.Ok(copy.ok && share.ok, "both sides read");
+    const OWJsonValue* left = nullptr;
+    const OWJsonValue* fixtures = doc.Find("fixtures");
+    for (size_t i = 0; fixtures && i < fixtures->Size(); ++i) {
+        const OWJsonValue& f = fixtures->Items()[i];
+        const OWJsonValue* file = f.Find("file");
+        if (file && file->Text() == "pass-OW-23-share-leaves-unread-out.owworld") left = f.Find("left_out");
+    }
+    t.Ok(left != nullptr, "the share side names what it leaves out");
+    auto list = [&](const char* key) {
+        std::vector<std::string> out;
+        const OWJsonValue* v = left ? left->Find(key) : nullptr;
+        for (size_t i = 0; v && i < v->Size(); ++i) out.push_back(v->Items()[i].Text());
+        return out;
+    };
+    std::string root = P().tmp + "/abbey";
+    OWFiles::RemoveTree(root);
+    WriteTree(root, copy.files);
+    OWPacked as_share = OWWorldArchive::PackFolder(root, false, false, false, false);
+    t.Ok(as_share.ok, "packed as a share (" + as_share.message + ")");
+    t.Ok(OWWorldArchive::Read(as_share.bytes).files == share.files, "the share side's files, byte for byte");
+    t.Eq(Join(as_share.hidden_left_out), Join(list("hidden")), "the hidden left out, by path");
+    t.Eq(Join(as_share.unread_left_out), Join(list("unread")), "the unread left out, apart from the hidden");
+    OWPacked as_copy = OWWorldArchive::PackFolder(root);
+    t.Ok(OWWorldArchive::Read(as_copy.bytes).files == copy.files, "by default a copy: every file byte for byte");
+    t.Ok(as_copy.hidden_left_out.empty() && as_copy.unread_left_out.empty(), "and a copy names nothing left out");
+    std::vector<std::string> faults = WriterFaults(as_copy.bytes, *doc.Find("sources")->Find("hidden"));
+    t.Ok(faults.empty(), "writer faults, copy: " + Join(faults));
+    // The same from a world in memory, and Pack to disk.
+    std::unique_ptr<OWWorld> w = OWWorld::FromFiles(copy.files);
+    t.Ok(OWWorldArchive::Read(w->Pack("abbey", false, false, false, false).bytes).files == share.files, "a world's pack as a share");
+    t.Ok(OWWorldArchive::Read(w->Pack("abbey").bytes).files == copy.files, "a world's pack, a copy by default");
+    std::string out = P().tmp + "/abbey-share.owworld";
+    t.Ok(OWWorldArchive::Pack(root, out, false, false, false, false).ok, "Pack writes a share to disk");
+    OWFiles::Write(P().out + "/share.owworld", as_share.bytes);
+    OWFiles::RemoveTree(root);
+    OWFiles::RemoveTree(out);
+}
+
+// The mark's values: absent, null and false travel in a share; any other value (true, 0, "", {}) is the mark.
+OW_TEST(pack_share_reads_the_mark_as_the_spec_does) {
+    const std::vector<std::pair<std::string, bool>> marks = {
+        {"", false}, {", \"hidden\": null", false}, {", \"hidden\": false", false}, {", \"hidden\": true", true},
+        {", \"hidden\": 0", true}, {", \"hidden\": \"\"", true}, {", \"hidden\": {}", true}};
+    for (const auto& [mark, hidden] : marks) {
+        OWFileMap files;
+        files["world.json"] = B("{\"id\": \"019a9200-0000-7000-8000-000000000001\", \"name\": \"W\"}");
+        files["elements/character/bo--000000c1.json"] =
+            B("{\"id\": \"019a9300-0000-7000-8000-0000000000c1\", \"name\": \"Bo\"" + mark + "}");
+        OWPacked p = OWWorldArchive::PackWorld(files, "w", false, false, false, false);
+        std::string label = mark.empty() ? std::string("no mark") : mark.substr(2);
+        t.Ok(p.ok, label + ": packed");
+        t.Eq(OWWorldArchive::Read(p.bytes).files.count("elements/character/bo--000000c1.json"), size_t(hidden ? 0 : 1),
+             label + (hidden ? ": left out" : ": travels"));
+        t.Eq(p.hidden_left_out.size(), size_t(hidden ? 1 : 0), label + ": counted hidden");
+        t.Ok(p.unread_left_out.empty(), label + ": nothing unread");
+    }
+}
+
 OW_TEST(pack_api_block_stripped_unless_kept) {
     OWArchiveRead r = OWWorldArchive::ReadFile(P().fixtures + "/pass-OW-10-api.owworld");
     std::string root = P().tmp + "/abbey";

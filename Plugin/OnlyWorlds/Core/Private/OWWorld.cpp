@@ -469,13 +469,14 @@ bool OWWorld::WriteFolder(const std::string& path, bool only_edited, std::string
     return true;
 }
 
-OWPacked OWWorld::Pack(const std::string& top, bool keep_api, bool include_private, bool include_author_fields) {
+OWPacked OWWorld::Pack(const std::string& top, bool keep_api, bool include_private, bool include_author_fields,
+                       bool include_hidden) {
     if (std::string why = WriteRefusal(); !why.empty()) {
         OWPacked refused;
         refused.message = why;
         return refused;
     }
-    return OWWorldArchive::PackWorld(ToFiles(), top, keep_api, include_private, include_author_fields);
+    return OWWorldArchive::PackWorld(ToFiles(), top, keep_api, include_private, include_author_fields, include_hidden);
 }
 
 }  // namespace OnlyWorlds

@@ -472,8 +472,48 @@ std::vector<std::string> StripAuthorFields(OWFileMap& files) {
     return left;
 }
 
+namespace {
+
+// The hidden mark of section 4.8: any value but absent, null and false (the Unity package's OWPayload.IsHiddenMark).
+bool IsHiddenMark(const OWJsonValue* mark) {
+    return mark && !mark->IsNull() && !(mark->IsBool() && !mark->AsBool());
+}
+
+// A share's read (section 4.8, ruled 2026-11-23): every file under elements/ and spatial/ that the folder reader would
+// not serve as one element with no mark is erased from `files`, named in `hidden` (served, with the mark) or `unread`
+// (everything else there, both files of an id two files hold among them), each in UTF-8 byte order.
+void LeaveOutForShare(OWFileMap& files, std::vector<std::string>& hidden, std::vector<std::string>& unread) {
+    OWFileMap view;  // what the folder reader reads, and nothing it does not
+    for (const auto& [rel, bytes] : files)
+        if (rel == World || StartsWith(rel, "elements/") || StartsWith(rel, "spatial/")) view[rel] = bytes;
+    std::unique_ptr<OWWorld> world = OWWorld::FromFiles(view);
+    std::map<std::string, bool> served;  // path -> carries the mark
+    if (world) {
+        std::map<std::string, int> files_of;
+        for (const OWElement& e : world->elements) ++files_of[e.Id()];
+        for (const OWElement& e : world->elements)
+            if (files_of[e.Id()] == 1) served[e.source_path] = IsHiddenMark(e.body.Find("hidden"));
+    }
+    for (auto it = files.begin(); it != files.end();) {
+        const std::string& rel = it->first;
+        if (!StartsWith(rel, "elements/") && !StartsWith(rel, "spatial/")) {
+            ++it;
+            continue;
+        }
+        auto s = served.find(rel);
+        if (s != served.end() && !s->second) {
+            ++it;
+            continue;
+        }
+        (s == served.end() ? unread : hidden).push_back(rel);
+        it = files.erase(it);
+    }
+}
+
+}  // namespace
+
 OWPacked PackWorld(const OWFileMap& files_in, const std::string& top, bool keep_api, bool include_private,
-                   bool include_author_fields) {
+                   bool include_author_fields, bool include_hidden) {
     OWPacked out;
     auto world = files_in.find(World);
     if (world == files_in.end()) {
@@ -510,15 +550,20 @@ OWPacked PackWorld(const OWFileMap& files_in, const std::string& top, bool keep_
             }
         }
     }
+    std::vector<std::string> hidden, unread;
+    if (!include_hidden) LeaveOutForShare(files, hidden, unread);
     std::vector<std::string> authored;
     if (!include_author_fields) authored = StripAuthorFields(files);
     out = PackFiles(files, top);
     out.left_out = left_out;
     out.author_fields_left_out = authored;
+    out.hidden_left_out = hidden;
+    out.unread_left_out = unread;
     return out;
 }
 
-OWPacked PackFolder(const std::string& folder_in, bool keep_api, bool include_private, bool include_author_fields) {
+OWPacked PackFolder(const std::string& folder_in, bool keep_api, bool include_private, bool include_author_fields,
+                    bool include_hidden) {
     OWPacked out;
     std::string folder = folder_in;
     while (!folder.empty() && (folder.back() == '/' || folder.back() == '\\')) folder.pop_back();
@@ -542,13 +587,13 @@ OWPacked PackFolder(const std::string& folder_in, bool keep_api, bool include_pr
     CollectRecords(folder, files);
     std::string top = OWFiles::LastSegment(OWFiles::Absolute(folder));
     if (top.empty() || top.find(':') != std::string::npos) top = "world";
-    out = PackWorld(files, top, keep_api, include_private, include_author_fields);
+    out = PackWorld(files, top, keep_api, include_private, include_author_fields, include_hidden);
     if (!out.ok) out.message += " (" + folder + ")";
     return out;
 }
 
 OWPacked Pack(const std::string& folder, const std::string& archive_path, bool keep_api, bool include_private,
-              bool include_author_fields) {
+              bool include_author_fields, bool include_hidden) {
     std::string abs_folder = OWUnicode::Fold(OWFiles::Absolute(folder));
     std::string abs_archive = OWUnicode::Fold(OWFiles::Absolute(archive_path));
     if (StartsWith(abs_archive, abs_folder + "/")) {
@@ -556,7 +601,7 @@ OWPacked Pack(const std::string& folder, const std::string& archive_path, bool k
         bad.message = "the archive " + archive_path + " would be written inside the folder it packs";
         return bad;
     }
-    OWPacked p = PackFolder(folder, keep_api, include_private, include_author_fields);
+    OWPacked p = PackFolder(folder, keep_api, include_private, include_author_fields, include_hidden);
     if (!p.ok) return p;
     if (!OWFiles::Write(archive_path, p.bytes)) {
         p.ok = false;

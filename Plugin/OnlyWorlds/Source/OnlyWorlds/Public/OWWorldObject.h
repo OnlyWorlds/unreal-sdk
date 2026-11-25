@@ -76,9 +76,11 @@ public:
 	bool WriteFolder(const FString& Path, bool bOnlyEdited, FString& Error);
 
 	/** Pack the world as a portable .owworld file (its api block stripped, private records left out, and who wrote
-	 * each element left out: the five author fields, unless bIncludeAuthorFields, for a copy of your own folder). */
+	 * each element left out: the five author fields, unless bIncludeAuthorFields, for a copy of your own folder). A copy
+	 * by default, every element file whole; bAsShare packs a file to hand to someone else (folder spec 4.8): elements
+	 * marked hidden, and every file the reader could not read as one element, are left out. */
 	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds")
-	bool PackToFile(const FString& ArchivePath, FString& Error, bool bIncludeAuthorFields = false);
+	bool PackToFile(const FString& ArchivePath, FString& Error, bool bIncludeAuthorFields = false, bool bAsShare = false);
 
 private:
 	std::unique_ptr<OnlyWorlds::OWWorld> World;

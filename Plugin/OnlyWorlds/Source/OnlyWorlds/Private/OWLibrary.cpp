@@ -64,10 +64,10 @@ FOWArchiveVerdict UOWLibrary::CheckWorldFile(const FString& Path)
 }
 
 bool UOWLibrary::PackWorldFolder(const FString& Folder, const FString& ArchivePath, FString& Error,
-	bool bIncludeAuthorFields)
+	bool bIncludeAuthorFields, bool bAsShare)
 {
 	OnlyWorlds::OWPacked P = OnlyWorlds::OWWorldArchive::Pack(OWConvert::Path(Folder), OWConvert::Path(ArchivePath),
-		false, false, bIncludeAuthorFields);
+		false, false, bIncludeAuthorFields, !bAsShare);
 	Error = P.ok ? FString() : Str(P.message);
 	return P.ok;
 }

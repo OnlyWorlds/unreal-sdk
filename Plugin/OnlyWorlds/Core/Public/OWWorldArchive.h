@@ -55,6 +55,11 @@ struct OWPacked {
     // The files written without their author fields (OWWorldArchive::StripAuthorFields), by path inside the world, in
     // UTF-8 byte order; empty when they were asked to travel, and for PackFiles.
     std::vector<std::string> author_fields_left_out;
+    // On a share (include_hidden false, section 4.8), by path inside the world in UTF-8 byte order: the element files
+    // left out for their mark, and apart from them every other file under elements/ and spatial/ left out because the
+    // folder reader would not serve it as one element. Both empty on a copy, the default.
+    std::vector<std::string> hidden_left_out;
+    std::vector<std::string> unread_left_out;
 };
 
 namespace OWWorldArchive {
@@ -109,19 +114,30 @@ OW_API std::vector<std::string> StripAuthorFields(OWFileMap& files);
 // fields left out of every element-folder file (StripAuthorFields; named in author_fields_left_out): a .owworld is a
 // file handed on (folder spec 4.2). Refused when world.json is not an object with an id, or when the manifest cannot
 // say which producers are private.
+//
+// include_hidden true (the default) packs a copy: every file under elements/ and spatial/ travels byte for byte, as
+// keel's own download keeps an owner's hidden elements, and a file is also how a person moves or backs up their own
+// world. False packs a share, a file made to hand to someone else (folder spec section 4.8, ruled 2026-11-23): under
+// those two folders nothing travels but a file the folder reader (OWWorld::FromFiles) serves as one element with no
+// `hidden` mark (a mark is any value but absent, null and false). A served element with the mark is left out whole and
+// named in hidden_left_out. Every other file there is left out whole and named apart, in unread_left_out: one that is
+// not UTF-8, not JSON, not an object or has no id; one no reader serves (a notes.txt, a file in a deeper folder, a
+// folder that is no type, a name spelled .JSON); and both files of an id two files hold, since the share cannot say
+// which file's mark is the element's. Nothing else is rewritten for a share: a visible element's link to a hidden one
+// keeps its id.
 OW_API OWPacked PackWorld(const OWFileMap& files, const std::string& top, bool keep_api = false, bool include_private = false,
-                          bool include_author_fields = false);
+                          bool include_author_fields = false, bool include_hidden = true);
 
 // Pack a world folder as a portable .owworld: world.json (its api block stripped unless keep_api: a private copy),
 // elements/, spatial/ and media/ without dot-names and .meta files, and records/ whole but for Unity's own .meta
 // files and, unless include_private, the producers records/RECORDS.json marks private; the author fields left out
-// unless include_author_fields (PackWorld).
+// unless include_author_fields; a copy unless include_hidden is false, then a share (PackWorld).
 OW_API OWPacked PackFolder(const std::string& folder, bool keep_api = false, bool include_private = false,
-                           bool include_author_fields = false);
+                           bool include_author_fields = false, bool include_hidden = true);
 
 // PackFolder, written to `archive_path` (refused when that lies inside the folder).
 OW_API OWPacked Pack(const std::string& folder, const std::string& archive_path, bool keep_api = false,
-              bool include_private = false, bool include_author_fields = false);
+              bool include_private = false, bool include_author_fields = false, bool include_hidden = true);
 
 }  // namespace OWWorldArchive
 }  // namespace OnlyWorlds

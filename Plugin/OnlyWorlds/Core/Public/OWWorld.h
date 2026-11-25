@@ -124,9 +124,10 @@ public:
     // in another spelling (TypeFolderFault's line: elements/character/ beside elements/Character/).
     bool WriteFolder(const std::string& path, bool only_edited = false, std::string* error = nullptr);
     // The world as a portable .owworld (OWWorldArchive::PackWorld: api stripped, private records and the author fields
-    // left out, unless asked). Not ok, its message WriteRefusal's, when it refuses.
+    // left out, unless asked; a copy unless include_hidden is false, then a share, section 4.8). Not ok, its message
+    // WriteRefusal's, when it refuses.
     OWPacked Pack(const std::string& top, bool keep_api = false, bool include_private = false,
-                  bool include_author_fields = false);
+                  bool include_author_fields = false, bool include_hidden = true);
 
     // Section 3.2's filename for an element: <slug>--<id tail>.json, or <full id>.json when the name gives no slug;
     // with `full_id`, the collision fallback <slug>--<full id>.json.
