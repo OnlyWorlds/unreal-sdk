@@ -17,6 +17,13 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ### Added
 
+- **A file nested past 200 is refused by name, `too_deep`** (the folder format's OW-25): the depth of its deepest object
+  or array, the file's top value at 1, objects and arrays both counted, so a plain value inside the 200th is read. The
+  core's parser draws the line (`OWJson::MaxDepth`, `OWJson::TooDeep`, `OWJsonParseResult::too_deep`); its old line
+  was 512. An element file past it is skipped into `errors` as `<path>: too_deep: ...`, its bytes kept in
+  `other_files`, as the TypeScript SDK's folder reader skips it; a share leaves it out as unread, and a world.json
+  nested that deep is no world. Tests: `tests/test_too_deep.cpp`.
+
 - `UOWElements::<Type>FromJson(Json, <Type>, Reason)`, one pure Blueprint node per element type (`CharacterFromJson`,
   …): an element's JSON text, as the client's read nodes answer it, into the same `FOW<Type>` struct `Find<Type>`
   gives from a world on disk, so a Blueprint on the onlyworlds.com API breaks the same struct. Refused, with the

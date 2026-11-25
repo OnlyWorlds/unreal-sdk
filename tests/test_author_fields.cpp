@@ -183,7 +183,7 @@ std::vector<EdgeCase> Edges() {
         // JSON.stringify puts integer-like keys first ("0", "12", "id", "b"); here every key keeps its place.
         {"integer-like keys keep their order", R"({"id":"q","b":1,"12":2,"0":3,"created_by":"u"})",
          "{\n  \"id\": \"q\",\n  \"b\": 1,\n  \"12\": 2,\n  \"0\": 3\n}\n"},
-        // Depth: the npm SDK reads to 200 deep, an object at the top being 1; the core's parser reads to 512.
+        // Depth: the npm SDK and the core's parser read to 200 deep, an object at the top being 1 (OW-25).
         {"nested 200 deep", "{\"id\":\"o\",\"x_d\":" + Nested(200) + ",\"created_by\":\"u\"}", "rewritten"},
         {"nested 201 deep keeps its bytes", "{\"id\":\"p\",\"x_d\":" + Nested(201) + ",\"created_by\":\"u\"}", ""},
     };

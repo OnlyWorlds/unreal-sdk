@@ -246,7 +246,8 @@ void OWWorld::SetWorldJson(OWBytes bytes) {
     world_bytes = std::move(bytes);
     OWJsonParseResult r = OWJson::Parse(world_bytes);
     if (!r.ok || !r.value.IsObject()) {
-        world_unread_ = std::string("world.json: ") + (r.ok ? "not a JSON object" : "not JSON (" + r.error + ")");
+        world_unread_ = std::string("world.json: ")
+                        + (r.ok ? "not a JSON object" : r.too_deep ? r.error : "not JSON (" + r.error + ")");
         errors.push_back(world_unread_);
         info = OWJsonValue::Object();
         return;
@@ -258,7 +259,8 @@ void OWWorld::SetWorldJson(OWBytes bytes) {
 void OWWorld::AddParsed(const std::string& rel, const std::string& type, OWBytes bytes) {
     OWJsonParseResult r = OWJson::Parse(bytes);
     if (!r.ok || !r.value.IsObject()) {
-        errors.push_back(rel + ": " + (r.ok ? "not a JSON object" : "not JSON (" + r.error + ")"));
+        // A file nested past the depth is skipped by its name (OW-25), as the TypeScript SDK's folder reader skips it.
+        errors.push_back(rel + ": " + (r.ok ? "not a JSON object" : r.too_deep ? r.error : "not JSON (" + r.error + ")"));
         other_files[rel] = std::move(bytes);
         return;
     }

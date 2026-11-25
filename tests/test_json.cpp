@@ -93,10 +93,10 @@ OW_TEST(json_parser_is_strict) {
         t.Ok(!OWJson::Parse(b).ok, "refused: not UTF-8");
     t.Ok(OWJson::Parse("\xef\xbb\xbf{\"id\":\"w\"}").ok, "one byte order mark at the start is read past");
     t.Ok(OWJson::Parse(" \t\r\n[1e5, -0.5E-3, 0, \"\\/\"] \n").ok, "white space and the grammar's corners");
-    std::string deep(512, '[');
-    deep += std::string(512, ']');
-    t.Ok(OWJson::Parse(deep).ok, "512 levels deep");
-    t.Ok(!OWJson::Parse("[" + deep + "]").ok, "513 levels: refused, not a stack overflow");
+    std::string deep(200, '[');
+    deep += std::string(200, ']');
+    t.Ok(OWJson::Parse(deep).ok, "200 levels deep");
+    t.Ok(!OWJson::Parse("[" + deep + "]").ok, "201 levels: refused (too_deep, OW-25), not a stack overflow");
 }
 
 OW_TEST(json_example_world_rewrites_byte_for_byte) {

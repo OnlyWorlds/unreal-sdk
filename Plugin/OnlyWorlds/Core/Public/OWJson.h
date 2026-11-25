@@ -89,13 +89,18 @@ struct OWJsonParseResult {
     bool ok = false;
     OWJsonValue value;
     std::string error;  // what failed, and at which byte
+    bool too_deep = false;  // failed on an object or array past OWJson::MaxDepth (error starts with OWJson::TooDeep)
 };
 
 namespace OWJson {
 
 // Parse UTF-8 JSON bytes strictly: RFC 8259's grammar, well-formed UTF-8, no raw control character in a string, one
 // value and only white space after it. A byte order mark at the start is read past. A key given twice keeps its first
-// position and takes the last value (JSON.parse and Python's json.loads do the same). Nesting deeper than 512 fails.
+// position and takes the last value (JSON.parse and Python's json.loads do the same). An object or array nested past
+// MaxDepth fails by name (too_deep), the text's top value at 1, objects and arrays both counted (the folder format's
+// OW-25), so a plain value inside the 200th is read.
+inline constexpr int MaxDepth = 200;
+inline constexpr const char* TooDeep = "too_deep";
 OW_API OWJsonParseResult Parse(std::string_view bytes);
 OW_API OWJsonParseResult Parse(const std::vector<uint8_t>& bytes);
 

@@ -103,7 +103,11 @@ public:
         if (s_.size() >= 3 && s_.substr(0, 3) == "\xEF\xBB\xBF") at_ = 3;
         if (!OWUnicode::IsUtf8(s_)) return Fail(r, "not well-formed UTF-8");
         Space();
-        if (!Value(r.value, 0)) return Fail(r, error_);
+        if (!Value(r.value, 0)) {
+            Fail(r, error_);
+            r.too_deep = too_deep_;
+            return r;
+        }
         Space();
         if (at_ != s_.size()) return Fail(r, "data after the value");
         r.ok = true;
@@ -114,6 +118,7 @@ private:
     std::string_view s_;
     size_t at_ = 0;
     std::string error_;
+    bool too_deep_ = false;
 
     OWJsonParseResult& Fail(OWJsonParseResult& r, const std::string& why) {
         r.ok = false;
@@ -142,9 +147,13 @@ private:
     }
 
     bool Value(OWJsonValue& v, int depth) {
-        if (depth >= 512) return Err("nested deeper than 512");
         if (at_ >= s_.size()) return Err("the input ends where a value should be");
         char c = s_[at_];
+        if ((c == '{' || c == '[') && depth + 1 > OWJson::MaxDepth) {
+            // An object or array past the standard's depth (OW-25; depth counts from 0 here, the text's top at 1 there).
+            if (error_.empty()) too_deep_ = true;
+            return Err("too_deep: nested more than 200 deep");
+        }
         switch (c) {
             case '{': return ObjectValue(v, depth);
             case '[': return ArrayValue(v, depth);
