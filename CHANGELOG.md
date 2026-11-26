@@ -44,6 +44,12 @@ the detail a maintainer needs; the history before this file is in the git log.
   node, equal to `Find<Type>`'s struct), `.Refused`, and `OnlyWorldsLive.Models.CharacterFromJson` (a Moppetopia
   Character read over its public key and broken).
 
+### Changed
+
+- Schema pin to `v0.34.1-dist.148` (`93e7232`): canonical `00.34.01` unchanged; the generated files moved in their
+  stamp only. The `.owworld` set gains its nine depth cases (OW-25), now 120 generated fixtures, each with the set's
+  verdict and its reader-side `left_out`. The folder format is 0.3.25.
+
 ## [0.3.0] - 2026-11-25
 
 A world can be packed as a share, which leaves out what a reader should not get: elements marked hidden and files
