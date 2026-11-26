@@ -79,7 +79,7 @@ bool FOWArchiveSetTest::RunTest(const FString& Parameters)
 	TArray<FString> Zips;
 	IFileManager::Get().FindFiles(Zips, *(OWTestPaths::Fixtures() / TEXT("*.zip")), true, false);
 	TestEqual(TEXT("every generated fixture is on disk, and nothing else"), OnDisk.Num() + Zips.Num(), NumGenerated);
-	TestEqual(TEXT("the set's 111 generated fixtures"), NumGenerated, 111);
+	TestEqual(TEXT("the set's 120 generated fixtures"), NumGenerated, 120);
 
 	// The core's thirteen causes: section 4.7's twelve and section 4.8's name_case. A set from before the serial that adds
 	// it (serial 145 lists twelve) holds all of them but that one; a set from after it, the same thirteen.
