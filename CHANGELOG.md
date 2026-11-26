@@ -4,7 +4,7 @@ Notable changes to the OnlyWorlds SDK for Unreal. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Where it stands.** 0.3.0 is the latest release. `onlyworlds-unreal-0.3.0.zip`, on the repository's Releases page,
+**Where it stands.** 0.4.0 is the latest release. `onlyworlds-unreal-0.4.0.zip`, on the repository's Releases page,
 holds the plugin folder to drop into a project's `Plugins/`, as source the project compiles; the [README](README.md)
 has the install and a first run. What a game can do with it: open a world on disk (a world folder or an `.owworld`
 file) and read its elements of all 22 types as Blueprint structs; read and write a world over the onlyworlds.com API
@@ -14,6 +14,14 @@ OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine
 the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
+
+## [0.4.0] - 2026-11-26
+
+An element read over the onlyworlds.com API becomes its Blueprint struct with `<Type>FromJson`, the same struct a
+world on disk gives. A file nested more than 200 levels deep is left out by name, `too_deep`, counted in its text
+as every OnlyWorlds reader counts it. The name finder passes over web addresses, and over Markdown's code, HTML and
+definitions when told the text is Markdown. The plugin names its engine, its platform and its icon, and keeps its
+core when Epic's `BuildPlugin` packages it. Pinned to schema-dist serial 148 (the folder format 0.3.25).
 
 ### Added
 
