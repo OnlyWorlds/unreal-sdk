@@ -11,7 +11,8 @@ The rule, at namespace scope of each header (OWApi.h itself excepted):
   - an `extern` constant needs it;
   - a template, an inline function or a function with a body, a constexpr value, an alias, an enum and a forward
     declaration need none.
-A class nested inside a class is covered by its outer class's mark.
+A class nested inside a class is covered by its outer class's mark. An attribute (`[[deprecated("...")]]`) is read as
+no part of the declaration it stands before: the mark goes after it.
 
   python tools/check_exports.py           exit 0 when every mark is there, 1 (and each missing one listed) when not
   python tools/check_exports.py --write   inserts the missing marks (and the include of OWApi.h), bytes kept as read
@@ -67,7 +68,16 @@ def masked(text):
             i = j + 1
             continue
         i += 1
+    # An attribute ([[deprecated("...")]], its words already blanked) is no part of the declaration it stands before.
+    masked_text = "".join(out)
+    for a in reversed(list(ATTRIBUTE.finditer(masked_text))):
+        for k in range(a.start(), a.end()):
+            if masked_text[k] != "\n":
+                out[k] = " "
     return "".join(out)
+
+
+ATTRIBUTE = re.compile(r"\[\[.*?\]\]", re.DOTALL)
 
 
 BODY_END = re.compile(r"(\)|\bconst|\bnoexcept|\boverride|\bfinal)\s*$")

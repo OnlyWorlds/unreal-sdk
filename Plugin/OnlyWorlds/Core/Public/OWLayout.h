@@ -23,7 +23,7 @@
 // graph it cannot read answers an `error`, naming what (the npm SDK's TypeError): no nodes or edges list, a node that is
 // not an object or has no id, a type that is not one of the 22, a name neither text nor null, an id twice, an edge
 // without text source and target, a field there and not text (null too), an index there and not a finite number (null
-// too). The kinds' colour groups are the presentation sidecar's defaults (OWPresentation::FamilyOf, Order).
+// too). The kinds' colour groups are the presentation sidecar's defaults (OWPresentation::GroupOf, Order).
 
 #include "OWApi.h"
 #include "OWGraph.h"
@@ -57,7 +57,8 @@ struct OWLayoutAroundPoint {
 // or, for a graph it cannot read, an error naming what (and no points).
 struct OWLayoutByKind {
     std::string method = "by-kind";
-    int version = 1;
+    // Always 1: a method's word is its version, so read `method`, never this number.
+    [[deprecated("Since 0.7.0. Leaves in 1.0. The layout profile's mark carries no version key.")]] int version = 1;
     std::vector<OWLayoutPoint> points;
     std::string error;
 };
@@ -66,7 +67,8 @@ struct OWLayoutByKind {
 // error naming what.
 struct OWLayoutAround {
     std::string method = "around";
-    int version = 1;
+    // Always 1: a method's word is its version, so read `method`, never this number.
+    [[deprecated("Since 0.7.0. Leaves in 1.0. The layout profile's mark carries no version key.")]] int version = 1;
     std::vector<OWLayoutAroundPoint> points;
     std::string error;
 };

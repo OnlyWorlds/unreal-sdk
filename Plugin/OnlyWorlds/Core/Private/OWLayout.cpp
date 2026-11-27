@@ -46,12 +46,12 @@ struct Ordered {
 };
 
 int Rank(const std::string& type) {
-    const std::string family = OWPresentation::FamilyOf(type);
+    const std::string family = OWPresentation::GroupOf(type);
     const auto& order = OWPresentation::Order();
     return static_cast<int>(std::find(order.begin(), order.end(), family) - order.begin());
 }
 
-bool IsType(const std::string& type) { return !OWPresentation::FamilyOf(type).empty(); }
+bool IsType(const std::string& type) { return !OWPresentation::GroupOf(type).empty(); }
 
 // Check the graph, then put it in the method's one order, whatever order the caller handed: the nodes by id, the edges
 // by source, then field (none as ""), then index (none as 0), then target, every word in code point order (a UTF-8

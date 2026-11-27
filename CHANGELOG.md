@@ -24,8 +24,28 @@ the detail a maintainer needs; the history before this file is in the git log.
   X.Y.Z. Leaves in 1.0. Use Y.")]]` in C++, and `DeprecatedFunction` with that `DeprecationMessage` on a Blueprint node.
   `tools/verify_promise.py` holds the public names of the core's and the plugin's headers, listed in
   `tools/public-names.json`, and their marks to the promise in the tests workflow, with Python's standard library;
-  `tools/mutants_promise.py` watches it fail once for each rule. No name is deprecated today, and no release so far has
-  removed or renamed a public name.
+  `tools/mutants_promise.py` watches it fail once for each rule. No release so far has removed or renamed a public
+  name; the first marks are under Deprecated below.
+- **`OWPresentation::GroupOf`, the TypeScript SDK's `groupOf`, the name its 5.0 keeps.** A type's colour group, its
+  colour word (`blue`, `green`, `pink` or `amber`), and `""` for a word that is not one of the 22 slugs: the answer
+  `FamilyOf` has always given, under the TypeScript SDK's name. The core's own readers (the graph's node `family`,
+  the layout's group order) now call it.
+
+### Deprecated
+
+- **`OWPresentation::FamilyOf`, since 0.7.0: use `OWPresentation::GroupOf`. It leaves in 1.0.** It answers through
+  `GroupOf`, so the two never differ. The TypeScript SDK's own `familyOf` answers the group's words from before its
+  4.102.0 (`agents`, `world`, `abstract`, `temporal`); this one has always answered the colour words, so a move to
+  `GroupOf` changes no answer. A graph node's `family` field, `FOWGraphNode::Family` in Blueprint, stays, as the
+  TypeScript SDK's `OwGraphNode.family` does.
+- **`OWLayoutByKind::version` and `OWLayoutAround::version`, since 0.7.0, with nothing in their place. They leave in
+  1.0.** Each is always 1; a method's word, `method`, is its version, and the layout profile's mark carries no
+  version key (the TypeScript SDK's two `version` keys, deprecated since its 4.177.0). Read `method`.
+  `OWLayoutByLinks3d::version` stays: it moves when the method's answers do, as the TypeScript SDK's
+  `BY_LINKS_3D_VERSION`.
+
+A C++ caller of a deprecated name sees the mark's words as a warning (MSVC's C4996, or `-Wdeprecated-declarations`),
+never an error.
 
 ### Fixed
 

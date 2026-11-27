@@ -1480,7 +1480,12 @@
   "OnlyWorlds::OWLayoutAround::error": {},
   "OnlyWorlds::OWLayoutAround::method": {},
   "OnlyWorlds::OWLayoutAround::points": {},
-  "OnlyWorlds::OWLayoutAround::version": {},
+  "OnlyWorlds::OWLayoutAround::version": {
+   "deprecated": {
+    "since": "0.7.0",
+    "leaves": "1.0"
+   }
+  },
   "OnlyWorlds::OWLayoutAroundPoint": {},
   "OnlyWorlds::OWLayoutAroundPoint::depth": {},
   "OnlyWorlds::OWLayoutAroundPoint::id": {},
@@ -1490,7 +1495,12 @@
   "OnlyWorlds::OWLayoutByKind::error": {},
   "OnlyWorlds::OWLayoutByKind::method": {},
   "OnlyWorlds::OWLayoutByKind::points": {},
-  "OnlyWorlds::OWLayoutByKind::version": {},
+  "OnlyWorlds::OWLayoutByKind::version": {
+   "deprecated": {
+    "since": "0.7.0",
+    "leaves": "1.0"
+   }
+  },
   "OnlyWorlds::OWLayoutByLinks3d": {},
   "OnlyWorlds::OWLayoutByLinks3d::centres": {},
   "OnlyWorlds::OWLayoutByLinks3d::code": {},
@@ -1783,7 +1793,13 @@
   "OnlyWorlds::OWPinsKnownTo::known": {},
   "OnlyWorlds::OWPinsKnownTo::out": {},
   "OnlyWorlds::OWPinsKnownTo::unknown": {},
-  "OnlyWorlds::OWPresentation::FamilyOf": {},
+  "OnlyWorlds::OWPresentation::FamilyOf": {
+   "deprecated": {
+    "since": "0.7.0",
+    "leaves": "1.0"
+   }
+  },
+  "OnlyWorlds::OWPresentation::GroupOf": {},
   "OnlyWorlds::OWPresentation::IconOf": {},
   "OnlyWorlds::OWPresentation::Order": {},
   "OnlyWorlds::OWPresentation::PublicOf": {},
