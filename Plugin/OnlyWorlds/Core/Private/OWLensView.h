@@ -1,7 +1,8 @@
 #pragma once
 // Private to the core: one reader's view of a world as OWLens builds it, and a lens's reading over it, for the graph
 // (OWGraph.cpp) and the charter's reader (OWCharter.cpp). They read who sees what, what a body serves, and what a lens
-// kept and cut, through the lens reader's own View and resolution, never a second copy of their rules.
+// kept and cut, through the lens reader's own View and resolution, never a second copy of their rules. The views
+// reader (OWViews.cpp) reads a row's own banner marks through HasMark, the one presence rule.
 
 #include "OWJson.h"
 #include "OWLens.h"
@@ -51,6 +52,11 @@ struct Sight {
         return it->second;
     }
 };
+
+// A mark by presence, as the room profile reads it (serial 126): any value but null, a string only when something is
+// left after trimming White_Space, a list or an object only when it holds something. The rule OWLens::IsRoomElement,
+// IsReadingAid and IsProposed read.
+bool HasMark(const OWJsonValue& element, const char* field);
 
 // A reader as Resolve checks it: "" when it reads, else the mistake, prefixed by `where`.
 std::string CheckReader(const OWJsonValue& reader, const std::string& where);

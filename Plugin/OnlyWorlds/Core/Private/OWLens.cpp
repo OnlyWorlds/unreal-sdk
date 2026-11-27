@@ -1288,6 +1288,8 @@ OWLensReading Resolve(const OWJsonValue& world, const OWJsonValue& lens, const O
 
 namespace OWLensView {
 
+bool HasMark(const OWJsonValue& element, const char* field) { return OWLens::HasMark(element, field); }
+
 std::string CheckReader(const OWJsonValue& reader, const std::string& where) { return OWLens::CheckReader(reader, where); }
 
 std::string See(const OWJsonValue& world, const OWJsonValue& reader, const OWJsonValue* lens,
