@@ -1,6 +1,6 @@
 {
  "about": "Every public name of the OnlyWorlds SDK for Unreal and its deprecation: written by tools/verify_promise.py --write, read by it in CI. A name leaves this file only in a major.",
- "version": "0.9.0",
+ "version": "0.10.1",
  "major": 0,
  "names": {
   "EOWApiErrorKind": {},
@@ -79,6 +79,7 @@
   "FOWApiError::Current": {},
   "FOWApiError::DocUrl": {},
   "FOWApiError::Kind": {},
+  "FOWApiError::Limit": {},
   "FOWApiError::Line": {},
   "FOWApiError::Message": {},
   "FOWApiError::Param": {},
@@ -1071,6 +1072,9 @@
   "OnlyWorlds::OWApiError::IsAuthError": {},
   "OnlyWorlds::OWApiError::IsCharacterInvalid": {},
   "OnlyWorlds::OWApiError::IsCharacterTaken": {},
+  "OnlyWorlds::OWApiError::IsElementTooLarge": {},
+  "OnlyWorlds::OWApiError::IsElementTooManyLinks": {},
+  "OnlyWorlds::OWApiError::IsExtensionsTooLarge": {},
   "OnlyWorlds::OWApiError::IsIdConflict": {},
   "OnlyWorlds::OWApiError::IsIdempotencyConflict": {},
   "OnlyWorlds::OWApiError::IsKnownOfNotWritable": {},
@@ -1089,6 +1093,7 @@
   "OnlyWorlds::OWApiError::Kind::Api": {},
   "OnlyWorlds::OWApiError::Kind::Refused": {},
   "OnlyWorlds::OWApiError::Kind::Transport": {},
+  "OnlyWorlds::OWApiError::Limit": {},
   "OnlyWorlds::OWApiError::Of": {},
   "OnlyWorlds::OWApiError::ParseRetryAfter": {},
   "OnlyWorlds::OWApiError::ResyncReason": {},

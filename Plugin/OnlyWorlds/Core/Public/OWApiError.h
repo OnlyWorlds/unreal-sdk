@@ -102,6 +102,21 @@ struct OW_API OWApiError {
     // the copy holds that a walk from the start no longer names) or "view" (something left its view: drop it); absent
     // otherwise, and for any other word. Never empty a copy on your own. Mirrors the TypeScript SDK's `resyncReason`.
     std::optional<std::string> ResyncReason() const;
+    // Which size limit a write passed, from the envelope's `limit`: a key of the API document's `info.x-ow-limits`,
+    // where its number and unit are. Set on a 422 invalid_request only, and only for the limits keel names this way
+    // (an element's size, its links, its extension fields); a full world, a file too large or a request body too large
+    // keep their own codes. An open string: more values may come. Absent for any other error, when keel sends none, or
+    // when it is not a string. A bulk slot's error reads it too. Mirrors the TypeScript SDK's `limit`.
+    std::optional<std::string> Limit() const;
+    // A write would make the element larger than an element may be (422, Limit `element_bytes`). Nothing is saved.
+    // Mirrors the TypeScript SDK's `isElementTooLarge`.
+    bool IsElementTooLarge() const;
+    // A write would give the element more link ids, across all its link fields, than it may hold (422, Limit
+    // `element_link_ids`). Nothing is saved. Mirrors the TypeScript SDK's `isElementTooManyLinks`.
+    bool IsElementTooManyLinks() const;
+    // A write would put an element's or the World's extension fields past their cap (422, Limit `extensions_bytes`).
+    // Nothing is saved. Mirrors the TypeScript SDK's `isExtensionsTooLarge`.
+    bool IsExtensionsTooLarge() const;
     // A write became a proposal (status 202, `proposal` set): the element did not change; `proposal` is the row the
     // owner or a co-builder accepts or declines. Not a failure to retry. Mirrors the TypeScript SDK's `isProposed`.
     bool IsProposed() const;

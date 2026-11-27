@@ -16,6 +16,18 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- **`OWApiError::Limit()` names the size limit a write passed, and three predicates read it**: `IsElementTooLarge()`
+  (`element_bytes`), `IsElementTooManyLinks()` (`element_link_ids`) and `IsExtensionsTooLarge()`
+  (`extensions_bytes`), on a call's error and on a failed bulk slot's `error`; on Blueprints, `FOWApiError` gains
+  `Limit`, the name as a string (`""` when there is none), a bulk slot's `Error` too. The OnlyWorlds API will add
+  `limit` to its three 422 `invalid_request` refusals for size (an element's size, its links, its extension fields),
+  as a key of the API document's `info.x-ow-limits`, where the number and its unit are; the code, `param` and the
+  message stay as they are. `Limit()` answers any string, so a value this release does not know is read and no
+  predicate claims it. Until the API sends the key, `Limit()` is absent and the predicates are false: read the message
+  as before. Parity with the TypeScript SDK 4.219.0, its test vector ported.
+
 ## [0.10.1] - 2026-11-27
 
 Every string keeps its characters on its way through the plugin: U+FFFE and U+FFFF no longer turn into `?`, so an

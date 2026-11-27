@@ -135,6 +135,10 @@ struct ONLYWORLDS_API FOWApiError
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
 	FString ResyncReason;
 
+	/** On a 422 invalid_request for a size limit, which one: element_bytes (the element too large), element_link_ids (too many link ids) or extensions_bytes (extension fields past their cap), or a name a later API adds, a key of the API document's info.x-ow-limits; "" otherwise, and until the API sends it. A bulk slot's Error carries it too. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Limit;
+
 	/** The line it prints: "OnlyWorlds API 404 [not_found] (field: id): No such character.", "OnlyWorlds refused: ...", "OnlyWorlds transport: ...". */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
 	FString Line;
