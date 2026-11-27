@@ -99,6 +99,7 @@ namespace
 		int32 EraIndex = -1, Month = 0;
 		FString Era, EraLabel, MonthName, Intercalary, Weekday;
 		bool bIntercalary = false;
+		bool bPastExactRange = false;
 	};
 
 	FBreakdownRead CallBreakdownStep(FAutomationTestBase& Test, const UOWWorld* World, const FString& CalendarId, int64 Step)
@@ -120,6 +121,7 @@ namespace
 		const UScriptStruct* S = Out->Struct;
 		const void* B = Out->ContainerPtrToValuePtr<void>(Call.GetFrame());
 		R.Step = Member<FInt64Property>(Test, S, B, TEXT("Step"));
+		R.bPastExactRange = BoolMember(Test, S, B, TEXT("bPastExactRange"));
 		R.AbsYear = Member<FInt64Property>(Test, S, B, TEXT("AbsYear"));
 		R.Year = Member<FInt64Property>(Test, S, B, TEXT("Year"));
 		R.EraIndex = Member<FIntProperty>(Test, S, B, TEXT("EraIndex"));
@@ -378,6 +380,9 @@ bool FOWCalendarFixtureTest::RunTest(const FString& Parameters)
 				const FBreakdownRead B = CallBreakdownStep(*this, World, TreatyId, Step);
 				TestTrue(At + TEXT("found"), B.bFound);
 				TestEqual(At + TEXT("Step"), B.Step, Step);
+				// A date past the exact range has no year (null in the fixture); the flag tells it from a year 0.
+				const OWJsonValue* WantYear = E->Find("year");
+				TestEqual(At + TEXT("bPastExactRange"), B.bPastExactRange, !(WantYear && WantYear->IsNumber()));
 				TestEqual(At + TEXT("AbsYear"), B.AbsYear, static_cast<int64>(IntOf(E->Find("absYear"))));
 				TestEqual(At + TEXT("Year"), B.Year, static_cast<int64>(IntOf(E->Find("year"))));
 				TestEqual(At + TEXT("Era"), B.Era, TextOf(E->Find("era")));

@@ -39,6 +39,13 @@ struct ONLYWORLDS_API FOWStepBreakdown
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Calendar")
 	int64 Step = 0;
 
+	/**
+	 * True for a date past the exact range: the step alone is the date, and AbsYear and Year are 0 because the date has
+	 * no year, not because its year is 0 (a calendar whose era counts from year_base 0 has a real year 0).
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Calendar")
+	bool bPastExactRange = false;
+
 	/** The year index from step 0 (step 0 opens year 0; negative steps count back). */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Calendar")
 	int64 AbsYear = 0;

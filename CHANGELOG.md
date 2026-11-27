@@ -32,7 +32,8 @@ the detail a maintainer needs; the history before this file is in the git log.
 - **`OWCalendarBreakdown::abs_year` and `year` are `std::optional<int64_t>`**: absent, with every other field but
   `step` (and `era` -1), for a date past the exact range. C++ that read them as `int64_t` reads `*b.year` or
   `b.year.value_or(…)`. The Blueprint struct `FOWStepBreakdown` keeps `int64` fields: such a date holds only its step,
-  every other part 0, `""` or -1.
+  every other part 0, `""` or -1, and its new `bPastExactRange` is true, which tells a date with no year from one
+  in year 0.
 - Schema pin to `v0.34.1-dist.149` (`6792960`); canonical `00.34.01` unchanged. Only the calendar profile and its
   fixture moved; the generated files moved in their stamp only. The shared calendar cost cases are timed on the
   calendar read past the size bounds, since five of them hold templates or names of thousands of characters.
