@@ -555,6 +555,15 @@ bool FOWWorldGraphFixtureTest::RunTest(const FString& Parameters)
 	const OWJsonValue* Cases = Fixture.Find("cases");
 	if (!TestTrue(TEXT("the fixture holds cases"), Cases && Cases->IsArray())) return false;
 
+	// How many of each the fixture holds, read from it: a pin move that adds a case moves these with it.
+	int32 InFixtureGraphs = 0, InFixtureDegrees = 0;
+	for (const OWJsonValue& Case : Cases->Items())
+	{
+		const std::string Kind = WgText(Case.Find("kind"));
+		if (Kind == "graph") ++InFixtureGraphs;
+		if (Kind == "degree") ++InFixtureDegrees;
+	}
+
 	int32 Graphs = 0, Degrees = 0, Failed = 0, NamesNotText = 0;
 	TArray<FString> Left;
 	for (const OWJsonValue& Case : Cases->Items())
@@ -682,14 +691,17 @@ bool FOWWorldGraphFixtureTest::RunTest(const FString& Parameters)
 		}
 		if (!bHeld) ++Failed;
 	}
-	// The fixture as vendored at serial 145: 66 graph and 5 degree cases.
-	TestEqual(TEXT("the 66 graph cases carried"), Graphs, 66);
-	TestEqual(TEXT("the 5 degree cases carried"), Degrees, 5);
+	// Every graph and degree case the fixture holds, each run (none left out), and some of each.
+	TestTrue(TEXT("the fixture holds graph cases"), InFixtureGraphs > 0);
+	TestTrue(TEXT("the fixture holds degree cases"), InFixtureDegrees > 0);
+	TestEqual(TEXT("every graph case the fixture holds carried"), Graphs, InFixtureGraphs);
+	TestEqual(TEXT("every degree case the fixture holds carried"), Degrees, InFixtureDegrees);
 	TestTrue(TEXT("none left out: ") + FString::Join(Left, TEXT("; ")), Left.Num() == 0);
 	TestEqual(TEXT("cases failed"), Failed, 0);
 	// One node's name is stored as a number ("a node's name is the stored value, null when absent"): no text on the node.
 	TestEqual(TEXT("the one name stored as a number, read as no text"), NamesNotText, 1);
-	AddInfo(FString::Printf(TEXT("graph fixture: %d graph and %d degree cases through UOWGraph, %d failed"), Graphs, Degrees, Failed));
+	AddInfo(FString::Printf(TEXT("graph fixture: %d graph and %d degree cases through UOWGraph (the fixture holds %d and %d), %d failed"),
+		Graphs, Degrees, InFixtureGraphs, InFixtureDegrees, Failed));
 	return true;
 }
 

@@ -222,7 +222,8 @@ The automation tests (`OnlyWorlds.*`):
   vectors beside it, the table and every type's section fields, the door's refusals, and every element of Sikelia
   through `ViewOfElement`, each answer held to the core's on the same input; no count is pinned.
 - `OnlyWorlds.Graph.Pins`, `.Run`, `.Integers` (editor only): Blueprints built in code. `Pins` places a Break and a
-  Make node on each of the plugin's 74 structs: every member gets a pin, the 70 integer pairs a bool and an Integer64
+  Make node on each of the plugin's structs (how many is read from the reflection, the 22 generated ones
+  required among them): every member gets a pin, the 70 integer pairs a bool and an Integer64
   on both. `Run` builds one function graph
   of real K2 nodes (`ParseAddress` -> Break -> Make -> `WriteAddress` and `OpenersForAddress`, `FormatStep`,
   `TypeWord`), compiles it with the Kismet compiler (no error, no warning), and calls it once per element of Sikelia
