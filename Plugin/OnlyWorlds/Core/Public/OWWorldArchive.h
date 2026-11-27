@@ -87,6 +87,15 @@ OW_API std::string PathFault(const std::string& name);
 // OW-22: every segment lands on any disk. "" when it does.
 OW_API std::string NameFault(const std::string& name);
 
+// Why a world file holding `names` (each as a writer writes it: the marker, then every file under its top folder) would
+// be refused for a name by Read, in words, or "" (`reason` then cleared): the reader's own checks, in its order (folder
+// spec section 4.7, whose fixture marks every such file writer: refuse): PathFault (unsafe_path, OW-16), NameFault
+// (name, OW-22), a name given twice (unsafe_path, the TypeScript SDK's writeWorldFile's cause, where a reader answers
+// duplicate), two names or folders one after the fold (collision, OW-18) and a path that is a file and a folder
+// (unsafe_path, OW-19). A top folder named mimetype is a file and a folder beside the marker, and MimeType one name
+// with it. PackWorld, and PackFolder through it, ask it before they write.
+OW_API std::string EntryNamesFault(const std::vector<std::string>& names, std::string& reason);
+
 // What PackFolder selects from a folder, part by part. CollectContent: every file of a content folder (elements/,
 // spatial/, media/) but dot-names and .meta files, recursively, keyed `rel/...`. CollectRecords: records/ whole but for
 // Unity's own .meta files (private producers included: PackWorld decides what travels).
