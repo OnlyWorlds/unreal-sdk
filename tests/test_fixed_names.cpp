@@ -216,3 +216,63 @@ OW_TEST(fixed_names_a_write_into_a_new_folder_writes_as_before) {
     t.Ok(back && back->Get(IdB) != nullptr, "read back");
     OWFiles::RemoveTree(root);
 }
+
+namespace {
+
+const std::string LongS = "\xC5\xBFpatial";  // spatial with U+017F first, which OW-18's fold makes an s
+
+// npm 4.212.3's writer vectors: world.json, one element, and a pin under `spatial` (or Elements/ alone when empty).
+std::vector<std::pair<std::string, std::string>> WriterCase(const std::string& spatial,
+                                                            const std::string& elements = "elements") {
+    std::vector<std::pair<std::string, std::string>> files = {{"world.json", WorldJson},
+                                                              {elements + "/character/ada--c1.json", Element(IdA)}};
+    if (!spatial.empty()) files.push_back({spatial + "/pin/p--p1.json", Element(IdB, "P")});
+    return files;
+}
+
+const std::vector<std::string> ControlNames = {"mimetype", "w/elements/character/ada--c1.json",
+                                               "w/spatial/pin/p--p1.json", "w/world.json"};
+
+}  // namespace
+
+OW_TEST(fixed_names_pack_world_refuses_spatial_in_another_case_beside_elements_as_a_copy_and_a_share) {
+    // The TypeScript SDK 4.212.3: its writer dropped Spatial/ beside elements/ from a copy and emptied a share; it now
+    // refuses name_case and writes nothing, as the readers refuse such a world. PackWorld, the files-in writer, the same.
+    for (bool copy : {true, false}) {
+        const std::string mode = copy ? "copy" : "share";
+        for (const std::string& top : {std::string("Spatial"), LongS}) {
+            OWPacked p = OWWorldArchive::PackWorld(Map(WriterCase(top)), "w", false, false, false, copy);
+            t.Ok(!p.ok && p.bytes.empty() && p.names.empty(), mode + ", " + top + ": refused, nothing written");
+            t.Ok(p.message.find("name_case") != std::string::npos && p.message.find("'" + top + "'") != std::string::npos,
+                 mode + ", " + top + ": the cause and the spelling (" + p.message + ")");
+        }
+        OWPacked alone = OWWorldArchive::PackWorld(Map(WriterCase("", "Elements")), "w", false, false, false, copy);
+        t.Ok(!alone.ok && alone.bytes.empty() && alone.message.find("name_case") != std::string::npos,
+             mode + ", Elements/ alone: refused (" + alone.message + ")");
+        // The control: the names as written, a share carrying the element and the legacy pin both.
+        OWPacked control = OWWorldArchive::PackWorld(Map(WriterCase("spatial")), "w", false, false, false, copy);
+        t.Ok(control.ok && control.names == ControlNames, mode + ": the names as written are written (" + control.message + ")");
+        t.Ok(OWWorldArchive::Read(control.bytes).ok, mode + ": and read back");
+    }
+}
+
+OW_TEST(fixed_names_pack_folder_refuses_spatial_in_another_case_beside_elements_as_a_copy_and_a_share) {
+    // The same vectors on a folder on disk: held since the pack lists the folder (section 4.8, ruled 2026-11-25).
+    for (bool copy : {true, false}) {
+        const std::string mode = copy ? "copy" : "share";
+        for (const std::string& top : {std::string("Spatial"), LongS}) {
+            std::string root = Root("spatial-" + mode) + "/w";
+            WriteTree(root, WriterCase(top));
+            OWPacked p = OWWorldArchive::PackFolder(root, false, false, false, copy);
+            t.Ok(!p.ok && p.bytes.empty(), mode + ", " + top + ": refused, nothing packed");
+            t.Ok(p.message.find("name_case") != std::string::npos && p.message.find("'" + top + "'") != std::string::npos,
+                 mode + ", " + top + ": the cause and the spelling (" + p.message + ")");
+            OWFiles::RemoveTree(Root("spatial-" + mode));
+        }
+        std::string control = Root("control-" + mode) + "/w";
+        WriteTree(control, WriterCase("spatial"));
+        OWPacked c = OWWorldArchive::PackFolder(control, false, false, false, copy);
+        t.Ok(c.ok && c.names == ControlNames, mode + ": the names as written pack (" + c.message + ")");
+        OWFiles::RemoveTree(Root("control-" + mode));
+    }
+}

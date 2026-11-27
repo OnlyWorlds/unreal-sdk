@@ -275,6 +275,8 @@ OWArchiveRead Read(const OWBytes& raw, const OWArchiveBudget& budget) {
     OWJsonParseResult parsed = OWJson::Parse(r.held_world_json);
     if (!parsed.ok) {
         r.world_fault = parsed.too_deep ? OWJson::TooDeep : "not_json";
+        // Too deep, the words alone, the code being world_fault (the TypeScript SDK 4.212.3).
+        if (parsed.too_deep) return Refuse(r, "not_a_world", std::string("world.json is ") + OWJson::TooDeepWords);
         return Refuse(r, "not_a_world", "world.json does not parse: " + parsed.error);
     }
     if (!parsed.value.IsObject()) return Refuse(r, "not_a_world", "world.json is not an object");
@@ -518,12 +520,27 @@ void LeaveOutForShare(OWFileMap& files, std::vector<std::string>& hidden, std::v
 OWPacked PackWorld(const OWFileMap& files_in, const std::string& top, bool keep_api, bool include_private,
                    bool include_author_fields, bool include_hidden) {
     OWPacked out;
+    // Section 4.8: files holding world.json, elements/ or spatial/ only in another case are a world the readers refuse,
+    // so they are refused here and nothing is written (the TypeScript SDK's writeWorldFile, 4.212.3): written, Spatial/
+    // beside elements/ would hand on a file no reader opens.
+    {
+        std::vector<std::string> tops;
+        for (const auto& kv : files_in) tops.push_back(kv.first.substr(0, kv.first.find('/')));
+        if (std::string why = OWWorld::FixedNameFault(tops); !why.empty()) {
+            out.message = "the world's files are refused, " + why;
+            return out;
+        }
+    }
     auto world = files_in.find(World);
     if (world == files_in.end()) {
         out.message = "no world.json";
         return out;
     }
     OWJsonParseResult info = OWJson::Parse(world->second);
+    if (!info.ok && info.too_deep) {
+        out.message = std::string("world.json is ") + OWJson::TooDeepWords;  // as writeWorldFile refuses it (4.212.3)
+        return out;
+    }
     const OWJsonValue* id = info.ok && info.value.IsObject() ? info.value.Find("id") : nullptr;
     if (!id || !id->IsString() || OWUnicode::StripWhite(id->Text()).empty()) {
         out.message = "world.json is not an object with an id (a non-empty string)";

@@ -117,7 +117,10 @@ OW_API std::vector<std::string> StripAuthorFields(OWFileMap& files);
 // file is a private copy, OW-10); unless include_private, every producer directory records/RECORDS.json marks
 // private left out whole (section 4.5 rule 11; named in left_out); and unless include_author_fields, the author
 // fields left out of every element-folder file (StripAuthorFields; named in author_fields_left_out): a .owworld is a
-// file handed on (folder spec 4.2). Refused when world.json is not an object with an id, or when the manifest cannot
+// file handed on (folder spec 4.2). Refused, nothing written, when the files hold world.json, elements/ or spatial/
+// only in another case (by OW-18's fold, so a long s too: the message begins with the cause, name_case, as the readers
+// refuse such a world, as the TypeScript SDK's writeWorldFile does since 4.212.3), when world.json is nested
+// past 200 ("world.json is nested more than 200 deep") or is not an object with an id, or when the manifest cannot
 // say which producers are private.
 //
 // include_hidden true (the default) packs a copy: every file under elements/ and spatial/ travels byte for byte, as

@@ -56,3 +56,22 @@ OW_TEST(world_fault_a_world_json_that_cannot_be_read_says_why_any_other_not_a_wo
     OWArchiveRead r = OWWorldArchive::Read(OWWorldArchive::PackFiles(two, "").bytes);
     t.Ok(!r.ok && r.reason == "more_than_one" && r.world_fault.empty(), "more_than_one has none (" + r.reason + ")");
 }
+
+OW_TEST(world_fault_a_world_json_past_200_says_it_in_words_the_code_the_field) {
+    // The TypeScript SDK 4.212.3: a world file's refusal says it in words alone; the code is world_fault. npm's vector,
+    // '[' 201 deep inside the object.
+    const std::string deep = "{\"id\": \"" + Wid + "\", \"x\": " + std::string(201, '[') + std::string(201, ']') + "}";
+    OWArchiveRead r = ReadOne("world.json", deep);
+    t.Ok(!r.ok && r.reason == "not_a_world", "not_a_world (" + r.reason + ")");
+    t.Eq(r.world_fault, std::string("too_deep"), "the code is the field");
+    t.Ok(r.message.find("too_deep") == std::string::npos, "no code mark in the words: " + r.message);
+    t.Eq(r.message, std::string("world.json is nested more than 200 deep"), "the words");
+    // The writer refuses such a world.json in the same words, as npm's writeWorldFile does (4.212.3); never "no id".
+    OWFileMap files;
+    files["world.json"] = Bytes(deep);
+    for (bool copy : {true, false}) {
+        OWPacked p = OWWorldArchive::PackWorld(files, "w", false, false, false, copy);
+        t.Ok(!p.ok && p.bytes.empty(), std::string(copy ? "copy" : "share") + ": refused");
+        t.Eq(p.message, std::string("world.json is nested more than 200 deep"), "the writer's words");
+    }
+}
