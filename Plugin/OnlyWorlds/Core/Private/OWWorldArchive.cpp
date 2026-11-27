@@ -273,7 +273,10 @@ OWArchiveRead Read(const OWBytes& raw, const OWArchiveBudget& budget) {
     // OW-3: the world's own world.json is a JSON object whose id is a non-empty string once trimmed.
     r.held_world_json = content[r.prefix + World];
     OWJsonParseResult parsed = OWJson::Parse(r.held_world_json);
-    if (!parsed.ok) return Refuse(r, "not_a_world", "world.json does not parse: " + parsed.error);
+    if (!parsed.ok) {
+        r.world_fault = parsed.too_deep ? OWJson::TooDeep : "not_json";
+        return Refuse(r, "not_a_world", "world.json does not parse: " + parsed.error);
+    }
     if (!parsed.value.IsObject()) return Refuse(r, "not_a_world", "world.json is not an object");
     const OWJsonValue* id = parsed.value.Find("id");
     if (!id || !id->IsString() || OWUnicode::StripWhite(id->Text()).empty())

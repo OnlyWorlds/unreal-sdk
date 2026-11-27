@@ -153,4 +153,37 @@ bool FOWArchiveConformanceTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FOWArchiveWorldFaultTest, "OnlyWorlds.Archive.WorldFault", OWTestFlags)
+
+bool FOWArchiveWorldFaultTest::RunTest(const FString& Parameters)
+{
+	// The TypeScript SDK's OwWorldFileError.worldFault (4.212.0) through the Blueprint verdict: a world.json that is
+	// there and cannot be read says why; one with no id says nothing. The core's runner holds every vector
+	// (tests/test_world_fault.cpp); this holds that the verdict carries the word.
+	const FString Dir = FPaths::ConvertRelativePathToFull(FPaths::ProjectSavedDir() / TEXT("OWWorldFault"));
+	const std::string Wid = "019a9200-0000-7000-8000-000000000001";
+	const std::string Deep = "{\"id\":\"" + Wid + "\",\"x\":" + std::string(200, '[') + std::string(200, ']') + "}";
+	struct FFaultCase
+	{
+		FString Want;
+		std::string Text;
+	};
+	const FFaultCase Cases[] = {
+		{TEXT("too_deep"), Deep}, {TEXT("not_json"), "{nope"}, {FString(), "{\"name\":\"no id\"}"}};
+	int32 N = 0;
+	for (const FFaultCase& C : Cases)
+	{
+		OnlyWorlds::OWFileMap Files;
+		Files["world.json"] = OnlyWorlds::OWBytes(C.Text.begin(), C.Text.end());
+		const FString Path = Dir / FString::Printf(TEXT("fault%d.owworld"), N++);
+		TestTrue(TEXT("written: ") + Path,
+			OnlyWorlds::OWFiles::Write(OWConvert::Utf8(Path), OnlyWorlds::OWWorldArchive::PackFiles(Files, "w").bytes));
+		const FOWArchiveVerdict Verdict = UOWLibrary::CheckWorldFile(Path);
+		TestEqual(TEXT("not_a_world (") + Verdict.Message + TEXT(")"), Verdict.Reason, FString(TEXT("not_a_world")));
+		TestEqual(TEXT("the fault: ") + (C.Want.IsEmpty() ? FString(TEXT("none")) : C.Want), Verdict.WorldFault, C.Want);
+	}
+	IFileManager::Get().DeleteDirectory(*Dir, false, true);
+	return true;
+}
+
 #endif  // WITH_DEV_AUTOMATION_TESTS && OW_REPO_TESTS

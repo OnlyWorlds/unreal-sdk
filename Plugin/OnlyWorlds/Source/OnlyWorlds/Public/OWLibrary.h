@@ -27,6 +27,14 @@ struct ONLYWORLDS_API FOWArchiveVerdict
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
 	FString Message;
 
+	/**
+	 * For a "not_a_world" whose world.json is there but cannot be read, what is wrong with it: "too_deep" (nested past
+	 * 200) or "not_json". "" on every other refusal (no world.json, one that is JSON but no object, one with no id) and
+	 * when accepted. Read this, never the message.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
+	FString WorldFault;
+
 	/** The world's id, when accepted. */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
 	FString WorldId;

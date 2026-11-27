@@ -30,6 +30,11 @@ struct OWArchiveRead {
     bool ok = false;
     std::string reason;   // a refusal's one cause (OWWorldArchive::Reasons)
     std::string message;  // what was found, in words
+    // For a not_a_world whose world.json is there but cannot be read, what is wrong with it, in the folder read
+    // report's words: "too_deep" (nested past 200) or "not_json". "" on every other refusal (no world.json, one that
+    // is JSON but no object, one with no id) and on a world read. A tool reads this, never the message. The
+    // TypeScript SDK's OwWorldFileError.worldFault.
+    std::string world_fault;
     std::string world_id;
     // "" when world.json sits at the archive's root, else the top folder with its slash ("abbey/").
     std::string prefix;

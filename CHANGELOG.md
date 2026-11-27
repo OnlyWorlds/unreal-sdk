@@ -21,6 +21,11 @@ the detail a maintainer needs; the history before this file is in the git log.
   Character's name, absent when the link names none, when that Character has since been deleted, hidden or taken (keel
   sends null), and on an agent's or a player's link (where keel sends no such key). Parity with the TypeScript SDK
   4.211.0, its preview read with and without the key.
+- **A world file refused for a `world.json` it cannot read says what is wrong with it**: `OWArchiveRead::world_fault`
+  is `too_deep` (nested past 200 levels) or `not_json`, the folder read report's words, beside the reason
+  `not_a_world`; a tool reads the field, never the message. It is `""` on every other refusal: no `world.json`, one
+  that is JSON but no object, one with no id. Blueprint's `FOWArchiveVerdict` (from `Check World File` and
+  `Open World File`) carries it as `WorldFault`. Parity with the TypeScript SDK 4.212.0, its test vector ported.
 
 ## [0.5.0] - 2026-11-27
 
