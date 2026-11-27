@@ -174,8 +174,8 @@ account: `OnlyWorlds::OWJoin::ParseLink` and `Redeem` turn it into that player's
 
 | Part | Where | What it does |
 |---|---|---|
-| **Core** | `Plugin/OnlyWorlds/Core/` | Plain C++17 with zlib and no Unreal header: the API client (`OWClient`, `OWJoin`), world folders and `.owworld` files (`OWWorld`, `OWWorldArchive`, `OWJson`), and readers over a world it holds, with no request of their own (`OWLens`, `OWGraph`, `OWLanding`, `OWMapSpace`, `OWCharter`, `OWStrand`, `OWRecord`, `OWReport`, `OWMessage`, `OWNames`, `OWCalendar`, `OWAddress`, `OWNameFinder`, `OWOpeners`: what one reader may see of a world, the world as nodes and edges, its maps as points and outlines, its calendar, in-world messages, element names found in prose and more). It does all the work and is tested on its own. |
-| **Blueprints** | `Plugin/OnlyWorlds/Source/OnlyWorlds/` | The Runtime module: the core compiled in place, with UObject at the edges. `UOWLibrary` and `UOWWorld` (open, read, edit, write back, pack), one `USTRUCT` per element type with `UOWElements` to find them, async nodes for the API's reads and element writes, and Blueprint libraries over most of the readers, a world's maps and its layouts among them (`UOWMapSpace`, `UOWLayout`). `FOWHttpTransport` is the client's transport on Unreal's HTTP. |
+| **Core** | `Plugin/OnlyWorlds/Core/` | Plain C++17 with zlib and no Unreal header: the API client (`OWClient`, `OWJoin`), world folders and `.owworld` files (`OWWorld`, `OWWorldArchive`, `OWJson`), and readers over a world it holds, with no request of their own (`OWLens`, `OWGraph`, `OWLanding`, `OWMapSpace`, `OWCharter`, `OWStrand`, `OWRecord`, `OWReport`, `OWMessage`, `OWNames`, `OWCalendar`, `OWAddress`, `OWNameFinder`, `OWOpeners`, `OWViews`: what one reader may see of a world, the world as nodes and edges, its maps as points and outlines, its calendar, in-world messages, element names found in prose, how an element is shown and more). It does all the work and is tested on its own. |
+| **Blueprints** | `Plugin/OnlyWorlds/Source/OnlyWorlds/` | The Runtime module: the core compiled in place, with UObject at the edges. `UOWLibrary` and `UOWWorld` (open, read, edit, write back, pack), one `USTRUCT` per element type with `UOWElements` to find them, async nodes for the API's reads and element writes, and Blueprint libraries over most of the readers, a world's maps and its layouts among them (`UOWMapSpace`, `UOWLayout`), and how an element is shown (`UOWViews`). `FOWHttpTransport` is the client's transport on Unreal's HTTP. |
 
 Every call, with what it answers and what it refuses, and what is not built yet:
 [docs/reference.md](docs/reference.md).
@@ -200,6 +200,7 @@ python codegen/generate.py --check                  # the schema pin holds, the 
 python codegen/generate_models.py --check           # the generated structs match schema.json
 python codegen/generate_tools.py --check            # the tools list's pin holds, OWTools.generated.cpp is current
 python codegen/generate_presentation.py --check     # the generated sidecar matches presentation.json
+python codegen/generate_views.py --check            # views.json checked, OWViews.generated.cpp current
 python codegen/generate_frame_bits.py --check       # tests/data's frame bits match the map-space fixture
 python tools/release_zip.py v0.8.0                  # the release zip, from a tag or a commit, into dist/
 python tools/check_exports.py                       # every core declaration a game module links against carries OW_API

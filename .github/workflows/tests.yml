@@ -35,9 +35,13 @@ jobs:
           python codegen/generate_models.py --check
           python codegen/generate_tools.py --check
           python codegen/generate_presentation.py --check
+          python codegen/generate_views.py --check
           python codegen/generate_frame_bits.py --check
+          python codegen/generate_layout.py --check
+          python codegen/generate_layout_3d.py --check
           python codegen/test_generate_presentation.py
           python codegen/test_generate_tools.py
+          python codegen/test_generate_views.py
           python tools/check_exports.py
           python tools/verify_promise.py
           python tools/mutants_promise.py

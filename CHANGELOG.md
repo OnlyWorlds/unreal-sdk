@@ -15,6 +15,36 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- **How an element is shown: `OWViews` in the core and `UOWViews` on Blueprints.** The other OnlyWorlds SDKs read
+  schema-dist's `views.json` (presentation data, not the standard): for a report, a charter, a message and a line in a
+  room, which field gives the one sentence for a card, a list row or a hover, which fields lead the page and which
+  fold, and the marks shown at the head of any element's page. Unreal had no reader for it, so a game drew an
+  element's card by hand. `OWViews::ViewOf(element)` answers an `OWView`: the row that matches (or none: the element
+  draws as its type), its sentence, its banners (`known_of`, `hidden`, the two review marks, `x_served_trimmed` and the
+  row's own) and the fields its page draws in order, a Pin's generic link as one field. A profile's pair matches by
+  that profile's own reader (`OWLens::IsRoomElement`, `OWCharter::IsCharterElement`), and a row's own banner mark by
+  the room profile's one presence rule, never a second copy of either. Beside it the table as baked (`Version`,
+  `Sha256`, `Banners`, `Layouts`, `Rows`) and each type's `SectionFields` and `GenericLinks`. On Blueprints, four pure
+  nodes: `ViewOf` over an element's JSON text as served, `ViewOfElement` over an opened world's element,
+  `SectionFieldsOf` and `GetViewsTable`, answering flat structs (`FOWView`, `FOWViewRow`, `FOWViewFold`,
+  `FOWViewBanner`, `FOWViewLayoutWords`, `FOWViewsTable`; `""` for none). The names are the Unity SDK's `OWViews`'.
+- **`codegen/generate_views.py`** bakes the table into `Core/Private/OWViews.generated.cpp` from the pinned
+  `views.json`, after checking it as the Godot and Unity SDKs' codegens do (version 3, each row's columns, kinds that
+  their profile's reader matches, fields by the walk, defined layouts, no two rows of one kind, the fixture's cites
+  at their page lines), and refuses it whole when it fails; it also refuses an empty word the table would read as
+  none and a character outside printable ASCII. `--check` runs in CI with the other drift checks, beside
+  `codegen/test_generate_views.py` (each refusal on a changed copy, and a one-byte drift). Held by
+  `tests/test_views.cpp` to every case of `views.fixture.json` and the other SDKs' vectors, and by the automation tests
+  `OnlyWorlds.Views.*`, each node's answer equal to the core's on the same input; no count is pinned.
+
+### Changed
+
+- CI runs `codegen/generate_layout.py --check` and `codegen/generate_layout_3d.py --check` with the other drift checks.
+  Each had a `--check` that nothing ran.
+- `OnlyWorlds.Graph.Pins` counts the six new structs (74).
+
 ## [0.8.0] - 2026-11-27
 
 A Blueprint game reaches a world's maps and its layouts: `UOWMapSpace` reads a Map's geometry, its Pins and Zones,
