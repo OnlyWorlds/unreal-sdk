@@ -1,5 +1,7 @@
 #include "OWWorldCacheObject.h"
 
+#include "UObject/Package.h"
+
 #include "OWClientShared.h"
 #include "OWConvert.h"
 #include "OWHttpTransport.h"
