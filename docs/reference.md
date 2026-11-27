@@ -260,6 +260,10 @@ The automation tests (`OnlyWorlds.*`):
   is the core's `ToWorld`, read by `UOWElements`, and the same object after a second sync, holding its element.
   `OnlyWorldsLive.Sync.HeadTag` reads production: Moppetopia over its public key and Unreal's HTTP, a `SyncWorld` then
   `HasWorldChanges` twice, the second poll's `If-None-Match` and its answer recorded.
+- `OnlyWorlds.Convert.AboveTheBmp`: the plugin's string seam (`OWConvert::Str` and `Utf8`). U+1F6A2 and U+10FFFF
+  read back as the bytes they were, each held in an `FString` as its surrogate pair; what the round trip does to the
+  noncharacters U+FFFF, U+FFFE and U+FDD0, and to every id of the map-space fixture's `code-point-order` and
+  `hand-in-code-point-order` cases, is logged, each id that changes named by its code points.
 - `OnlyWorlds.Models.Write.RoundTrip`, `.Unset`, `.Doors`, `.Node`: the way back. `RoundTrip` reads every element
   of both worlds through `Find<Type>` and writes it through `Get<Type>Json`, both called as a Blueprint calls them,
   and holds the text to the file on `schema.json`'s keys: a key as the file holds it is the same, a form a struct
