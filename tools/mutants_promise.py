@@ -2,7 +2,9 @@
 """Watch tools/verify_promise.py fail, once for each thing it holds, and pass on its controls.
 
 Each plant runs the check on a copy of what it reads (the core's and the plugin's public headers, OnlyWorlds.uplugin,
-CHANGELOG.md and tools/public-names.json), never on the real files, with one change made to the copy.
+CHANGELOG.md and tools/public-names.json), never on the real files, with one change made to the copy. The controls
+that count marks count them above the tree's own (read first from an unchanged copy), and a plant that moves the major
+first takes the tree's own marks off, so that only the planted name is judged there.
 
 Usage: python tools/mutants_promise.py
 Exit 0 when every plant failed as named and every control passed, 1 otherwise. Python's standard library only.
@@ -84,8 +86,22 @@ def record(name: str):
     return names(put)
 
 
+TREE_MARK = re.compile(r'\[\[deprecated(?:\("[^"]*"\))?\]\]\s*|\bUE_DEPRECATED\s*\([^)]*\)\s*')
+
+
+def unmark(d: Path) -> None:
+    """The tree's own marks taken off the copy's headers: a 1.0 would have dropped those names, which a plant cannot."""
+    for folder in (CORE, NODES):
+        for p in (d / folder).rglob("*.h"):
+            text = p.read_bytes().decode("utf-8")
+            out = TREE_MARK.sub("", text)
+            if out != text:
+                p.write_bytes(out.encode("utf-8"))
+
+
 def major1(date: str):
     def plant(d: Path) -> None:
+        unmark(d)
         edit("Plugin/OnlyWorlds/OnlyWorlds.uplugin", lambda t: re.sub(r'"VersionName": "[^"]+"', '"VersionName": "1.0.0"', t, count=1))(d)
         edit("CHANGELOG.md", lambda t: once(t, "## [Unreleased]", f"## [Unreleased]\n\n## [1.0.0] - {date}"))(d)
     return plant
@@ -128,26 +144,41 @@ PLANTS = [
      r"\(3\) OnlyWorlds::GhostName: marked since 0\.1\.0 \(2026-11-23\), gone 2027-05-22, before 2027-05-23"),
     ("control: a major that drops a name six months after its mark", both(major1("2027-05-23"), ghost("0.1.0")), 0, r"^PASS"),
     ("control: a well-formed [[deprecated]] the file records", both(cpp_mark(f'[[deprecated("{GOOD}")]]'), record("OnlyWorlds::OWId::Mint")), 0,
-     r"^PASS: \d+ public names in [\d.]+, 1 marked"),
+     r"^PASS: \d+ public names in [\d.]+, <BASE+1> marked"),
     ("control: a well-formed Blueprint DeprecationMessage the file records",
      both(blueprint_mark(f'meta = (DeprecatedFunction, DeprecationMessage = "{GOOD}")'), record("UOWAddresses::ParseAddress")), 0,
-     r"^PASS: \d+ public names in [\d.]+, 1 marked"),
+     r"^PASS: \d+ public names in [\d.]+, <BASE+1> marked"),
     ("control: one overload of two marked leaves the name unmarked",
      edit(CORE / "OWId.h", lambda t: once(t, "OW_API std::string NewId();", f'[[deprecated("{GOOD}")]] OW_API std::string NewId();')), 0,
-     r"^PASS: \d+ public names in [\d.]+, 0 marked"),
+     r"^PASS: \d+ public names in [\d.]+, <BASE> marked"),
     ("control: a listed member reached through its base class", names(reached), 0, r"^PASS"),
     ("control: the copy unchanged", lambda d: None, 0, r"^PASS"),
 ]
 
 
+def check(d: Path) -> subprocess.CompletedProcess:
+    env = {**os.environ, "OW_PROMISE_ROOT": str(d), "OW_PROMISE_NAMES": str(d / "tools" / "public-names.json")}
+    return subprocess.run([sys.executable, str(CHECK)], env=env, capture_output=True, text=True, timeout=600)
+
+
 def main() -> int:
+    d = copy()
+    try:
+        r = check(d)
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+    found = re.search(r"^PASS: \d+ public names in [\d.]+, (\d+) marked", r.stdout, re.MULTILINE)
+    if not found:
+        print(f"mutants-promise: BLIND: the check fails on an unchanged copy of the tree\n{(r.stdout + r.stderr)[:1500]}")
+        return 2
+    base = int(found.group(1))
     bad = 0
     for what, plant, want, line in PLANTS:
+        line = line.replace("<BASE+1>", str(base + 1)).replace("<BASE>", str(base))
         d = copy()
         try:
             plant(d)
-            env = {**os.environ, "OW_PROMISE_ROOT": str(d), "OW_PROMISE_NAMES": str(d / "tools" / "public-names.json")}
-            r = subprocess.run([sys.executable, str(CHECK)], env=env, capture_output=True, text=True, timeout=600)
+            r = check(d)
             out = r.stdout + r.stderr
             ok = r.returncode == want and re.search(line, out, re.MULTILINE) is not None
             bad += not ok
