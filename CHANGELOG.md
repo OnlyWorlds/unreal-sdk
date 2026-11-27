@@ -16,6 +16,25 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Every string the plugin hands a game, or a game hands the core, keeps its characters as they are.** The plugin
+  passes each one between the core (UTF-8) and an `FString` (UTF-16) through `OWConvert::Str` and `OWConvert::Utf8`,
+  which used the engine's conversion; that conversion writes `?` for U+FFFE and U+FFFF, both ways. Both are valid in
+  JSON and in an element id, so an id holding one changed on its way through a Blueprint node and named no element
+  (two cases of the map-space fixture, `code-point-order` and `hand-in-code-point-order`, were left out of the
+  plugin's tests for it). The two functions now convert by their own loop, which keeps every Unicode scalar value. With
+  it, three rules a stranger may meet:
+  - a lone surrogate is kept: the core holds one read from a JSON escape (`"\ud800"`) as WTF-8, and the `FString`
+    holds it as its one UTF-16 unit, so it is written back as the same escape (it was `?`);
+  - bytes that are not UTF-8 read as U+FFFD, one for each maximal subpart, as the Unicode standard recommends (they
+    were `?`); the core's JSON reader refuses such text before it holds it;
+  - a string that begins with U+0000 is no longer empty in the `FString`.
+
+  The map-space tests now run both cases, and a row that does not read back through the seam fails its case by name.
+  New automation tests: `OnlyWorlds.Convert.EveryScalar` (every scalar value from U+0000 to U+10FFFF both ways),
+  `OnlyWorlds.Convert.LoneSurrogates` and `OnlyWorlds.Convert.NotUtf8`.
+
 ## [0.10.0] - 2026-11-27
 
 A world held by a game and kept current, in C++ and in Blueprints: `OWWorldCache` and `OWSync` hold one world's

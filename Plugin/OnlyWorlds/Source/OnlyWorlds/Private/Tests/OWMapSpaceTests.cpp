@@ -5,12 +5,13 @@
 // Blueprint calls it (OWBlueprintCall.h); then Sikelia's map through ServedElements against the core's.
 //
 // The carry rule. A node takes the elements as JSON texts, a map by its id and a point as an FVector2D: a case the
-// shape cannot hold (a Map named by its position, a point that is not two numbers, a list that is no list, a text that
-// does not read back as its row) is not the node's to answer. Such a case is named, counted and left out by a rule
-// read from the case; and every case's input is first written in the node's shape by this file's own code and read
-// back, and when the core answers that input otherwise than the fixture's, the case is not carried either. Every other
-// case is the node's, and its answer must be the core's. No count is pinned: every suite's cases are counted from the
-// fixture, carried plus not carried must be all of them, and at least one must be carried.
+// shape cannot hold (a Map named by its position, a point that is not two numbers, a list that is no list) is not the
+// node's to answer. Such a case is named, counted and left out by a rule read from the case. Every other case is the
+// node's, and its answer must be the core's. Each case's input is first written in the node's shape by this file's own
+// code (each row's JSON text, an FString through OWConvert) and read back: when the core answers that input otherwise
+// than the fixture's, the string seam changed a row (the U+FFFF ids of code-point-order did, before the seam kept every
+// scalar value), and the case fails. No count is pinned: every suite's cases are counted from the fixture, carried plus
+// not carried must be all of them, and at least one must be carried.
 
 #include "CoreMinimal.h"
 #include "Misc/AutomationTest.h"
@@ -254,6 +255,14 @@ namespace
 		}
 	};
 
+	// A case whose rows did not read back from their texts: the string seam changed one. Counted as carried and failed.
+	void MsNotReadBack(FAutomationTestBase& Test, FMsTally& T, const FString& Name)
+	{
+		Test.AddError(Name + TEXT(": its rows do not read back from their texts (the string seam changed a row)"));
+		++T.Carried;
+		++T.Failed;
+	}
+
 	// The one Map row of a case with that id (as the core's own test finds it: the last row whose type is exactly map).
 	const OWJsonValue* MsMapRow(const OWJsonValue& Elements, const std::string& Id)
 	{
@@ -330,7 +339,7 @@ bool FOWMapSpaceFixtureTest::RunTest(const FString& Parameters)
 			const OnlyWorlds::OWWorldMapSpace Want = MsCore::MapSpaceOf(*Elements);
 			if (MsBytes(MsCore::MapSpaceOf(MsBack(Texts)).ToJson()) != MsBytes(Want.ToJson()))
 			{
-				T.NotCarried.Add(Name + TEXT(" (its rows do not read back from their texts)"));
+				MsNotReadBack(*this, T, Name);
 				continue;
 			}
 			++T.Carried;
@@ -374,7 +383,7 @@ bool FOWMapSpaceFixtureTest::RunTest(const FString& Parameters)
 			const OWJsonValue* BackRow = MsMapRow(Back, MapId->Text());
 			if (!BackRow || MsBytes(MsCore::LayoutOf(*BackRow, MsOfType(Back, "map"), MsOfType(Back, "pin")).ToJson()) != MsBytes(Want.ToJson()))
 			{
-				T.NotCarried.Add(Name + TEXT(" (its rows do not read back from their texts)"));
+				MsNotReadBack(*this, T, Name);
 				continue;
 			}
 			++T.Carried;
@@ -436,7 +445,7 @@ bool FOWMapSpaceFixtureTest::RunTest(const FString& Parameters)
 			const OWJsonValue* BackRow = MsMapRow(Back, MapId->Text());
 			if (!BackRow || MsBytes(MsCore::CarryOf(*BackRow, *X, *Y, Back).ToJson()) != MsBytes(Want.ToJson()))
 			{
-				T.NotCarried.Add(Name + TEXT(" (its rows do not read back from their texts)"));
+				MsNotReadBack(*this, T, Name);
 				continue;
 			}
 			++T.Carried;
@@ -476,7 +485,7 @@ bool FOWMapSpacePinsKnownToTest::RunTest(const FString& Parameters)
 		const TArray<FString> PinTexts = MsTexts(*Pins), ServedTexts = MsTexts(*Served);
 		if (MsBytes(MsCore::PinsKnownTo(MsBack(PinTexts), MsBack(ServedTexts)).ToJson()) != MsBytes(Want.ToJson()))
 		{
-			T.NotCarried.Add(Name + TEXT(" (its rows do not read back from their texts)"));
+			MsNotReadBack(*this, T, Name);
 			return;
 		}
 		++T.Carried;
