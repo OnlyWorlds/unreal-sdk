@@ -4,16 +4,23 @@ Notable changes to the OnlyWorlds SDK for Unreal. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Where it stands.** 0.9.0 is the latest release. `onlyworlds-unreal-0.9.0.zip`, on the repository's Releases page,
+**Where it stands.** 0.10.0 is the latest release. `onlyworlds-unreal-0.10.0.zip`, on the repository's Releases page,
 holds the plugin folder to drop into a project's `Plugins/`, as source the project compiles; the [README](README.md)
 has the install and a first run. What a game can do with it: open a world on disk (a world folder or an `.owworld`
 file) and read its elements of all 22 types as Blueprint structs; read and write a world over the onlyworlds.com API
-from Blueprint nodes, which answer JSON text, and from C++; and read a world it holds without a server (as a graph, as
+from Blueprint nodes, which answer JSON text, and from C++; hold a world from the API and keep it current by the
+change feed; and read a world it holds without a server (as a graph, as
 map geometry, by its own calendar, as one reader may see it), each reader giving the same answers as the other
 OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine 5.8, Win64. The entries below are in
 the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
+
+## [0.10.0] - 2026-11-27
+
+A world held by a game and kept current, in C++ and in Blueprints: `OWWorldCache` and `OWSync` hold one world's
+elements and walk the change feed onto them, and `UOWWorldCache` with its three nodes gives a Blueprint the same, one
+client per cache so a poll of an unmoved world is answered 304. A minor release because it adds public API (below).
 
 ### Added
 
@@ -35,6 +42,12 @@ the detail a maintainer needs; the history before this file is in the git log.
   (`MakeWorldCache`, `OpenWorldCache`, `WriteFile`, `GetHeldWorld`: the held world as a `UOWWorld`, the same object
   across syncs) holds one client, so its tip read sends the last tag and an unmoved head is a 304; the async nodes
   `SyncWorld`, `BaselineWorld` (answering an `FOWSyncResult`) and `HasWorldChanges` fill it.
+
+### Fixed
+
+- **The reference said the live automation tests sat outside the default run.** `RunTests` matches its text anywhere
+  in a name, so `RunTests OnlyWorlds` also runs `OnlyWorldsLive.*`, which read production and fail offline; the
+  reference now gives `RunTests ^OnlyWorlds.` to leave them out.
 
 ## [0.9.0] - 2026-11-27
 
