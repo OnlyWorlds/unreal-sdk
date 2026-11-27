@@ -36,8 +36,12 @@ project becomes one with its first C++ class (**Tools → New C++ Class**).
 4. To call it from C++, add `"OnlyWorlds"` to your module's dependencies in its `.Build.cs`
    (`PrivateDependencyModuleNames`).
 
-**Versions.** 0.1.0 is the first numbered release. Before 1.0, a minor version may change a call's name, and the
-[CHANGELOG](CHANGELOG.md) says so when it does.
+**Versions.** A patch release fixes and a minor release adds; neither removes nor renames a public name, and the
+plugin keeps to this while it is 0.x. A name that will go is marked deprecated first, saying since which release,
+what to use instead and the release it leaves in; it stays at least six months after that release and goes only in
+1.0. It is the promise the TypeScript SDK and the Python package make on the docs'
+[Stability page](https://onlyworlds.github.io/docs/development/api/stability#the-standard-the-packages-and-this-site), and a check in CI
+holds the public names to it on every change. The [CHANGELOG](CHANGELOG.md) lists what each version changed.
 
 ## First run
 
@@ -199,6 +203,8 @@ python codegen/generate_presentation.py --check     # the generated sidecar matc
 python codegen/generate_frame_bits.py --check       # tests/data's frame bits match the map-space fixture
 python tools/release_zip.py v0.6.0                  # the release zip, from a tag or a commit, into dist/
 python tools/check_exports.py                       # every core declaration a game module links against carries OW_API
+python tools/verify_promise.py                      # the written promise: no public name gone, each one listed
+python tools/mutants_promise.py                     # the promise check, watched failing once per rule
 ```
 
 The plugin builds, and its automation tests (`OnlyWorlds.*`) run, through the host project in `Host/`, which finds the
@@ -209,6 +215,14 @@ the core's runner skips those tests and the automation tests warn and do not run
 core's runner reads the vendored `.owworld` conformance set, or a draft copy when `OW_OWWORLD_FIXTURES` names a folder
 holding its `verdicts.json`. The
 plugin's tests are compiled only inside this repository, so a copy of the plugin in your project lists none.
+
+**Deprecating a name.** In C++, `[[deprecated("Since X.Y.Z. Leaves in 1.0. Use Y.")]]`, or in the plugin's own code
+`UE_DEPRECATED(<engine version>, "…")` with the same words; on a Blueprint node,
+`meta = (DeprecatedFunction, DeprecationMessage = "Since X.Y.Z. Leaves in 1.0. Use Y.")`. X.Y.Z is the release that
+first carries the mark. A Blueprint property has no mark yet that keeps its name (Unreal's own way renames it), so
+none is deprecated. `tools/verify_promise.py` reads the public names of the core's and the plugin's headers and holds
+them, kept in `tools/public-names.json`, and their marks to the promise on every push and pull request. A change that
+adds a public name or a mark runs `python tools/verify_promise.py --write` and commits the file.
 
 ## OnlyWorlds
 
