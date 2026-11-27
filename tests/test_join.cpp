@@ -417,6 +417,29 @@ OW_TEST(join_a_person_links_preview_reads_the_note_as_written_line_break_kept) {
     t.Ok(!p.owner_character, "no owner's Character set");
 }
 
+OW_TEST(join_a_person_links_preview_reads_the_character_it_names_null_or_absent_read_none) {
+    // The TypeScript SDK's OwJoinPreview.character_name (4.211.0): a person's link that names the Character its person
+    // will play answers that Character's name; null when it names none or the Character was since deleted, hidden or
+    // taken; absent on an agent's or a player's link. Kills: the key left unread, read under another key (the owner's
+    // Character), or absent read as anything but absent.
+    OWJsonValue named = Parse(PersonPreview);
+    named.Set("owner_character", OWJsonValue::String("The Mapmaker"));
+    named.Set("character_name", OWJsonValue::String("Ada"));
+    OWReply<OWJoinPreview> r = PreviewOn(Answering(200, OWJson::Stringify(named)));
+    t.Ok(r.Ok(), "answered");
+    t.Eq(r.value.character_name.value_or("(absent)"), std::string("Ada"), "the Character the link names");
+    t.Eq(r.value.owner_character.value_or(""), std::string("The Mapmaker"), "the Character the link names is not the owner's");
+
+    OWJsonValue none = Parse(PersonPreview);
+    none.Set("character_name", OWJsonValue::Null());
+    OWReply<OWJoinPreview> n = PreviewOn(Answering(200, OWJson::Stringify(none)));
+    t.Ok(n.Ok() && !n.value.character_name, "null: the link names none, or its Character was deleted, hidden or taken");
+    OWReply<OWJoinPreview> a = PreviewOn(Answering(200, PersonPreview));
+    t.Ok(a.Ok() && !a.value.character_name, "absent reads as none");
+    OWReply<OWJoinPreview> pl = PreviewOn(Answering(200, PreviewBody));
+    t.Ok(pl.Ok() && !pl.value.character_name, "a player's link has no such key");
+}
+
 OW_TEST(join_a_preview_reads_the_glimpse_a_group_or_null) {
     // The TypeScript SDK's previewJoin glimpse vector (4.189.0): the group comes back as it was sent, and null reads
     // absent. Written back out, the group is the JSON that came in, key for key and in order, so a thing read with an

@@ -137,6 +137,11 @@ struct OW_API OWJoinPreview {
     // The note the inviter wrote on a person link, plain text with its line breaks: show it as text, never as markup.
     // Absent when there is none, and always on an agent's or a player's link.
     std::optional<std::string> note;
+    // A person's link only: the name of the Character the person would play once they join, when the link names one
+    // and joining now would set it. Absent when the link names none, or when that Character has since been deleted,
+    // hidden or taken by someone else (keel sends null): joining then goes on as if the link named none. Read it again
+    // at every preview; show it as text, never as markup. Absent on an agent's or a player's link (no such key).
+    std::optional<std::string> character_name;
     // For a link whose role reads it (contributor or co_builder): up to five things by name and type and the links
     // among them. Absent for a guest's link, and so for every player's, and when no two things a visitor could see are
     // linked.

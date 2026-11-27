@@ -17,6 +17,7 @@ namespace
 		V.bAccepted = R.ok;
 		V.Reason = Str(R.reason);
 		V.Message = Str(R.message);
+		V.WorldFault = Str(R.world_fault);
 		V.WorldId = Str(R.world_id);
 		return V;
 	}
