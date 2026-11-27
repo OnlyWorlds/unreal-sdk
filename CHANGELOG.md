@@ -15,6 +15,22 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Parity with the TypeScript SDK 4.212.3: `OWWorldArchive::PackWorld` refuses files holding `world.json`,
+  `elements/` or `spatial/` only in another case**, as a copy and as a share, and writes nothing; its message begins
+  with the cause, `name_case`, and names both spellings, as the readers refuse such a world. Before, it wrote `Spatial/`
+  (or `spatial/` with a long s) beside `elements/`, or `Elements/` alone, into a file that its own reader then refused.
+  `PackFolder`, `Pack` and Blueprint's `PackWorldFolder` already refused such a folder. `PackFiles` still packs
+  exactly the files it is given.
+- **Parity with the TypeScript SDK 4.212.3: a world file refused for a `world.json` nested past 200 levels says it in
+  words alone.** `OWWorldArchive::Read`'s message, and Blueprint's `FOWArchiveVerdict.Message` with it, is now
+  "world.json is nested more than 200 deep", with no `too_deep:` mark and no byte offset; the code is `world_fault`
+  (`WorldFault` in Blueprint), which a tool reads. A folder's errors and a skipped file's keep `too_deep` in their text,
+  as the TypeScript SDK's folder route and skip reasons do.
+- **`PackWorld` and `PackFolder` refuse such a `world.json` in the same words**, as the TypeScript SDK's
+  `writeWorldFile` does, where they said it "is not an object with an id".
+
 ## [0.6.0] - 2026-11-27
 
 A join preview names the Character a person's invite link offers, and a world file refused for its `world.json`

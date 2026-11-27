@@ -101,6 +101,10 @@ namespace OWJson {
 // OW-25), so a plain value inside the 200th is read.
 inline constexpr int MaxDepth = 200;
 inline constexpr const char* TooDeep = "too_deep";
+// A world file's refusal of its world.json nested past MaxDepth, and PackWorld's, in words alone: the code is
+// OWArchiveRead::world_fault (the TypeScript SDK 4.212.3's world file says it so). The parser's own error, which a
+// folder's error and a skipped file's carry, keeps the code in front: "too_deep: " and these words.
+inline constexpr const char* TooDeepWords = "nested more than 200 deep";
 OW_API OWJsonParseResult Parse(std::string_view bytes);
 OW_API OWJsonParseResult Parse(const std::vector<uint8_t>& bytes);
 
