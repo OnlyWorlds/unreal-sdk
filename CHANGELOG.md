@@ -15,6 +15,27 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- **A world's maps and its layouts on Blueprints: `UOWMapSpace` and `UOWLayout`, eleven pure nodes over the core's
+  readers.** Until now a Blueprint graph could not reach a world's Maps, Zones, Markers and Pins, nor lay out its
+  graph: the core had the readings and no node called them. `UOWMapSpace`: `MapSpaceOf` (each Map's frame, each Zone's
+  outline from its Markers, each Pin's point, in the Map's own pixels from its bottom left, and what was left aside by
+  reason), `LayoutOf` (one Map's layout keys: its method, its ground, the Pins a new lay-out keeps), `CarryOf` (a point
+  on a child Map carried onto its parent and each Map above it, in 64-bit floats) and `PinsKnownTo` (which of a map's
+  Pins one reader knows). Each takes the elements as served, one element's JSON text each: an opened world's through
+  the fifth node, `ServedElements`, or the API's, the `Elements` of `ListAllElements` for the four map types appended
+  into one list. `UOWLayout`: `LayoutByKind`, `LayoutAround` and `LayoutByLinks3d`, each with its Unplaced reading,
+  over the `FOWWorldGraph` that `UOWGraph::Read` answers. Answers are structs (`FOWWorldMapSpace`, `FOWMapLayout`,
+  `FOWMapCarry`, `FOWPinsKnownTo`, `FOWLayoutPoint`, `FOWLayoutAroundPoint`, `FOWLayoutByLinks3d` and the rows inside
+  them): map pixels stay `int64`, as the core reads them, and layout and carry points are `FVector2D` or `FVector`, in
+  doubles, so the points match the core's to the bit. A refusal is `false` and the reason: the core's sentence, by-links-3d's
+  word (`held-box`, ...), `no map <id>`, or `elements[n]: ` and where a row's text does not parse. The names are the Unity
+  SDK's `OWMapSpace` and `OWLayout` calls', but `OWMapSpace.Of`, which is `MapSpaceOf` here. Held by every case of the
+  map-space fixture, the layout fixture, the by-links-3d fixture and the packages' pins-known-to cases, each node's
+  answer equal to the core's on the same input. The profile's `down_cases` (`downOf`) are still not read: the core has
+  no such call yet.
+
 ## [0.7.0] - 2026-11-27
 
 The plugin makes a written promise about what a release may change, checked on every push, and takes the name

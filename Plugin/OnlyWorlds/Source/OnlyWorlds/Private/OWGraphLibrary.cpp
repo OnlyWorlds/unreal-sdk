@@ -2,6 +2,7 @@
 
 #include "OWConvert.h"
 #include "OWGraph.h"
+#include "OWGraphDoor.h"
 #include "OWJson.h"
 #include "OWLensDoor.h"
 #include "OWWorld.h"
@@ -42,24 +43,6 @@ namespace
 		Out.EdgesCut = OWLensDoor::CutsOf(Got.edges_cut);
 		Out.Cut = OWLensDoor::CutsOf(Got.cut);
 		Out.Unreadable = Got.unreadable ? OWConvert::Str(*Got.unreadable) : FString();
-		return Out;
-	}
-
-	// The keys the two counts read, back in the core's shape: each node's id, each edge whole.
-	OnlyWorlds::OWWorldGraph CoreOfGraph(const FOWWorldGraph& Given)
-	{
-		OnlyWorlds::OWWorldGraph Out;
-		for (const FOWGraphNode& N : Given.Nodes)
-		{
-			OnlyWorlds::OWGraphNode Node;
-			Node.id = OWConvert::Utf8(N.Id);
-			Node.type = OWConvert::Utf8(N.Type);
-			Out.nodes.push_back(std::move(Node));
-		}
-		for (const FOWGraphEdge& E : Given.Edges)
-		{
-			Out.edges.push_back({ OWConvert::Utf8(E.Source), OWConvert::Utf8(E.Field), OWConvert::Utf8(E.Target), E.Index });
-		}
 		return Out;
 	}
 
@@ -125,10 +108,10 @@ bool UOWGraph::Read(const UOWWorld* World, const FOWLensReader& Reader, const FO
 
 TArray<FOWGraphDegree> UOWGraph::DegreeOf(const FOWWorldGraph& Graph)
 {
-	return DegreesOf(GraphCore::DegreeOf(CoreOfGraph(Graph)));
+	return DegreesOf(GraphCore::DegreeOf(OWGraphDoor::CoreOf(Graph)));
 }
 
 TArray<FOWGraphDegree> UOWGraph::OutDegreeOf(const FOWWorldGraph& Graph)
 {
-	return DegreesOf(GraphCore::OutDegreeOf(CoreOfGraph(Graph)));
+	return DegreesOf(GraphCore::OutDegreeOf(OWGraphDoor::CoreOf(Graph)));
 }
