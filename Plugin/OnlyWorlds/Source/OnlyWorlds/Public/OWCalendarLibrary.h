@@ -26,7 +26,11 @@ struct ONLYWORLDS_API FOWWorldCalendar
 	FString Name;
 };
 
-/** A step taken apart. A part the calendar does not have is 0 or "". */
+/**
+ * A step taken apart. A part the calendar does not have is 0 or "". A date past the exact range (its step, year index
+ * plus a leap rule's offset, or shown year outside -(2^53 - 1) to 2^53 - 1) holds only its step: every other part is
+ * 0, "" or -1, and FormatStep prints the plain step.
+ */
 USTRUCT(BlueprintType)
 struct ONLYWORLDS_API FOWStepBreakdown
 {

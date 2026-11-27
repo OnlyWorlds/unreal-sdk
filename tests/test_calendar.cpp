@@ -1,4 +1,4 @@
-// OWCalendar on the calendar profile's conformance fixture (schema-dist profiles/calendar.fixture.json, dist.146's
+// OWCalendar on the calendar profile's conformance fixture (schema-dist profiles/calendar.fixture.json, dist.149's
 // copy): every case by name, a refused value refused, each step's words and breakdown as the fixture gives them, and
 // the calendars found on a case's elements.
 // Then the readings the fixture leaves open (its gaps), as npm @onlyworlds/sdk 4.102.4 answers them (the profile's
@@ -23,8 +23,8 @@ using owtest::P;
 
 namespace {
 
-// The fixture's sha256 as dist.146's MANIFEST.json records it.
-const char* const DistSha256 = "1ae922bc7af243453cac62053a31b2d10180e0ebb4843639dde9479f16e87206";
+// The fixture's sha256 as dist.149's MANIFEST.json records it.
+const char* const DistSha256 = "97c22793bdcb66d71b3cdb068941d22621ffc9939518e148356533092ed207d9";
 
 std::string FixturePath() { return P().root + "/codegen/schema-dist/profiles/calendar.fixture.json"; }
 
@@ -57,8 +57,8 @@ OWJsonValue OptStr(const std::optional<std::string>& s) { return s ? OWJsonValue
 // A breakdown as the fixture writes one (its era by name).
 OWJsonValue AsJson(const OWCalendarConfig& cal, const OWCalendarBreakdown& b) {
     OWJsonValue o = OWJsonValue::Object();
-    o.Set("absYear", OWJsonValue::Number(b.abs_year));
-    o.Set("year", OWJsonValue::Number(b.year));
+    o.Set("absYear", OptInt(b.abs_year));
+    o.Set("year", OptInt(b.year));
     o.Set("era", b.era >= 0 ? OWJsonValue::String(cal.eras[static_cast<size_t>(b.era)].name) : OWJsonValue::Null());
     o.Set("month", OptInt(b.month));
     o.Set("monthName", OptStr(b.month_name));
@@ -235,7 +235,7 @@ std::string Plain(const std::string& extra = "") {
 OW_TEST(calendar_fixture_is_the_pinned_one) {
     OWBytes raw;
     t.Ok(OWFiles::Read(FixturePath(), raw), "the calendar fixture is vendored: " + FixturePath());
-    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.147's");
+    t.Eq(owtest::Sha256Hex(raw), std::string(DistSha256), "the fixture's bytes are dist.149's");
     // And the vendored manifest says the same.
     OWBytes manifest;
     OWFiles::Read(P().root + "/codegen/schema-dist/MANIFEST.json", manifest);
@@ -248,8 +248,10 @@ OW_TEST(calendar_fixture_is_the_pinned_one) {
     const OWJsonValue* cases = doc->Find("cases");
     t.Ok(cases && cases->IsArray(), "it parses, with its cases");
     if (!cases) return;
-    size_t refused = 0, read = 0, steps = 0;
+    size_t refused = 0, read = 0, steps = 0, with_elements = 0, with_world = 0;
     for (const OWJsonValue& c : cases->Items()) {
+        if (c.Has("elements")) ++with_elements;
+        if (c.Has("world")) ++with_world;
         const OWJsonValue* valid = c.Find("valid");
         if (valid && valid->IsBool() && valid->AsBool()) {
             ++read;
@@ -258,10 +260,12 @@ OW_TEST(calendar_fixture_is_the_pinned_one) {
             ++refused;
         }
     }
-    t.Eq(cases->Size(), size_t(91), "91 cases (the profile page says 91)");
-    t.Eq(read, size_t(48), "48 calendars");
-    t.Eq(refused, size_t(43), "43 values a reader must refuse");
-    t.Eq(steps, size_t(256), "256 steps");
+    t.Eq(cases->Size(), size_t(191), "191 cases (the profile page says 191)");
+    t.Eq(read, size_t(95), "95 calendars");
+    t.Eq(refused, size_t(96), "96 values a reader must refuse");
+    t.Eq(steps, size_t(402), "402 steps");
+    t.Eq(with_elements, size_t(13), "13 cases with a world's elements");
+    t.Eq(with_world, size_t(12), "12 with the World's own keys");
 }
 
 OW_CASES(calendar_fixture_cases) {
@@ -394,7 +398,7 @@ OW_TEST(calendar_numbers_npm_cannot_answer) {
         t.Eq(OWCalendar::FormatStep(*safe, 9007199254740990), std::string("9007199254740991 A, 0"), "its last day");
         t.Eq(OWCalendar::FormatStep(*safe, 9007199254740991), std::string("1 A, 1"), "year 1");
         OWCalendarBreakdown b = OWCalendar::Breakdown(*safe, -9007199254740991);
-        t.Eq(b.abs_year, int64_t(-1), "step -(2^53 - 1) is year -1");
+        t.Eq(b.abs_year.value_or(0), int64_t(-1), "step -(2^53 - 1) is year -1");
         t.Eq(b.day.value_or(0), int64_t(1), "its first day");
     }
     // A number past a double's range is Infinity to JavaScript. std::from_chars leaves its value unset there by the
@@ -436,11 +440,11 @@ OW_TEST(calendar_restart_false_reads_the_absolute_year) {
     std::optional<OWCalendarConfig> count = Read(Plain(R"(,"eras":[{"name":"Late","abbrev":"L","start":45}])"));
     t.Ok(label && count, "both read");
     if (!label || !count) return;
-    t.Eq(OWCalendar::Breakdown(*label, 45).year, int64_t(2), "restart false: the absolute year");
-    t.Eq(OWCalendar::Breakdown(*count, 45).year, int64_t(1), "a restart: year_base");
+    t.Eq(OWCalendar::Breakdown(*label, 45).year.value_or(0), int64_t(2), "restart false: the absolute year");
+    t.Eq(OWCalendar::Breakdown(*count, 45).year.value_or(0), int64_t(1), "a restart: year_base");
     // Only a JSON false is false: 0 restarts.
     std::optional<OWCalendarConfig> zero = Read(Plain(R"(,"eras":[{"name":"Late","start":45,"restart":0}])"));
-    t.Ok(zero && OWCalendar::Breakdown(*zero, 45).year == 1, "restart 0 restarts");
+    t.Ok(zero && OWCalendar::Breakdown(*zero, 45).year == int64_t(1), "restart 0 restarts");
 }
 
 OW_TEST(calendar_world_calendars_by_the_field) {
@@ -477,4 +481,25 @@ OW_TEST(calendar_keeps_the_value_and_prints_a_bare_step_without_one) {
     t.Eq(OWCalendar::FloorMod(-1, 10), int64_t(9), "floor modulo");
     t.Eq(OWCalendar::FloorDiv(-10, 10), int64_t(-1), "floor division on a multiple");
     t.Eq(OWCalendar::FloorMod(-10, 10), int64_t(0), "floor modulo on a multiple");
+}
+
+OW_TEST(calendar_a_date_past_the_exact_range_is_a_plain_number_in_every_label) {
+    // An era starting at -(2^53 - 1): step 0 shows year 2^53 there, past the safe integers (serial 149's
+    // era-starting-at-the-line case), here with a week. The fixture reads FormatStep and Breakdown; the weekday on its
+    // own, IsPastExactRange and the optional overload follow them.
+    std::optional<OWCalendarConfig> cal = Read(
+        R"({"version":1,"grain":"year","bundles":{"week":{"length":2,"names":["X","Y"]}},"eras":[{"name":"Long","abbrev":"L","start":-9007199254740991}]})");
+    t.Ok(cal.has_value(), "reads");
+    if (!cal) return;
+    t.Ok(OWCalendar::IsPastExactRange(*cal, 0), "step 0 is past the exact range");
+    t.Eq(OWCalendar::FormatStep(cal, 0), std::string("0"), "the plain step, never a rounded year");
+    t.Ok(!OWCalendar::WeekdayForStep(*cal, 0).has_value(), "no weekday past the range");
+    OWCalendarBreakdown b = OWCalendar::Breakdown(*cal, 0);
+    t.Ok(!b.abs_year && !b.year && b.era == -1 && !b.weekday, "every breakdown field but the step absent");
+    t.Eq(b.step, int64_t(0), "the step kept");
+    const int64_t first = -9007199254740991;
+    t.Ok(!OWCalendar::IsPastExactRange(*cal, first), "the era's first year is inside the range");
+    t.Eq(OWCalendar::FormatStep(cal, first), std::string("1 L"), "and is worded");
+    t.Ok(OWCalendar::WeekdayForStep(*cal, first).has_value(), "with its weekday");
+    t.Ok(OWCalendar::IsPastExactRange(*cal, first - 1), "a step below the line is past it too");
 }

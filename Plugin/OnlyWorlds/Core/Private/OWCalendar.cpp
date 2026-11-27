@@ -1,5 +1,6 @@
 #include "OWCalendar.h"
 
+#include "OWCalendarPastTheBounds.h"
 #include "OWMessage.h"
 #include "OWUnicode.h"
 
@@ -19,6 +20,12 @@ const char* const Supertype = "calendar";
 namespace {
 
 constexpr double MaxSafe = 9007199254740991.0;  // 2^53 - 1, Number.MAX_SAFE_INTEGER
+constexpr int64_t MaxSafeInt = 9007199254740991;
+
+// The profile's size bounds (serial 149): past one of them a value is not a calendar.
+constexpr size_t MaxEras = 256, MaxMonths = 64, MaxWeek = 64, MaxIntercalary = 16, MaxExcept = 8, MaxText = 256;
+
+bool OutsideSafe(int64_t n) { return n < -MaxSafeInt || n > MaxSafeInt; }
 
 // -- JSON values as JavaScript sees them ----------------------------------------------------------------------------
 
@@ -202,6 +209,45 @@ int64_t BaseLength(const OWCalendarConfig& cal) {
     return base;
 }
 
+// -- the size bounds and the longest year (serial 149) --------------------------------------------------------------
+
+// Longer than 256 code points, the string as decoded: UTF-8 (WTF-8 for a lone surrogate, one code point) counted by
+// its lead bytes, untrimmed and not normalised.
+bool TooLong(std::string_view s) {
+    if (s.size() <= MaxText) return false;
+    size_t points = 0;
+    for (unsigned char c : s)
+        if ((c & 0xC0) != 0x80) ++points;
+    return points > MaxText;
+}
+bool TooLongIfThere(const std::optional<std::string>& s) { return s && TooLong(std::string_view(*s)); }
+
+// The profile's last two refusals: the size bounds, and the longest year (the months' lengths plus every entry in
+// intercalary, whether or not one year earns them all) at most 2^53 - 1.
+bool WithinBounds(const OWCalendarConfig& cal) {
+    if (cal.eras.size() > MaxEras || cal.month_names.size() > MaxMonths || cal.intercalary.size() > MaxIntercalary)
+        return false;
+    if (cal.has_week && (cal.week_length > static_cast<int64_t>(MaxWeek) || cal.week_names.size() > MaxWeek)) return false;
+    if (TooLong(cal.grain) || TooLongIfThere(cal.step_name) || TooLongIfThere(cal.format) ||
+        TooLongIfThere(cal.format_intercalary))
+        return false;
+    for (const OWCalendarEra& e : cal.eras)
+        if (TooLong(e.name) || TooLongIfThere(e.abbrev)) return false;
+    for (const std::string& n : cal.month_names)
+        if (TooLong(n)) return false;
+    for (const std::string& n : cal.week_names)
+        if (TooLong(n)) return false;
+    for (const OWCalendarIntercalary& ic : cal.intercalary)
+        if (TooLong(ic.name) || ic.except.size() > MaxExcept) return false;
+    if (cal.has_months) {
+        // At most 64 lengths of at most 2^53 - 1 each: the sum stays inside int64.
+        int64_t longest = static_cast<int64_t>(cal.intercalary.size());
+        for (int64_t len : cal.month_lengths) longest += len;
+        if (longest > MaxSafeInt) return false;
+    }
+    return true;
+}
+
 constexpr int MaxYearCorrection = 10000;
 
 // -- the year's days ----------------------------------------------------------------------------------------------
@@ -315,6 +361,12 @@ std::optional<OWCalendarConfig> ReadValue(const OWJsonValue& raw) {
 }
 
 std::optional<OWCalendarConfig> ReadConfig(const OWJsonValue& value) {
+    std::optional<OWCalendarConfig> cal = ReadConfigPastTheBounds(value);
+    if (cal && !WithinBounds(*cal)) return std::nullopt;
+    return cal;
+}
+
+std::optional<OWCalendarConfig> ReadConfigPastTheBounds(const OWJsonValue& value) {
     // readCalendarConfig, rule by rule; an array is an object to typeof, and has no version.
     if (!value.IsObject()) return std::nullopt;
     const OWJsonValue* cfg = &value;
@@ -584,13 +636,26 @@ int64_t DisplayYear(const OWCalendarConfig& cal, int64_t step, int era) {
 }
 
 std::optional<std::string> WeekdayForStep(const OWCalendarConfig& cal, int64_t step) {
+    if (IsPastExactRange(cal, step)) return std::nullopt;
     return Weekday(cal, step, PositionOf(cal, step));
 }
 
+bool IsPastExactRange(const OWCalendarConfig& cal, int64_t step) {
+    // The step first: the year arithmetic is exact only from inside the line (and safe in int64 from there).
+    if (OutsideSafe(step)) return true;
+    int64_t abs = AbsoluteYear(cal, step);
+    // Each leap rule's offset (0 on version 1, which reads no offset); a step, a year and an offset each within
+    // 2^53 - 1, so every sum here stays inside int64.
+    for (const LeapRule& r : LeapRules(cal, false))
+        if (OutsideSafe(abs + r.offset)) return true;
+    return OutsideSafe(DisplayYear(cal, step, EraForStep(cal, step)));
+}
+
 OWCalendarBreakdown Breakdown(const OWCalendarConfig& cal, int64_t step) {
-    Position pos = PositionOf(cal, step);
     OWCalendarBreakdown b;
     b.step = step;
+    if (IsPastExactRange(cal, step)) return b;  // a plain number: every other field absent
+    Position pos = PositionOf(cal, step);
     b.abs_year = pos.abs_year;
     b.era = EraForStep(cal, step);
     b.year = DisplayYear(cal, step, b.era);
@@ -609,11 +674,12 @@ std::string EraLabel(const OWCalendarEra& era) { return era.abbrev ? *era.abbrev
 
 std::string FormatStep(const OWCalendarConfig& cal, int64_t step) {
     OWCalendarBreakdown b = Breakdown(cal, step);
+    if (!b.year) return std::to_string(step);  // past the exact range: the plain step, never a rounded label
     OWCalendarTokens v;
     if (b.day) v.day = std::to_string(*b.day);
     v.month = b.month_name;
     v.weekday = b.weekday;
-    v.year = std::to_string(b.year);
+    v.year = std::to_string(*b.year);
     if (b.era >= 0) v.era = EraLabel(cal.eras[static_cast<size_t>(b.era)]);
     v.step = std::to_string(step);
     v.intercalary = b.intercalary;

@@ -12,6 +12,12 @@
 // and a whole number is one Number.isSafeInteger takes (to 2^53 - 1; `1e400` is Infinity and refused). The arithmetic
 // after the read is on int64: exact, and the same as the SDK's doubles while every step and year sum stays within
 // 2^53. Strings are UTF-8.
+//
+// The size bounds (schema-dist serial 149): a value with more than 256 eras, 64 months, a week longer than 64 steps or
+// with more than 64 names, 16 entries in `intercalary`, an `except` longer than 8 (version 2), a template or a name
+// longer than 256 code points (as decoded, untrimmed, not normalised), or a longest year (the months' lengths plus
+// every entry in `intercalary`) past 2^53 - 1 is not a calendar. A date past the exact range (IsPastExactRange) is the
+// plain step, and its breakdown holds the step alone.
 
 #include "OWApi.h"
 #include "OWJson.h"
@@ -69,12 +75,13 @@ struct OWCalendarConfig {
     OWJsonValue raw;
 };
 
-// A step taken apart (the SDK's StepBreakdown). Absent fields are the structure the calendar does not have.
+// A step taken apart (the SDK's StepBreakdown). Absent fields are the structure the calendar does not have; for a date
+// past the exact range (IsPastExactRange) every field but the step is absent, the years too, and era is -1.
 struct OWCalendarBreakdown {
     int64_t step = 0;
-    int64_t abs_year = 0;  // the year index from step 0 (zero-based, Euclidean)
-    int64_t year = 0;      // the era's year, or abs_year with no era or restart false
-    int era = -1;          // the era's index in OWCalendarConfig::eras, or -1
+    std::optional<int64_t> abs_year;  // the year index from step 0 (zero-based, Euclidean)
+    std::optional<int64_t> year;      // the era's year, or abs_year with no era or restart false
+    int era = -1;                     // the era's index in OWCalendarConfig::eras, or -1
     std::optional<int64_t> month;  // 1-based; absent on a day outside the months or with no months
     std::optional<std::string> month_name;
     std::optional<int64_t> day;  // 1-based within the month
@@ -103,7 +110,8 @@ extern OW_API const char* const Supertype;  // "calendar": the supertype Atlas g
 // mark). std::nullopt for a JSON null, any other kind, or a value the profile refuses.
 OW_API std::optional<OWCalendarConfig> ReadValue(const OWJsonValue& raw);
 
-// The object half: every "Not a calendar" rule (the SDK's readCalendarConfig).
+// The object half: every "Not a calendar" rule (the SDK's readCalendarConfig), the size bounds and the longest year
+// included.
 OW_API std::optional<OWCalendarConfig> ReadConfig(const OWJsonValue& value);
 
 // Every element (each a JSON object) with a valid `atlas_calendar`, in order: found by the field, never by type or
@@ -138,12 +146,17 @@ OW_API int EraForStep(const OWCalendarConfig& cal, int64_t step);
 OW_API int64_t DisplayYear(const OWCalendarConfig& cal, int64_t step, int era);
 
 // The weekday's name, or absent: no week, fewer names than its length, a nested week outside the months, a day
-// outside the week.
+// outside the week, a date past the exact range.
 OW_API std::optional<std::string> WeekdayForStep(const OWCalendarConfig& cal, int64_t step);
+
+// A date past the exact range (the profile, serial 149): its step, its year index plus each leap rule's offset, or the
+// year it shows in its era lies outside -(2^53 - 1) to 2^53 - 1. Such a date reads as the plain step; the calendar stays
+// a calendar and its other dates are worded.
+OW_API bool IsPastExactRange(const OWCalendarConfig& cal, int64_t step);
 
 OW_API OWCalendarBreakdown Breakdown(const OWCalendarConfig& cal, int64_t step);
 
-// The step in words (step 5, with the default templates). With no calendar, the bare step.
+// The step in words (step 5, with the default templates). With no calendar, or past the exact range, the bare step.
 OW_API std::string FormatStep(const OWCalendarConfig& cal, int64_t step);
 OW_API std::string FormatStep(const std::optional<OWCalendarConfig>& cal, int64_t step);
 

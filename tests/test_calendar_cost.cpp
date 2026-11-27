@@ -3,10 +3,14 @@
 // a name, a long run of marks at a label's edge, and a month of millions of days, each answered with its words inside
 // the cases' line. A roundtrip case reads its label back with parseDate, which this core does not have: its format
 // half is replayed and timed, and the read is left to the packages that hold it.
+// Since serial 149 the calendar profile bounds a template or a name at 256 code points, and five of the cases hold one
+// of thousands: the bounded reader refuses them, so each case is read past the bounds (ReadConfigPastTheBounds, private
+// to the core). A config built in code never meets the bounds, so the formatter must stay linear on its own.
 
 #include "ow_test.h"
 #include "sha256.h"
 
+#include "../Plugin/OnlyWorlds/Core/Private/OWCalendarPastTheBounds.h"
 #include "OWCalendar.h"
 #include "OWFiles.h"
 #include "OWJson.h"
@@ -84,6 +88,15 @@ OW_TEST(calendar_cost_cases_file_is_the_pinned_one) {
     t.Eq(owtest::Sha256Hex(CasesBytes()), std::string(CasesSha256), "the cases file's sha256 (the npm SDK's bytes)");
     t.Ok(Get(*Doc(), "cases").Size() >= 8, "at least 8 cases");
     t.Eq(LineMs(), 50.0, "the npm SDK's line, 50 ms");
+    // The bounded reader refuses the cases past its bounds (serial 149), and the unbounded one reads every case.
+    size_t bounded = 0, unbounded = 0;
+    for (const OWJsonValue& c : Get(*Doc(), "cases").Items()) {
+        const OWJsonValue cfg = Expand(Get(c, "cfg"));
+        if (OWCalendar::ReadConfig(cfg)) ++bounded;
+        if (OWCalendar::ReadConfigPastTheBounds(cfg)) ++unbounded;
+    }
+    t.Eq(unbounded, Get(*Doc(), "cases").Size(), "every case reads past the bounds");
+    t.Eq(Get(*Doc(), "cases").Size() - bounded, size_t(5), "five cases are past the bounds (a template or a name of thousands)");
 }
 
 OW_CASES(calendar_cost_cases) {
@@ -92,8 +105,8 @@ OW_CASES(calendar_cost_cases) {
     for (const OWJsonValue& c : Get(*doc, "cases").Items()) {
         const OWJsonValue* cp = &c;
         out.push_back({"calendar cost: " + Str(c, "name"), [doc, cp](owtest::T& t) {
-                           std::optional<OWCalendarConfig> cal = OWCalendar::ReadConfig(Expand(Get(*cp, "cfg")));
-                           if (!cal) return t.Fail("the case is a calendar the reader accepts");
+                           std::optional<OWCalendarConfig> cal = OWCalendar::ReadConfigPastTheBounds(Expand(Get(*cp, "cfg")));
+                           if (!cal) return t.Fail("the case is a calendar the reader accepts, the size bounds aside");
                            const int64_t step = static_cast<int64_t>(Get(*cp, "step").AsDouble());
                            const std::string call = Str(*cp, "call");
                            const OWJsonValue want = Expand(Get(*cp, "want"));
