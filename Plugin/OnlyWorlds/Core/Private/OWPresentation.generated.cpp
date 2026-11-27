@@ -84,10 +84,13 @@ const std::vector<std::string>& Types() {
     return slugs;
 }
 
-std::string FamilyOf(std::string_view type) {
+std::string GroupOf(std::string_view type) {
     const Row* r = RowOf(type);
     return r ? r->family : std::string();
 }
+
+// The old name answers through the new one: one implementation.
+std::string FamilyOf(std::string_view type) { return GroupOf(type); }
 
 std::string IconOf(std::string_view type) {
     const Row* r = RowOf(type);

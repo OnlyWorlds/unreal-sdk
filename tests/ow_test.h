@@ -74,6 +74,16 @@ const Paths& P();
 
 }  // namespace owtest
 
+// A deprecated name's own tests, kept until the name leaves: OW_DEPRECATED_BEGIN and OW_DEPRECATED_END around them
+// silence the deprecation warning there and nowhere else.
+#if defined(_MSC_VER)
+#define OW_DEPRECATED_BEGIN __pragma(warning(push)) __pragma(warning(disable : 4996))
+#define OW_DEPRECATED_END __pragma(warning(pop))
+#else
+#define OW_DEPRECATED_BEGIN _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#define OW_DEPRECATED_END _Pragma("GCC diagnostic pop")
+#endif
+
 #define OW_CAT2(a, b) a##b
 #define OW_CAT(a, b) OW_CAT2(a, b)
 #define OW_TEST(name)                                                       \

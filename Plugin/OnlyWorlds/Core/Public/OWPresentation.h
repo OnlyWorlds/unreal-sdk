@@ -21,9 +21,13 @@ namespace OWPresentation {
 OW_API const std::vector<std::string>& Order();
 // The 22 type slugs, in the sidecar's order (schema.json's).
 OW_API const std::vector<std::string>& Types();
-// A type's colour word, and its icon (a Material Symbols name); "" for a word that is not one of the 22 slugs.
-OW_API std::string FamilyOf(std::string_view type);
+// A type's colour group, its colour word (the TypeScript SDK's groupOf), and its icon (a Material Symbols name); ""
+// for a word that is not one of the 22 slugs.
+OW_API std::string GroupOf(std::string_view type);
 OW_API std::string IconOf(std::string_view type);
+// The same answer as GroupOf, under its old name.
+[[deprecated("Since 0.7.0. Leaves in 1.0. Use OWPresentation::GroupOf.")]]
+OW_API std::string FamilyOf(std::string_view type);
 // The fields a known-of stub of the type shows beside its base fields (types.<type>.public); empty for a type with none
 // and for a word that is not one of the 22.
 OW_API const std::vector<std::string>& PublicOf(std::string_view type);

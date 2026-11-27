@@ -88,7 +88,9 @@ void ByKindCase(owtest::T& t, const OWJsonValue& c) {
     OWLayoutByKind got = OWLayout::LayoutByKind(*c.Find("graph"));
     t.Eq(got.error, std::string(), name + ": an answer");
     t.Eq(got.method, std::string("by-kind"), name + ": the method");
-    t.Eq(got.version, 1, name + ": the version");
+    OW_DEPRECATED_BEGIN
+    t.Eq(got.version, 1, name + ": the version (deprecated since 0.7.0)");
+    OW_DEPRECATED_END
     t.Eq(Off(got, c), 0, name + ": points that differ from the fixture, bit for bit (-1: counts or order)");
 }
 
@@ -97,7 +99,9 @@ void AroundCase(owtest::T& t, const OWJsonValue& c) {
     OWLayoutAround got = OWLayout::LayoutAround(*c.Find("graph"), c.Find("focus")->Text(), static_cast<int>(c.Find("steps")->AsDouble()));
     t.Eq(got.error, std::string(), name + ": an answer");
     t.Eq(got.method, std::string("around"), name + ": the method");
-    t.Eq(got.version, 1, name + ": the version");
+    OW_DEPRECATED_BEGIN
+    t.Eq(got.version, 1, name + ": the version (deprecated since 0.7.0)");
+    OW_DEPRECATED_END
     const auto& want = c.Find("want")->Items();
     std::string ids, want_ids;
     for (const auto& p : got.points) ids += p.id + ":" + std::to_string(p.depth) + " ";
@@ -223,7 +227,7 @@ OW_TEST(layout_the_groups_are_the_fixtures_and_the_presentation_defaults) {
     t.Ok(groups && groups->Size() == 22, "22 types");
     if (!groups) return;
     for (size_t i = 0; i < groups->Size(); ++i)
-        t.Eq(OWPresentation::FamilyOf(groups->Keys()[i]), groups->Items()[i].Text(), groups->Keys()[i]);
+        t.Eq(OWPresentation::GroupOf(groups->Keys()[i]), groups->Items()[i].Text(), groups->Keys()[i]);
 }
 
 OW_CASES(layout_fixture_cases) {
@@ -332,7 +336,9 @@ OW_TEST(layout_a_frame_of_minus_one_to_one_on_the_longer_axis_centred) {
 
 OW_TEST(layout_the_empty_graph_answers_no_points_and_one_element_zero) {
     OWLayoutByKind none = OWLayout::LayoutByKind(Parse(R"({"nodes": [], "edges": []})"));
+    OW_DEPRECATED_BEGIN
     t.Ok(none.error.empty() && none.points.empty() && none.method == "by-kind" && none.version == 1, "empty");
+    OW_DEPRECATED_END
     OWLayoutByKind one = OWLayout::LayoutByKind(Parse(R"({"nodes": [{"id": "a", "type": "zone"}], "edges": []})"));
     t.Ok(one.error.empty() && one.points.size() == 1 && one.points[0].id == "a" && Bits(one.points[0].x) == 0 && Bits(one.points[0].y) == 0, "one");
 }

@@ -171,7 +171,7 @@ OWWorldGraph WorldGraph(const OWJsonValue& world, const OWJsonValue& reader, con
         out.type = stored && stored->IsString() ? stored->Text() : r.types[i];
         const OWJsonValue* name = r.els[i]->Find("name");
         out.name = name ? *name : OWJsonValue::Null();
-        out.family = OWPresentation::FamilyOf(r.types[i]);
+        out.family = OWPresentation::GroupOf(r.types[i]);
         out.icon = OWPresentation::IconOf(r.types[i]);
         // Every mark that applies, lens-kept or not: a reading aid a lens keeps carries reading_aid as a room element
         // a lens keeps carries room (serial 104).
