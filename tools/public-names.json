@@ -1952,6 +1952,7 @@
   "OnlyWorlds::OWWorldArchive::AuthorFields": {},
   "OnlyWorlds::OWWorldArchive::CollectContent": {},
   "OnlyWorlds::OWWorldArchive::CollectRecords": {},
+  "OnlyWorlds::OWWorldArchive::EntryNamesFault": {},
   "OnlyWorlds::OWWorldArchive::Extension": {},
   "OnlyWorlds::OWWorldArchive::Marker": {},
   "OnlyWorlds::OWWorldArchive::MediaType": {},
