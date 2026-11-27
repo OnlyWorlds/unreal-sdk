@@ -544,6 +544,22 @@ bool FOWClientWriteNodesAnswersTest::RunTest(const FString& Parameters)
 			TestTrue(TEXT("slot 2: bIsProposed"), Asked.bIsProposed);
 			TestTrue(TEXT("slot 2: the proposal row as JSON text, got ") + Asked.Proposal, OWW::SameJsonText(Asked.Proposal, OWW::ProposalRow));
 			TestTrue(TEXT("slot 2: no error"), Asked.Error.Kind == EOWApiErrorKind::None);
+			TestEqual(TEXT("slot 1: no Limit"), Bad.Error.Limit, FString());
+		}
+	}
+
+	// A slot refused for a size limit carries the limit on its Error.
+	{
+		auto Run = std::make_shared<OWW::FWriteRun>();
+		Run->Fake->Fallback = OWW::Respond(200, R"({"errors": true, "items": [
+			{"status": 422, "error": {"type": "invalid_request", "code": "invalid_request", "message": "Too many links.", "limit": "element_link_ids"}}]})");
+		OWW::Launch(&OWW::MakeBulk, OWW::WriterConfig(), Run);
+		const FOWBulkResult& B = Run->Probe->Bulk;
+		TestEqual(TEXT("BulkWrite, a size refusal: OnSuccess once"), Run->Probe->Successes, 1);
+		if (TestEqual(TEXT("BulkWrite, a size refusal: one slot"), B.Items.Num(), 1))
+		{
+			TestEqual(TEXT("BulkWrite, a size refusal: Code"), B.Items[0].Error.Code, FString(TEXT("invalid_request")));
+			TestEqual(TEXT("BulkWrite, a size refusal: Limit"), B.Items[0].Error.Limit, FString(TEXT("element_link_ids")));
 		}
 	}
 

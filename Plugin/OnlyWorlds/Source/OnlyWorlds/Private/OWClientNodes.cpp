@@ -182,6 +182,7 @@ FOWApiError OWClientShared::ErrorOf(const OnlyWorlds::OWApiError& E)
 	Out.RetryAfter = E.retry_after.value_or(0);
 	Out.bRetryable = E.IsRetryable();
 	Out.ResyncReason = TextOr(E.ResyncReason());
+	Out.Limit = TextOr(E.Limit());
 	Out.Line = Str(E.ToString());
 	Out.bIsProposed = E.IsProposed();
 	Out.Proposal = E.proposal ? JsonText(*E.proposal) : FString();

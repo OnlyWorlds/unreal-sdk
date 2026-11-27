@@ -626,6 +626,24 @@ bool FOWClientNodesErrorsTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("409: Code"), Run->Probe->Error.Code, FString(TEXT("resync_required")));
 		TestEqual(TEXT("409: ResyncReason"), Run->Probe->Error.ResyncReason, FString(TEXT("view")));
 		TestEqual(TEXT("409: an empty page"), Run->Probe->Page.Changes.Num(), 0);
+		TestEqual(TEXT("409: no Limit"), Run->Probe->Error.Limit, FString());
+	}
+
+	// A size refusal names its limit; another 422 has none.
+	{
+		auto Run = std::make_shared<FRun>();
+		Run->Fake->Fallback = Answer(422, R"({"error": {"type": "invalid_request", "code": "invalid_request", "message": "Too large.", "limit": "element_bytes"}})");
+		Start(&MakeWorld, ReadKey(), Run);
+		Failed(TEXT("422 element_bytes"), Run);
+		TestEqual(TEXT("422: Code"), Run->Probe->Error.Code, FString(TEXT("invalid_request")));
+		TestEqual(TEXT("422: Limit"), Run->Probe->Error.Limit, FString(TEXT("element_bytes")));
+	}
+	{
+		auto Run = std::make_shared<FRun>();
+		Run->Fake->Fallback = Answer(422, R"({"error": {"type": "invalid_request", "code": "invalid_request", "message": "No."}})");
+		Start(&MakeWorld, ReadKey(), Run);
+		Failed(TEXT("422 without a limit"), Run);
+		TestEqual(TEXT("422 without a limit: Limit"), Run->Probe->Error.Limit, FString());
 	}
 
 	// No answer came: kind Transport, status 0, the transport's words in the core's.

@@ -185,6 +185,18 @@ std::optional<std::string> OWApiError::ResyncReason() const {
     return std::nullopt;
 }
 
+std::optional<std::string> OWApiError::Limit() const {
+    if (status != 422 || raw_body.empty()) return std::nullopt;
+    OWJsonParseResult parsed = OWJson::Parse(raw_body);
+    const OWJsonValue* inner = parsed.ok ? parsed.value.Find("error") : nullptr;
+    const OWJsonValue* limit = inner && inner->IsObject() ? inner->Find("limit") : nullptr;
+    if (!limit || !limit->IsString()) return std::nullopt;
+    return limit->Text();
+}
+bool OWApiError::IsElementTooLarge() const { return Limit().value_or("") == "element_bytes"; }
+bool OWApiError::IsElementTooManyLinks() const { return Limit().value_or("") == "element_link_ids"; }
+bool OWApiError::IsExtensionsTooLarge() const { return Limit().value_or("") == "extensions_bytes"; }
+
 bool OWApiError::IsRetryable() const {
     // A same-key request still running, an upload or a removal not yet done: they clear by themselves.
     if (code == "idempotency_in_flight" || code == "upload_pending" || code == "removal_in_flight") return status == 409;
