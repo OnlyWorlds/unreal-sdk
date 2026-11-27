@@ -4,7 +4,7 @@ Notable changes to the OnlyWorlds SDK for Unreal. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Where it stands.** 0.10.1 is the latest release. `onlyworlds-unreal-0.10.1.zip`, on the repository's Releases page,
+**Where it stands.** 0.11.0 is the latest release. `onlyworlds-unreal-0.11.0.zip`, on the repository's Releases page,
 holds the plugin folder to drop into a project's `Plugins/`, as source the project compiles; the [README](README.md)
 has the install and a first run. What a game can do with it: open a world on disk (a world folder or an `.owworld`
 file) and read its elements of all 22 types as Blueprint structs; read and write a world over the onlyworlds.com API
@@ -15,6 +15,11 @@ OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine
 the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
+
+## [0.11.0] - 2026-11-27
+
+An error names the size limit a write passed, in C++ and on Blueprints. Parity with the TypeScript SDK 4.219.0. A
+minor release because it adds public API (below).
 
 ### Added
 
