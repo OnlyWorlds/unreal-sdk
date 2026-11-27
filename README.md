@@ -39,9 +39,9 @@ project becomes one with its first C++ class (**Tools → New C++ Class**).
 **Versions.** A patch release fixes and a minor release adds; neither removes nor renames a public name, and the
 plugin keeps to this while it is 0.x. A name that will go is marked deprecated first, saying since which release,
 what to use instead and the release it leaves in; it stays at least six months after that release and goes only in
-1.0. It is the promise the TypeScript SDK and the Python package make on the docs'
+1.0. It is the same promise as on the docs'
 [Stability page](https://onlyworlds.github.io/docs/development/api/stability#the-standard-the-packages-and-this-site), and a check in CI
-holds the public names to it on every change. The [CHANGELOG](CHANGELOG.md) lists what each version changed.
+holds the public names to it on every change; it reads names, not a call's parameters or what it does. The [CHANGELOG](CHANGELOG.md) lists what each version changed.
 
 ## First run
 
@@ -220,9 +220,9 @@ plugin's tests are compiled only inside this repository, so a copy of the plugin
 `UE_DEPRECATED(<engine version>, "…")` with the same words; on a Blueprint node,
 `meta = (DeprecatedFunction, DeprecationMessage = "Since X.Y.Z. Leaves in 1.0. Use Y.")`. X.Y.Z is the release that
 first carries the mark. A Blueprint property has no mark yet that keeps its name (Unreal's own way renames it), so
-none is deprecated. `tools/verify_promise.py` reads the public names of the core's and the plugin's headers and holds
-them, kept in `tools/public-names.json`, and their marks to the promise on every push and pull request. A change that
-adds a public name or a mark runs `python tools/verify_promise.py --write` and commits the file.
+none is deprecated. Then run `python tools/verify_promise.py --write` and commit `tools/public-names.json`, which lists
+every public name in the core's and the plugin's headers and its mark. CI runs `verify_promise.py` on every push and
+pull request, and `python tools/mutants_promise.py` watches the check fail once for each rule.
 
 ## OnlyWorlds
 
