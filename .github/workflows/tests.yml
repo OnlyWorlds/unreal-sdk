@@ -1,5 +1,7 @@
-# The core's checks on Windows with no Unreal install: the generated files against their sources and the core's
-# export marks (tools/check_exports.py), then the core
+# The core's checks on Windows with no Unreal install: the generated files against their sources, the core's
+# export marks (tools/check_exports.py) and the written promise (tools/verify_promise.py: no public name of the
+# headers gone within a major, every one listed in tools/public-names.json, every mark saying since which release and
+# the release it leaves in; tools/mutants_promise.py watches it fail once for each rule), then the core
 # (Plugin/OnlyWorlds/Core) and its test runner built by build.cmd with MSVC and run. The engine's zlib is 1.3; here
 # zlib 1.3 is built from its release, checked by its sha256, and handed to build.cmd as ZLIB and ZLIB_LIB. The
 # plugin's own automation tests need the Unreal Editor and do not run here.
@@ -37,6 +39,8 @@ jobs:
           python codegen/test_generate_presentation.py
           python codegen/test_generate_tools.py
           python tools/check_exports.py
+          python tools/verify_promise.py
+          python tools/mutants_promise.py
 
       # The zip a release carries (tools/release_zip.py), made from this commit: the script and the .uplugin's
       # VersionName stay readable. Building the zipped plugin needs Unreal and does not run here.

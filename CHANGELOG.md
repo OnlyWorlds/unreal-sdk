@@ -15,6 +15,18 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- **The plugin's written promise, held on every change.** A patch release fixes and a minor release adds; neither
+  removes nor renames a public name, and the plugin keeps to this while it is 0.x. A name that will go is marked first,
+  saying since which release, what to use instead and the release it leaves in, and goes no sooner than six months
+  later, in 1.0. The README's Versions line says so and links the docs' Stability page. The mark is `[[deprecated("Since
+  X.Y.Z. Leaves in 1.0. Use Y.")]]` in C++, and `DeprecatedFunction` with that `DeprecationMessage` on a Blueprint node.
+  `tools/verify_promise.py` holds the public names of the core's and the plugin's headers, listed in
+  `tools/public-names.json`, and their marks to the promise in the tests workflow, with Python's standard library;
+  `tools/mutants_promise.py` watches it fail once for each rule. No name is deprecated today, and no release so far has
+  removed or renamed a public name.
+
 ### Fixed
 
 - **Parity with the TypeScript SDK 4.212.3: `OWWorldArchive::PackWorld` refuses files holding `world.json`,
