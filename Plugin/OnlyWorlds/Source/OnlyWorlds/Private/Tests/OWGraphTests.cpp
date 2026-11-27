@@ -130,8 +130,10 @@ bool FOWGraphPinsTest::RunTest(const FString& Parameters)
 	// FOWListOptions, FOWChange, FOWChangesPage, FOWBulkItem, FOWBulkSlot, FOWBulkResult; the lens's FOWLensReader,
 	// FOWLensOptions, FOWLensCut, FOWLensMail, FOWLensReading; the graph's FOWGraphOptions, FOWGraphNode, FOWGraphEdge,
 	// FOWWorldGraph, FOWGraphDegree; the charter's FOWCharterLaw, FOWCharterGuide, FOWCharterHub, FOWCharterDomain,
-	// FOWReadingAids.
-	TestEqual(TEXT("the plugin's structs"), Structs.Num(), 22 + 17 + 15);
+	// FOWReadingAids; the map space's FOWMapSpacePoint, FOWMapSpaceMap, FOWMapSpaceOutline, FOWMapSpacePin,
+	// FOWWorldMapSpace, FOWMapLayout, FOWMapCarryPoint, FOWMapCarry, FOWPinKnown, FOWPinsKnownTo; the layout's
+	// FOWLayoutPoint, FOWLayoutAroundPoint, FOWLayout3dPoint, FOWLayoutByLinks3d.
+	TestEqual(TEXT("the plugin's structs"), Structs.Num(), 22 + 17 + 15 + 14);
 
 	int32 Optionals = 0, OptionalBreakPins = 0, OptionalMakePins = 0, Members = 0, Pairs = 0, PairsWithPins = 0;
 	TArray<FString> OptionalMembers;

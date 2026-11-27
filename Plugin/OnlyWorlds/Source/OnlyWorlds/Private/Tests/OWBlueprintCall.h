@@ -114,6 +114,38 @@ namespace OWBlueprintTest
 			return P->ContainerPtrToValuePtr<void>(Frame);
 		}
 
+		// A parameter's slot as T, its C++ type asserted as UHT spells it ("TArray<FString>", "FOWWorldGraph",
+		// "FVector2D", "double"), and its direction: an input (bOutput false) or an output pin. nullptr, an error
+		// logged, when it is not that. For the values the typed setters do not cover: an array, a whole struct.
+		template <typename T>
+		T* TypedSlot(const TCHAR* Param, const TCHAR* CppType, bool bOutput)
+		{
+			if (!Frame) return nullptr;
+			FProperty* P = Func->FindPropertyByName(Param);
+			FString Extended;
+			const FString Type = P ? P->GetCPPType(&Extended) + Extended : FString();
+			if (!P || Type != CppType || IsOutputPin(P) != bOutput || P->GetSize() != static_cast<int32>(sizeof(T)))
+			{
+				Test.AddError(FString::Printf(TEXT("%s has no %s %s parameter %s (found %s)"), Name, bOutput ? TEXT("output") : TEXT("input"),
+					CppType, Param, P ? *Type : TEXT("none")));
+				return nullptr;
+			}
+			return P->ContainerPtrToValuePtr<T>(Frame);
+		}
+
+		template <typename T>
+		void SetAs(const TCHAR* Param, const TCHAR* CppType, const T& Value)
+		{
+			if (T* V = TypedSlot<T>(Param, CppType, false)) *V = Value;
+		}
+
+		template <typename T>
+		T OutAs(const TCHAR* Param, const TCHAR* CppType)
+		{
+			const T* V = TypedSlot<T>(Param, CppType, true);
+			return V ? *V : T();
+		}
+
 		void Invoke()
 		{
 			if (Frame) Library->GetDefaultObject()->ProcessEvent(Func, Frame);
