@@ -2,6 +2,7 @@
 
 #include "UObject/WeakObjectPtrTemplates.h"
 
+#include "OWClientShared.h"
 #include "OWConvert.h"
 #include "OWHttpTransport.h"
 #include "OWJson.h"
@@ -12,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+using OWClientShared::ErrorOf;
 using OWConvert::Str;
 using OWConvert::Utf8;
 
@@ -45,35 +47,6 @@ namespace
 	FString TextOr(const std::optional<std::string>& Text)
 	{
 		return Text ? Str(*Text) : FString();
-	}
-
-	FOWApiError ErrorOf(const OnlyWorlds::OWApiError& E)
-	{
-		FOWApiError Out;
-		switch (E.kind)
-		{
-		case OnlyWorlds::OWApiError::Kind::Api: Out.Kind = EOWApiErrorKind::Api; break;
-		case OnlyWorlds::OWApiError::Kind::Transport: Out.Kind = EOWApiErrorKind::Transport; break;
-		case OnlyWorlds::OWApiError::Kind::Refused: Out.Kind = EOWApiErrorKind::Refused; break;
-		case OnlyWorlds::OWApiError::Kind::Answer: Out.Kind = EOWApiErrorKind::Answer; break;
-		}
-		Out.Status = E.status;
-		Out.Type = Str(E.type);
-		Out.Code = Str(E.code);
-		Out.Message = Str(E.message);
-		Out.Param = Str(E.param);
-		Out.DocUrl = Str(E.doc_url);
-		Out.RawBody = Str(E.raw_body);
-		Out.bHasRetryAfter = E.retry_after.has_value();
-		Out.RetryAfter = E.retry_after.value_or(0);
-		Out.bRetryable = E.IsRetryable();
-		Out.ResyncReason = TextOr(E.ResyncReason());
-		Out.Line = Str(E.ToString());
-		Out.bIsProposed = E.IsProposed();
-		Out.Proposal = E.proposal ? JsonText(*E.proposal) : FString();
-		const std::optional<OWJsonValue> Now = E.Current();
-		Out.Current = Now ? JsonText(*Now) : FString();
-		return Out;
 	}
 
 	// A refusal the node makes itself, in the core's form: kind Refused, its line "OnlyWorlds refused: ...".
@@ -170,6 +143,58 @@ namespace
 	}
 }
 
+// -- OWClientShared -----------------------------------------------------------------------------------------------------
+
+OnlyWorlds::OWClientConfig OWClientShared::CoreConfig(const FOWClientConfig& Config, std::shared_ptr<OnlyWorlds::OWTransport> Transport)
+{
+	OnlyWorlds::OWClientConfig Core;
+	Core.api_key = Utf8(Config.ApiKey);
+	Core.api_pin = Utf8(Config.ApiPin);
+	// "" is no world; anything else goes to the core, which refuses white space.
+	if (!Config.World.IsEmpty()) Core.world = Utf8(Config.World);
+	Core.base_url = Config.BaseUrl.IsEmpty() ? std::string(OnlyWorlds::OWClient::DefaultBaseUrl) : Utf8(Config.BaseUrl);
+	Core.page_size = Config.PageSize;
+	// "" is the core's own name; anything else goes to the core, which refuses a name that is not keel's shape.
+	if (!Config.Client.IsEmpty()) Core.client = Utf8(Config.Client);
+	Core.agent = Config.bAgent;
+	Core.transport = Transport ? std::move(Transport) : FOWHttpTransport::Make();
+	return Core;
+}
+
+FOWApiError OWClientShared::ErrorOf(const OnlyWorlds::OWApiError& E)
+{
+	FOWApiError Out;
+	switch (E.kind)
+	{
+	case OnlyWorlds::OWApiError::Kind::Api: Out.Kind = EOWApiErrorKind::Api; break;
+	case OnlyWorlds::OWApiError::Kind::Transport: Out.Kind = EOWApiErrorKind::Transport; break;
+	case OnlyWorlds::OWApiError::Kind::Refused: Out.Kind = EOWApiErrorKind::Refused; break;
+	case OnlyWorlds::OWApiError::Kind::Answer: Out.Kind = EOWApiErrorKind::Answer; break;
+	}
+	Out.Status = E.status;
+	Out.Type = Str(E.type);
+	Out.Code = Str(E.code);
+	Out.Message = Str(E.message);
+	Out.Param = Str(E.param);
+	Out.DocUrl = Str(E.doc_url);
+	Out.RawBody = Str(E.raw_body);
+	Out.bHasRetryAfter = E.retry_after.has_value();
+	Out.RetryAfter = E.retry_after.value_or(0);
+	Out.bRetryable = E.IsRetryable();
+	Out.ResyncReason = TextOr(E.ResyncReason());
+	Out.Line = Str(E.ToString());
+	Out.bIsProposed = E.IsProposed();
+	Out.Proposal = E.proposal ? JsonText(*E.proposal) : FString();
+	const std::optional<OWJsonValue> Now = E.Current();
+	Out.Current = Now ? JsonText(*Now) : FString();
+	return Out;
+}
+
+FOWApiError OWClientShared::Refused(const std::string& Why)
+{
+	return ErrorOf(OnlyWorlds::OWApiError::Of(OnlyWorlds::OWApiError::Kind::Refused, Why));
+}
+
 // -- UOWClientNode ----------------------------------------------------------------------------------------------------
 
 void UOWClientNode::SetTransport(std::shared_ptr<OnlyWorlds::OWTransport> InTransport)
@@ -182,18 +207,7 @@ OnlyWorlds::OWClient* UOWClientNode::Begin()
 	if (bActivated) return nullptr;
 	bActivated = true;
 
-	OnlyWorlds::OWClientConfig Core;
-	Core.api_key = Utf8(Settings.ApiKey);
-	Core.api_pin = Utf8(Settings.ApiPin);
-	// "" is no world; anything else goes to the core, which refuses white space.
-	if (!Settings.World.IsEmpty()) Core.world = Utf8(Settings.World);
-	Core.base_url = Settings.BaseUrl.IsEmpty() ? std::string(OnlyWorlds::OWClient::DefaultBaseUrl) : Utf8(Settings.BaseUrl);
-	Core.page_size = Settings.PageSize;
-	// "" is the core's own name; anything else goes to the core, which refuses a name that is not keel's shape.
-	if (!Settings.Client.IsEmpty()) Core.client = Utf8(Settings.Client);
-	Core.agent = Settings.bAgent;
-	Core.transport = Transport ? Transport : FOWHttpTransport::Make();
-	Client = std::make_unique<OnlyWorlds::OWClient>(std::move(Core));
+	Client = std::make_unique<OnlyWorlds::OWClient>(OWClientShared::CoreConfig(Settings, Transport));
 
 	// Kept until it answered: nothing else may hold the node (a graph's async node holds it only while the graph that
 	// made it lives), and its answer comes later. The keep comes first, since a refusal answers inside the call.
