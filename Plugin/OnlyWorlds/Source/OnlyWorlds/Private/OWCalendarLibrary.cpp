@@ -69,8 +69,11 @@ bool UOWCalendars::BreakdownStep(const UOWWorld* World, const FString& CalendarI
 
 	const OnlyWorlds::OWCalendarBreakdown B = OnlyWorlds::OWCalendar::Breakdown(*Cal, static_cast<int64_t>(Step));
 	Breakdown.Step = B.step;
-	Breakdown.AbsYear = B.abs_year;
-	Breakdown.Year = B.year;
+	// Absent past the exact range (the core's IsPastExactRange): 0 here, as the other parts a date does not have, and
+	// the flag says which 0 it is.
+	Breakdown.bPastExactRange = !B.year.has_value();
+	Breakdown.AbsYear = B.abs_year.value_or(0);
+	Breakdown.Year = B.year.value_or(0);
 	Breakdown.EraIndex = B.era;
 	if (B.era >= 0)
 	{
