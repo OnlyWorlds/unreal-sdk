@@ -15,6 +15,27 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- **A world held by a game and kept current: `OWWorldCache` and `OWSync` in the core, `UOWWorldCache` and three
+  nodes on Blueprints.** The client could read the change feed, but a game had to walk it and apply it by hand, and a
+  Blueprint's tip read held no ETag, so every poll was a full one. `OWWorldCache` holds one world's elements (each its
+  type and its body whole, as served), where the last sync stopped (`Cursor`, `CursorToken`, `Epoch`, `SyncedAt`) and
+  `read_only`; it reads by id, by type and by a link field (`Get`, `OfType`, `Resolve`), keeps itself in a file
+  (`WriteFile`, `ReadFile`) and gives the held world as an `OWWorld` (`ToWorld`), so every reader that takes one reads a
+  synced world. `OWSync::Baseline` walks every type through the list routes after a tip read, `OWSync::Incremental`
+  applies the feed from the cache's own cursor, and `OWSync::HasChanges` asks from one tip read: the rules are the
+  Unity and Godot SDKs' `OWSync` (the seq claimed only at a page that says no more, a cursor ahead of the server's head
+  walked again and kept, a 409 `resync_required` walked again with `view` dropping and `role` or no reason keeping
+  what the new walk does not name, a walk that fails putting the cache back), and keel's
+  [changes page](https://onlyworlds.github.io/docs/development/api/changes). Two choices of Unreal's own: a body is
+  held under its own id (the row's written into a body with none), so the cache and its `OWWorld` view index one id;
+  and a second sync on a cache with one in flight is refused, nothing sent. Each answer is queued and run in turn, so
+  a transport that answers inside `Send` walks a long feed with a flat stack. On Blueprints, `UOWWorldCache`
+  (`MakeWorldCache`, `OpenWorldCache`, `WriteFile`, `GetHeldWorld`: the held world as a `UOWWorld`, the same object
+  across syncs) holds one client, so its tip read sends the last tag and an unmoved head is a 304; the async nodes
+  `SyncWorld`, `BaselineWorld` (answering an `FOWSyncResult`) and `HasWorldChanges` fill it.
+
 ## [0.9.0] - 2026-11-27
 
 How an element is shown, in C++ and in Blueprints: `OWViews` reads the schema's views (a list row, a sentence, the

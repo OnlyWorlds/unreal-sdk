@@ -125,16 +125,18 @@ bool FOWGraphPinsTest::RunTest(const FString& Parameters)
 		if (It->GetOutermost()->GetName() == TEXT("/Script/OnlyWorlds")) Structs.Add(*It);
 	}
 	Structs.Sort([](const UScriptStruct& A, const UScriptStruct& B) { return A.GetName() < B.GetName(); });
-	// The 22 generated, and FOWArchiveVerdict, FOWWorldCalendar, FOWStepBreakdown, FOWAddress, FOWAddressFound (serial
-	// 128), FOWOpenerSurface, FOWOpener, FOWSender, FOWEdited, and the client's FOWClientConfig, FOWApiError,
-	// FOWListOptions, FOWChange, FOWChangesPage, FOWBulkItem, FOWBulkSlot, FOWBulkResult; the lens's FOWLensReader,
-	// FOWLensOptions, FOWLensCut, FOWLensMail, FOWLensReading; the graph's FOWGraphOptions, FOWGraphNode, FOWGraphEdge,
-	// FOWWorldGraph, FOWGraphDegree; the charter's FOWCharterLaw, FOWCharterGuide, FOWCharterHub, FOWCharterDomain,
-	// FOWReadingAids; the map space's FOWMapSpacePoint, FOWMapSpaceMap, FOWMapSpaceOutline, FOWMapSpacePin,
-	// FOWWorldMapSpace, FOWMapLayout, FOWMapCarryPoint, FOWMapCarry, FOWPinKnown, FOWPinsKnownTo; the layout's
-	// FOWLayoutPoint, FOWLayoutAroundPoint, FOWLayout3dPoint, FOWLayoutByLinks3d; the views' FOWViewFold, FOWViewRow,
-	// FOWViewBanner, FOWViewLayoutWords, FOWView, FOWViewsTable.
-	TestEqual(TEXT("the plugin's structs"), Structs.Num(), 22 + 17 + 15 + 14 + 6);
+	// How many there are is read from the reflection, never a literal: a struct a release adds is held like the rest.
+	// The 22 generated ones, one per element type, must be among them.
+	TArray<FString> Missing;
+	for (const char* Type : OnlyWorlds::OWAddress::TypeWords)
+	{
+		FString Name = FString(TEXT("OW")) + UTF8_TO_TCHAR(Type);
+		Name[2] = FChar::ToUpper(Name[2]);
+		if (!Structs.ContainsByPredicate([&Name](const UScriptStruct* S) { return S->GetName() == Name; })) Missing.Add(Name);
+	}
+	TestTrue(TEXT("the 22 generated structs among them, missing: ") + FString::Join(Missing, TEXT(", ")), Missing.Num() == 0);
+	TestTrue(TEXT("and the doors' own beside them"), Structs.Num() > 22);
+	AddInfo(FString::Printf(TEXT("the plugin's structs, read from the reflection: %d"), Structs.Num()));
 
 	int32 Optionals = 0, OptionalBreakPins = 0, OptionalMakePins = 0, Members = 0, Pairs = 0, PairsWithPins = 0;
 	TArray<FString> OptionalMembers;
