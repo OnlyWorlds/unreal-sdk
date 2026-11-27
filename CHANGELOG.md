@@ -30,6 +30,18 @@ the detail a maintainer needs; the history before this file is in the git log.
   as the TypeScript SDK's folder route and skip reasons do.
 - **`PackWorld` and `PackFolder` refuse such a `world.json` in the same words**, as the TypeScript SDK's
   `writeWorldFile` does, where they said it "is not an object with an id".
+- **`OWWorldArchive::PackWorld`, and every pack through it, refuses to write a world file its own reader would refuse
+  for a name**, as the folder format's writer rules ask (section 4.7: OW-16 to OW-19, OW-22) and as the TypeScript
+  SDK's `writeWorldFile` refuses it. Before anything is written, the top folder and every entry name go through the
+  reader's checks: an unsafe path (a `..` segment, a backslash, a top folder that is not one plain name, such as
+  `a/b`) is refused `unsafe_path`; a name some disk cannot hold (a Windows device name such as `media/aux.png`, a
+  name ending in a dot or a space, a reserved or control character), `name`; two names that are one after case
+  folding, `collision`; a path that would be a file and a folder, `unsafe_path`, and so is a top folder named
+  `mimetype` (the marker's name), while one named `MimeType` is refused `collision`. The message begins with the cause
+  and ends "nothing was written". Before, `PackWorld` wrote such files and `OWWorldArchive::Read` then refused them.
+  This reaches `PackFolder`, `Pack`, `OWWorld::Pack`, Blueprint's `PackWorldFolder` and `UOWWorld::PackToFile`, whose
+  top folder is the archive's file name. The checks are one function, `OWWorldArchive::EntryNamesFault`, which a tool
+  can call on its own list of names. `PackFiles` still packs exactly the files it is given.
 
 ## [0.6.0] - 2026-11-27
 

@@ -102,6 +102,43 @@ bool IsReserved(const std::string& seg) {
 
 }  // namespace
 
+namespace {
+
+// OW-18: why two of `names` (entry names, a folder's ending in "/"), or two folders above them, are one name after
+// folding (NFC, then simple case folding), or "". Read and EntryNamesFault both ask it.
+std::string CollisionFault(const std::vector<std::string>& names) {
+    std::unordered_set<std::string> prefixes;
+    std::unordered_map<std::string, std::string> folded;
+    for (const std::string& name : names) {
+        std::string prefix;
+        for (const std::string& seg : Split(RStripSlash(name))) {
+            prefix = prefix.empty() ? seg : prefix + "/" + seg;
+            if (!prefixes.insert(prefix).second) continue;
+            std::string key = OWUnicode::Fold(prefix);
+            auto it = folded.find(key);
+            if (it != folded.end()) return "names collide after NFC and case folding: " + Show(it->second) + ", " + Show(prefix);
+            folded.emplace(std::move(key), prefix);
+        }
+    }
+    return "";
+}
+
+// OW-19: why a path among `file_names` is also a folder above another of them, or "".
+std::string FileAndFolderFault(const std::vector<std::string>& file_names) {
+    std::unordered_set<std::string> names(file_names.begin(), file_names.end());
+    for (const std::string& name : file_names) {
+        std::string prefix;
+        std::vector<std::string> segs = Split(name);
+        for (size_t i = 0; i + 1 < segs.size(); ++i) {
+            prefix = i == 0 ? segs[i] : prefix + "/" + segs[i];
+            if (names.count(prefix)) return Show(prefix) + " is a file and a folder";
+        }
+    }
+    return "";
+}
+
+}  // namespace
+
 std::string PathFault(const std::string& name) {
     if (name.find('\\') != std::string::npos) return "holds a backslash";
     if (!name.empty() && name[0] == '/') return "is absolute";
@@ -124,6 +161,34 @@ std::string NameFault(const std::string& name) {
             return "segment " + Show(seg) + " ends in a dot or a space";
         if (IsReserved(seg)) return "segment " + Show(seg) + " is a Windows reserved name";
     }
+    return "";
+}
+
+std::string EntryNamesFault(const std::vector<std::string>& names, std::string& reason) {
+    std::unordered_set<std::string> seen;
+    for (const std::string& name : names) {
+        if (std::string fault = PathFault(name); !fault.empty()) {
+            reason = "unsafe_path";
+            return "entry " + Show(name) + " " + fault;
+        }
+        if (std::string fault = NameFault(name); !fault.empty()) {
+            reason = "name";
+            return "entry " + Show(name) + ": " + fault;
+        }
+        if (!seen.insert(name).second) {
+            reason = "unsafe_path";  // the TypeScript SDK's writeWorldFile's cause; a reader answers duplicate
+            return "entry " + Show(name) + " is listed twice";
+        }
+    }
+    if (std::string why = CollisionFault(names); !why.empty()) {
+        reason = "collision";
+        return why;
+    }
+    if (std::string why = FileAndFolderFault(names); !why.empty()) {
+        reason = "unsafe_path";
+        return why;
+    }
+    reason.clear();
     return "";
 }
 
@@ -166,35 +231,16 @@ OWArchiveRead Read(const OWBytes& raw, const OWArchiveBudget& budget) {
     }
 
     // OW-18: no two names (or folders) one after folding (NFC, then simple case folding).
-    {
-        std::unordered_set<std::string> prefixes;
-        std::unordered_map<std::string, std::string> folded;
-        for (const std::string& name : seen_order) {
-            std::string prefix;
-            for (const std::string& seg : Split(RStripSlash(name))) {
-                prefix = prefix.empty() ? seg : prefix + "/" + seg;
-                if (!prefixes.insert(prefix).second) continue;
-                std::string key = OWUnicode::Fold(prefix);
-                auto it = folded.find(key);
-                if (it != folded.end())
-                    return Refuse(r, "collision",
-                                  "names collide after NFC and case folding: " + Show(it->second) + ", " + Show(prefix));
-                folded.emplace(std::move(key), prefix);
-            }
-        }
-    }
+    if (std::string why = CollisionFault(seen_order); !why.empty()) return Refuse(r, "collision", why);
 
     // OW-19: no path is both a file and a folder.
     std::unordered_map<std::string, const OWZipEntry*> names;
-    for (const OWZipEntry* e : files) names.emplace(e->name, e);
+    std::vector<std::string> file_names;
     for (const OWZipEntry* e : files) {
-        std::string prefix;
-        std::vector<std::string> segs = Split(e->name);
-        for (size_t i = 0; i + 1 < segs.size(); ++i) {
-            prefix = i == 0 ? segs[i] : prefix + "/" + segs[i];
-            if (names.count(prefix)) return Refuse(r, "unsafe_path", Show(prefix) + " is a file and a folder");
-        }
+        names.emplace(e->name, e);
+        file_names.push_back(e->name);
     }
+    if (std::string why = FileAndFolderFault(file_names); !why.empty()) return Refuse(r, "unsafe_path", why);
 
     std::string reason, message;
     // OW-6: a marker is never required; one present with other bytes is refused. Its shape binds the writer only.
@@ -574,6 +620,24 @@ OWPacked PackWorld(const OWFileMap& files_in, const std::string& top, bool keep_
     if (!include_hidden) LeaveOutForShare(files, hidden, unread);
     std::vector<std::string> authored;
     if (!include_author_fields) authored = StripAuthorFields(files);
+    // Section 4.7: a writer never emits a file its reader refuses for a name, so the top and the names about to be
+    // written go through the reader's own checks first (EntryNamesFault), and nothing is written on a fault. A top
+    // that is no single plain name is unsafe_path, as the TypeScript SDK's writeWorldFile answers it.
+    {
+        std::string reason, why;
+        if (std::string fault = PathFault(top); !fault.empty() || top.find('/') != std::string::npos) {
+            reason = "unsafe_path";
+            why = "the top folder " + Show(top) + " " + (fault.empty() ? std::string("holds a '/'") : fault);
+        } else {
+            std::vector<std::string> names = {Marker};
+            for (const auto& kv : files) names.push_back(top + "/" + kv.first);
+            why = EntryNamesFault(names, reason);
+        }
+        if (!why.empty()) {
+            out.message = "the world's files are refused, " + reason + ": " + why + "; nothing was written";
+            return out;
+        }
+    }
     out = PackFiles(files, top);
     out.left_out = left_out;
     out.author_fields_left_out = authored;
