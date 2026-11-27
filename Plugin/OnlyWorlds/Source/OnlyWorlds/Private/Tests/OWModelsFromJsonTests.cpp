@@ -7,8 +7,8 @@
 //   through <Type>FromJson, is the struct Find<Type> gives for it, member for member (UScriptStruct::CompareScriptStruct).
 // - Refused: text that is not JSON, and JSON that is not an object, answer false with the reason and an empty struct.
 // - OnlyWorldsLive.Models.CharacterFromJson: one Moppetopia Character read over its public key (0000000001), its body
-//   as the node's text, broken by CharacterFromJson into the served id and name. Reads production, so it sits outside
-//   the OnlyWorlds prefix the suite runs by default: run it by name (Automation RunTests OnlyWorldsLive).
+//   as the node's text, broken by CharacterFromJson into the served id and name. Reads production. RunTests matches a
+//   substring, so `RunTests OnlyWorlds` runs it too; `RunTests ^OnlyWorlds.` leaves it out.
 //
 // Every helper is in the namespace OWModelsFromJsonTest, never at file scope (C4459, an error here).
 

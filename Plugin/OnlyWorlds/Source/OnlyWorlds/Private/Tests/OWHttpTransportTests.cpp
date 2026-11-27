@@ -2,8 +2,9 @@
 // command) for the one answer, as a game would: FHttpModule completes on the game thread, never inside Send.
 //
 // OnlyWorlds.Client.Transport.* needs no network (a port nothing listens on). OnlyWorldsLive.Client.* reads production
-// (the health pulse, Moppetopia by its public read key 0000000001, the apex address's redirect), so it sits outside the
-// OnlyWorlds prefix the suite runs by default: run it by name (Automation RunTests OnlyWorldsLive).
+// (the health pulse, Moppetopia by its public read key 0000000001, the apex address's redirect). RunTests matches a
+// substring, so `RunTests OnlyWorlds` runs it too; `RunTests ^OnlyWorlds.` leaves it out, `RunTests OnlyWorldsLive`
+// runs it alone.
 
 #include "CoreMinimal.h"
 #include "HAL/PlatformTime.h"

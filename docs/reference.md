@@ -168,6 +168,10 @@ looks for plugins in the subfolders of the folder named), and builds it into `Ho
     -nullrhi -unattended -nosplash -nop4          # exit 0 when every test passed, 255 when one failed
 ```
 
+`RunTests` matches its text anywhere in a test's name, so `OnlyWorlds` also runs the `OnlyWorldsLive.*` tests, which
+read production over Moppetopia's public key and fail offline once their wait runs out. To leave them out, run
+`Automation RunTests ^OnlyWorlds.`; to run only them, `Automation RunTests OnlyWorldsLive`.
+
 The automation tests (`OnlyWorlds.*`):
 
 - `OnlyWorlds.Archive.Conformance.<fixture>`: each of the `.owworld` conformance set's generated fixtures, read
@@ -289,7 +293,7 @@ The automation tests (`OnlyWorlds.*`):
   nodes and their pins. `World`: every element of both worlds, its text (`GetElementJson`, the form the read nodes
   answer) through its node, called as a Blueprint calls it, is the struct `Find<Type>` gives, member for member.
   `Refused`: text that is not JSON and JSON that is not an object answer `false`, the reason and an empty struct; extension
-  keys and a mistyped field still read. `OnlyWorldsLive.Models.CharacterFromJson`, outside the default prefix (it reads
+  keys and a mistyped field still read. `OnlyWorldsLive.Models.CharacterFromJson` (it reads
   production): one Moppetopia Character listed over its public key, its body as a node's text, broken into the served
   id and name.
 - `OnlyWorlds.Frame.MoppetopiaRootMap` needs a renderer (`-RenderOffscreen` instead of `-nullrhi`; a `-nullrhi`
