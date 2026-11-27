@@ -119,10 +119,10 @@ const std::vector<std::string>& OWJoinGlimpse::Keys() {
     return keys;
 }
 const std::vector<std::string>& OWJoinPreview::Keys() {
-    static const std::vector<std::string> keys = {"reader",     "world",       "invited_by", "owner_character",
+    static const std::vector<std::string> keys = {"reader",     "world",          "invited_by", "owner_character",
                                                   "role",       "with_character", "expires_at", "note",
-                                                  "glimpse",    "max_uses",    "uses_left",  "name_required",
-                                                  "characters"};
+                                                  "character_name", "glimpse",    "max_uses",   "uses_left",
+                                                  "name_required",  "characters"};
     return keys;
 }
 const std::vector<std::string>& OWJoined::Keys() {
@@ -189,6 +189,7 @@ OWJoinPreview OWJoin::PreviewOf(const OWJsonValue& v) {
     p.with_character = with && with->IsBool() && with->AsBool();
     p.expires_at = Str(v, "expires_at");
     p.note = Maybe(v, "note");
+    p.character_name = Maybe(v, "character_name");
     p.glimpse = GlimpseOf(v.Find("glimpse"));
     p.max_uses = Whole(v.Find("max_uses"));
     p.uses_left = Whole(v.Find("uses_left"));
