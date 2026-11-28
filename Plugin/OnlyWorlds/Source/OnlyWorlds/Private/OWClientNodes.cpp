@@ -166,7 +166,8 @@ namespace
 		Out.element = Utf8(Q.Element);
 		if (Q.Limit > 0) Out.limit = Q.Limit;
 		Out.cursor = Utf8(Q.Cursor);
-		Out.if_none_match = Utf8(Q.IfNoneMatch);
+		// "" is no tag on a graph, which has no absent string: none is sent.
+		if (!Q.IfNoneMatch.IsEmpty()) Out.if_none_match = Utf8(Q.IfNoneMatch);
 		return Out;
 	}
 

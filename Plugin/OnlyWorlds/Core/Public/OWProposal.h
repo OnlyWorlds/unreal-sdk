@@ -100,7 +100,8 @@ struct OW_API OWProposalPage {
     bool has_more = false;
     std::string next_cursor;  // "" when there is none
     // The ETag keel sent with this answer, exactly as received (W/ and quotes included), to send back as
-    // OWProposalQuery::if_none_match; absent when keel sent none. Never on the wire's body.
+    // OWProposalQuery::if_none_match; absent when keel sent none. On an unchanged answer, the 304's own tag, else the
+    // one sent: still the list's tag. Never on the wire's body.
     std::optional<std::string> etag;
     // keel answered 304 to the tag sent: nothing in the list moved, and `data` is empty (keep what you showed). False on
     // every 200. Never on the wire's body.
@@ -154,9 +155,12 @@ struct OWProposalQuery {
     // A page's next_cursor, passed back as is.
     std::string cursor;
     // The conditional poll: a tag a list answered (OWProposalPage::etag), sent as If-None-Match exactly as given, never
-    // compared here. When nothing moved keel answers 304, which this answers as OWProposalPage::unchanged with no rows.
-    // "" sends none, and a 304 to a call that sent none is an error. The client keeps no tag: the caller holds it.
-    std::string if_none_match;
+    // compared here. keel's tag covers the key's whole visible list, whatever the other members ask, so one tag serves
+    // every query on the list. When nothing moved keel answers 304 (refunded against the request budget), which this
+    // answers as OWProposalPage::unchanged with no rows. Absent sends none, and a 304 to a call that sent none is an
+    // error of kind Api, status 304; "" is no tag and is refused, nothing sent. The client keeps no tag: the caller holds
+    // it. Mirrors the TypeScript SDK's `ifNoneMatch` (4.221.0).
+    std::optional<std::string> if_none_match;
 };
 
 }  // namespace OnlyWorlds

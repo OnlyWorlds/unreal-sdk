@@ -1186,27 +1186,42 @@ Query ProposalQueryOf(const OWProposalQuery& q, int64_t page_size) {
     return out;
 }
 
-// A list's request: the query's tag sent as If-None-Match exactly as given, and a 304 read as an answer only when a tag
-// was sent (else it is the non-2xx it is: an error of kind Api, status 304).
+// A list's request: the query's tag sent as If-None-Match exactly as given, and a 304 read by the answer (PageAnswer).
 How ListHow(const OWProposalQuery& q) {
     How how;
-    how.if_none_match = q.if_none_match;
-    how.not_modified = !q.if_none_match.empty();
+    how.if_none_match = q.if_none_match.value_or("");
+    how.not_modified = true;
     return how;
 }
 
-// A list's answer: {data, has_more, next_cursor} read into rows, the ETag beside it; a 304 to a tagged call is
-// unchanged, with no rows.
-OWHandler<OWJsonValue> PageAnswer(std::string route, OWHandler<OWProposalPage> done) {
-    return [route, done](OWReply<OWJsonValue> raw) {
+// "" when the query's tag may be sent; else the refusal, in the TypeScript SDK's words (4.221.0): a tag given is the
+// etag of an earlier read, never empty.
+std::string TagWhy(const char* call, const OWProposalQuery& q) {
+    if (!q.if_none_match || !q.if_none_match->empty()) return "";
+    return std::string(call) + ": if_none_match is the etag of an earlier read, a non-empty string; got \"\"." +
+           NothingSent;
+}
+
+// A list's answer, as the TypeScript SDK's taggedList (4.221.0) reads it: {data, has_more, next_cursor} read into rows,
+// the ETag beside it (absent when none came); a 304 to a call that sent `tag` is unchanged, with no rows, its etag the
+// 304's own or else the tag sent; a 304 to a call that sent none is an error, never a page.
+OWHandler<OWJsonValue> PageAnswer(std::string route, std::string tag, OWHandler<OWProposalPage> done) {
+    return [route, tag, done](OWReply<OWJsonValue> raw) {
         std::optional<std::string> etag;
         if (raw.response)
-            if (const std::string* tag = raw.response->Header("ETag")) etag = *tag;
+            if (const std::string* sent = raw.response->Header("ETag")) etag = *sent;
         if (raw.Ok() && raw.response && raw.response->status == 304) {
             OWReply<OWProposalPage> r;
             r.response = std::move(raw.response);
+            if (tag.empty()) {
+                r.error = OWApiError::Of(OWApiError::Kind::Api,
+                                         route + " answered 304 Not Modified to a read that sent no If-None-Match: there "
+                                                 "is no list to return",
+                                         304, r.response->body);
+                return done(std::move(r));
+            }
             r.value.unchanged = true;
-            r.value.etag = etag;
+            r.value.etag = etag ? *etag : tag;
             return done(std::move(r));
         }
         OWReply<OWProposalPage> r =
@@ -1357,17 +1372,21 @@ void OWClient::ListProposals(const std::string& type, const std::string& id, con
         return Refuse(done, std::string("ListProposals: element filters the world's queue (WorldProposals); one "
                                         "element's list is already one element's.") + NothingSent);
     }
-    std::string why;
+    std::string why = TagWhy("ListProposals", query);
+    if (!why.empty()) return Refuse(done, why);
     std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/proposals";
     if (!why.empty()) return Refuse(done, why);
     Request(state_, "GET", path, ProposalQueryOf(query, state_->page_size), ListHow(query),
-            PageAnswer("GET " + path, std::move(done)));
+            PageAnswer("GET " + path, query.if_none_match.value_or(""), std::move(done)));
 }
 
 void OWClient::WorldProposals(const OWProposalQuery& query, OWHandler<OWProposalPage> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    const std::string why = TagWhy("WorldProposals", query);
+    if (!why.empty()) return Refuse(done, why);
     std::string path = "/world/proposals";
     Request(state_, "GET", path, ProposalQueryOf(query, state_->page_size), ListHow(query),
-            PageAnswer("GET " + path, std::move(done)));
+            PageAnswer("GET " + path, query.if_none_match.value_or(""), std::move(done)));
 }
 
 void OWClient::AcceptProposal(const std::string& type, const std::string& id, const std::string& pid,

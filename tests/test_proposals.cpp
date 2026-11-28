@@ -947,18 +947,99 @@ OW_TEST(proposals_a_304_to_a_tagged_call_is_unchanged_with_no_rows) {
         t.Eq(Str(g.reply.value.etag), tag, label + ": the 304's own ETag");
         t.Ok(g.reply.response && g.reply.response->status == 304, label + ": the response kept");
         run(bare);
-        t.Ok(bare.reply.Ok() && bare.reply.value.unchanged && !bare.reply.value.etag, label + ": a 304 with no ETag: none (" + bare.Why() + ")");
+        // A 304 that carries no ETag answers the tag sent: still the list's tag (the TypeScript SDK 4.221.0's rule).
+        t.Ok(bare.reply.Ok() && bare.reply.value.unchanged, label + ": a 304 with no ETag: unchanged (" + bare.Why() + ")");
+        t.Eq(Str(bare.reply.value.etag), tag, label + ": a 304 with no ETag answers the tag sent");
     }
 }
 
 OW_TEST(proposals_a_304_to_a_call_that_sent_no_tag_is_an_error) {
     for (bool queue : {true, false}) {
         auto fake = Fake(304, "");
+        fake->headers = {{"ETag", "W/\"t\""}};
         Got<OWProposalPage> g;
         if (queue) Make(fake).WorldProposals({}, g.H());
         else Make(fake).ListProposals("location", El, {}, g.H());
-        t.Ok(g.reply.error && g.reply.error->kind == OWApiError::Kind::Api && g.reply.error->status == 304,
-             std::string(queue ? "the queue" : "an element's list") + ": " + g.Why());
+        const std::string label = queue ? "the queue" : "an element's list";
+        t.Ok(g.reply.error && g.reply.error->kind == OWApiError::Kind::Api && g.reply.error->status == 304, label + ": " + g.Why());
         t.Ok(!g.reply.value.unchanged, "never unchanged");
+        if (g.reply.error)
+            t.Eq(g.reply.error->message,
+                 std::string("GET ") + (queue ? "/world/proposals" : "/location/" + El + "/proposals") +
+                     " answered 304 Not Modified to a read that sent no If-None-Match: there is no list to return",
+                 label + ": the TypeScript SDK's words");
     }
+}
+
+// -- the TypeScript SDK 4.221.0's vector (test/proposals.test.mjs), ported --------------------------------------------
+
+OW_TEST(proposals_a_conditional_poll_of_either_list_the_200_hands_back_the_tag_the_same_tag_answers_unchanged) {
+    const std::string tag = "W/\"2026-11-28T04:38:17.066832Z:1:0\"";
+    const std::string list = Page(Proposal, ",\"has_more\":true,\"next_cursor\":\"c2\"");
+    for (bool queue : {false, true}) {
+        const std::string label = queue ? "worldProposals" : "listProposals";
+        // keel's rule as measured on production: 304 to its own tag, 200 to any other. Scripted in the order sent.
+        auto fake = Fake();
+        fake->Then(200, list, {{"ETag", tag}});
+        fake->Then(304, "", {{"ETag", tag}});
+        fake->Then(200, list, {{"ETag", tag}});
+        OWClient c = Make(fake);
+        auto read = [&](const OWProposalQuery& q, Got<OWProposalPage>& into) {
+            if (queue) c.WorldProposals(q, into.H());
+            else c.ListProposals("location", El, q, into.H());
+        };
+        OWProposalQuery open;
+        open.state = "open";
+        Got<OWProposalPage> first, again, moved;
+        read(open, first);
+        t.Ok(first.reply.Ok() && first.reply.value.data.size() == 1 && first.reply.value.has_more &&
+                 first.reply.value.next_cursor == "c2",
+             label + ": the page as keel sends it (" + first.Why() + ")");
+        t.Eq(Str(first.reply.value.etag), tag, label + ": its etag");
+        t.Ok(!first.reply.value.unchanged, label + ": unchanged false");
+        t.Ok(fake->calls.size() == 1 && !fake->calls[0].Header("If-None-Match"), label + ": no If-None-Match on the first read");
+        OWProposalQuery all;
+        all.state = "all";
+        all.if_none_match = *first.reply.value.etag;
+        read(all, again);
+        t.Ok(again.reply.Ok() && again.reply.value.unchanged && again.reply.value.data.empty(), label + ": unchanged, no rows");
+        t.Eq(Str(again.reply.value.etag), tag, label + ": the tag");
+        if (fake->calls.size() == 2) {
+            t.Eq(HeaderOr(fake->calls[1], "If-None-Match"), tag, label + ": sent exactly as it came, W/ and quotes");
+            t.Ok(fake->calls[1].url.find("ifNoneMatch") == std::string::npos && fake->calls[1].url.find("if_none_match") == std::string::npos,
+                 label + ": the tag is no query parameter");
+        }
+        OWProposalQuery older;
+        older.if_none_match = "W/\"older\"";
+        read(older, moved);
+        t.Ok(moved.reply.Ok() && !moved.reply.value.unchanged, label + ": another tag reads the list (" + moved.Why() + ")");
+        t.Eq(moved.reply.value.data.size(), size_t{1}, label + ": its rows");
+    }
+}
+
+OW_TEST(proposals_a_conditional_poll_refuses_a_tag_that_is_not_one_and_a_304_nobody_asked_for_is_an_error) {
+    // The TypeScript SDK's second case. Of its three tags that are not one ("", 5, null), "" has a form here: a tag
+    // given as the empty string, refused before sending on both lists. A number or a null cannot be given: the tag is
+    // a std::string, absent for none.
+    for (bool queue : {true, false}) {
+        auto fake = Fake(200, Page(Proposal));
+        OWProposalQuery empty;
+        empty.if_none_match = "";
+        Got<OWProposalPage> g;
+        if (queue) Make(fake).WorldProposals(empty, g.H());
+        else Make(fake).ListProposals("location", El, empty, g.H());
+        const std::string name = queue ? "WorldProposals" : "ListProposals";
+        t.Ok(g.Refused(), name + ": refused (" + g.Why() + ")");
+        if (g.reply.error)
+            t.Eq(g.reply.error->message,
+                 name + ": if_none_match is the etag of an earlier read, a non-empty string; got \"\". Nothing was sent.",
+                 name + ": the TypeScript SDK's words");
+        t.Eq(fake->calls.size(), size_t{0}, name + ": nothing sent");
+    }
+    auto fake = Fake(304, "");
+    fake->headers = {{"ETag", "W/\"t\""}};
+    Got<OWProposalPage> g;
+    Make(fake).WorldProposals({}, g.H());
+    t.Ok(g.reply.error && g.reply.error->kind == OWApiError::Kind::Api && g.reply.error->status == 304, g.Why());
+    t.Ok(g.reply.error && g.reply.error->message.find("sent no If-None-Match") != std::string::npos, g.Why());
 }

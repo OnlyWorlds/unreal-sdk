@@ -390,6 +390,7 @@ bool FOWClientProposalNodesAnswersTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("its ETag"), Run->Probe->Page.ETag, FString(TEXT("W/\"2026-10-22:1:0\"")));
 		auto List = OWP::Launch(&OWP::MakeList, OWP::WriterConfig(), OWP::Respond(304, ""));
 		TestTrue(TEXT("an element's list: bUnchanged"), List->Probe->Successes == 1 && List->Probe->Page.bUnchanged);
+		TestEqual(TEXT("a 304 with no ETag: the tag sent"), List->Probe->Page.ETag, FString(TEXT("W/\"2026-10-22:1:0\"")));
 	}
 	// The review's answer as a write's: the element kept, or nothing after a decline.
 	{

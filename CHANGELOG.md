@@ -36,8 +36,11 @@ the detail a maintainer needs; the history before this file is in the git log.
   SDK's.
 - **The proposal lists poll cheaply.** Pass the `ETag` a list answered as the next call's `if_none_match`
   (`IfNoneMatch` on Blueprints), sent exactly as it came: when nothing moved the server answers 304, which reads as
-  `unchanged` (`bUnchanged`) with no rows, refunded against the request budget. The client keeps no tag of its own;
-  a 304 to a call that sent none is an error.
+  `unchanged` (`bUnchanged`) with no rows, refunded against the request budget; its `etag` is the 304's own, else
+  the tag sent. The client keeps no tag of its own; a 304 to a call that sent none is an error (`GET /world/proposals
+  answered 304 Not Modified to a read that sent no If-None-Match: there is no list to return`), and a tag given as
+  the empty string is refused before sending (`if_none_match` is absent for none; on Blueprints `IfNoneMatch` `""`
+  sends none). Parity with the TypeScript SDK 4.221.0, its two poll cases ported.
 
 ### Fixed
 

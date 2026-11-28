@@ -509,7 +509,7 @@ struct ONLYWORLDS_API FOWProposalPage
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
 	FString NextCursor;
 
-	/** The tag this answer carried, exactly as received: keep it and send it as the next poll's IfNoneMatch. "" when keel sent none. */
+	/** The tag this answer carried, exactly as received: keep it and send it as the next poll's IfNoneMatch. "" when keel sent none; on an unchanged answer, the 304's own tag, else the one sent. */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
 	FString ETag;
 
