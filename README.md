@@ -168,14 +168,17 @@ since a `.owworld` is a file handed on (in C++, `include_author_fields` keeps th
 carries a small example world, Hyperion, at `codegen/schema-dist/example/hyperion`.
 
 **A player link** (`https://www.onlyworlds.com/join#ow_j_…`, made by a world's owner for one Character) needs no
-account: `OnlyWorlds::OWJoin::ParseLink` and `Redeem` turn it into that player's read key (in C++ only, for now).
+account: on Blueprints, **Parse Join Link** reads its code, **PreviewJoin** shows what it opens (the world, who
+invites, at a table the Characters to pick from) and **RedeemJoin** turns it into that player's read key, which it
+hands over once (keep it in your own save); in C++, `OnlyWorlds::OWJoin::ParseLink`, `Preview` and `Redeem`. A
+person's link is **AcceptJoin** on an account token.
 
 ## What's in it
 
 | Part | Where | What it does |
 |---|---|---|
 | **Core** | `Plugin/OnlyWorlds/Core/` | Plain C++17 with zlib and no Unreal header: the API client (`OWClient`, with proposed changes in `OWProposal`, images and files on elements in `OWMedia`, and `OWJoin`), a world held and kept current from the change feed (`OWWorldCache`, `OWSync`), world folders and `.owworld` files (`OWWorld`, `OWWorldArchive`, `OWJson`), and readers over a world it holds, with no request of their own (`OWLens`, `OWGraph`, `OWLanding`, `OWMapSpace`, `OWCharter`, `OWStrand`, `OWRecord`, `OWReport`, `OWMessage`, `OWNames`, `OWCalendar`, `OWAddress`, `OWNameFinder`, `OWOpeners`, `OWViews`: what one reader may see of a world, the world as nodes and edges, its maps as points and outlines, its calendar, in-world messages, element names found in prose, how an element is shown and more). It does all the work and is tested on its own. |
-| **Blueprints** | `Plugin/OnlyWorlds/Source/OnlyWorlds/` | The Runtime module: the core compiled in place, with UObject at the edges. `UOWLibrary` and `UOWWorld` (open, read, edit, write back, pack), one `USTRUCT` per element type with `UOWElements` to find them, async nodes for the API's reads, element writes, proposed changes (propose, list, poll the queue, accept, decline, withdraw) and images and files (upload a picture for an element's `image_url`, attach a file to an element from bytes or a path on disk, list, link, remove), a world held and kept current (`UOWWorldCache`, with `SyncWorld`, `BaselineWorld` and `HasWorldChanges`; its tip reads keep their ETag between polls), and Blueprint libraries over most of the readers, a world's maps and its layouts among them (`UOWMapSpace`, `UOWLayout`), and how an element is shown (`UOWViews`). `FOWHttpTransport` is the client's transport on Unreal's HTTP. |
+| **Blueprints** | `Plugin/OnlyWorlds/Source/OnlyWorlds/` | The Runtime module: the core compiled in place, with UObject at the edges. `UOWLibrary` and `UOWWorld` (open, read, edit, write back, pack), one `USTRUCT` per element type with `UOWElements` to find them, async nodes for the API's reads, element writes, proposed changes (propose, list, poll the queue, accept, decline, withdraw), images and files (upload a picture for an element's `image_url`, attach a file to an element from bytes or a path on disk, list, link, remove), and joining by invite link (read a pasted link's code, preview what it opens, redeem a player's or an agent's code, accept a person's on an account token), a world held and kept current (`UOWWorldCache`, with `SyncWorld`, `BaselineWorld` and `HasWorldChanges`; its tip reads keep their ETag between polls), and Blueprint libraries over most of the readers, a world's maps and its layouts among them (`UOWMapSpace`, `UOWLayout`), and how an element is shown (`UOWViews`). `FOWHttpTransport` is the client's transport on Unreal's HTTP. |
 
 Every call, with what it answers and what it refuses, and what is not built yet:
 [docs/reference.md](docs/reference.md).

@@ -576,6 +576,13 @@ public:
 protected:
 	/** The client, built from Settings, and the node kept; nullptr when it was activated before (it answers once). */
 	OnlyWorlds::OWClient* Begin();
+
+	/**
+	 * For the calls sent with no key and no client (the join's PreviewJoin and RedeemJoin, OWJoinNodes.h): the node kept
+	 * as Begin keeps it, and the transport to send through (SetTransport's, else FOWHttpTransport); nullptr when it was
+	 * activated before.
+	 */
+	std::shared_ptr<OnlyWorlds::OWTransport> BeginKeyless();
 	/** True the first time it is asked: the node answers once. */
 	bool Answering();
 	/** Lets the node go: out of the root set, ready to be collected. */

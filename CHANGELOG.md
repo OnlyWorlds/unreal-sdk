@@ -17,6 +17,21 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- **Joining by invite link on Blueprints** (`OWJoinNodes.h`). A player pastes a link and lands seated in the world
+  with a key of their own, from a graph: **Parse Join Link** (`UOWJoin::ParseJoinLink`, pure) reads the code out of
+  the pasted text; **PreviewJoin** shows what the code opens before anyone says yes (the world, who invites, the role,
+  a person link's note, a glimpse, and at a table the places left and the Characters to pick from, `FOWJoinPreview`);
+  **RedeemJoin** turns a player's or an AI agent's code into its key (`FOWJoined`: a player's read key and the
+  Character it reads as, or an agent seat's key, secret, seat, front door and reading aids); **AcceptJoin** takes a
+  person's link on an account token (`FOWJoinedMembership`). The core's `OWJoin` and `OWClient::AcceptJoin` do the
+  work, as in C++ until now. The key is handed over once, on `OnSuccess`: the nodes log nothing, `FOWJoined` leaves
+  out the core's `env` and `served` (each holds the key again), and an error from RedeemJoin or AcceptJoin carries
+  no body (`RawBody` is `""`, its message says the body was withheld), since a body may hold the key.
+- `UOWClientNode::BeginKeyless`, protected: a node's start for a call sent with no key and no client (the join's
+  preview and redeem), through the node's transport.
+
 ## [0.14.0] - 2026-11-28
 
 A game can set an element's image and attach files to it: a portrait, a screenshot, a save. The ten image and
