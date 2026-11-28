@@ -40,6 +40,42 @@ struct ONLYWORLDS_API FOWArchiveVerdict
 	FString WorldId;
 };
 
+/** What a reader made of the one-file world export onlyworlds.com hands an owner ("Export world"). */
+USTRUCT(BlueprintType)
+struct ONLYWORLDS_API FOWExportVerdict
+{
+	GENERATED_BODY()
+
+	/** True when the file is a world export and its world was read. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
+	bool bAccepted = false;
+
+	/**
+	 * A refusal's one cause: "no_file", "not_json" (not JSON, or JSON but no object), "too_deep" (nested past 200,
+	 * counted from the file's top), "not_an_export" (a format other than onlyworlds-world-export) or "no_world_id".
+	 * "" when accepted. Read this, never the message.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
+	FString Reason;
+
+	/** What was found, in words. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
+	FString Message;
+
+	/** The world's id, when accepted. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
+	FString WorldId;
+
+	/** The version of the OnlyWorlds standard the elements follow ("00.34.01"), as the file says it: information,
+	 * never checked. "" when the file gives none. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
+	FString SchemaVersion;
+
+	/** When the owner downloaded it (ISO 8601), as the file says it; "" when it gives none. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds")
+	FString ExportedAt;
+};
+
 UCLASS()
 class ONLYWORLDS_API UOWLibrary : public UBlueprintFunctionLibrary
 {
@@ -58,6 +94,16 @@ public:
 	/** Open an .owworld file. nullptr when a reader refuses it; the verdict says why. */
 	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds")
 	static UOWWorld* OpenWorldFile(const FString& Path, FOWArchiveVerdict& Verdict);
+
+	/**
+	 * Open the one-file world export onlyworlds.com hands an owner from their world's page (a .json file whose format
+	 * is onlyworlds-world-export). A relative path is taken from the project's folder. The world opens as a world folder
+	 * does, local and with no folder (GetRoot is ""): an element with no id, in a group that is no type, or whose id
+	 * another element holds is skipped and named in GetErrors; WriteFolder writes it as a world folder. nullptr when
+	 * the file is refused; the verdict says why.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds")
+	static UOWWorld* OpenWorldExport(const FString& Path, FOWExportVerdict& Verdict);
 
 	/** Hold an .owworld file to the reader rules without keeping the world. */
 	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds")

@@ -144,6 +144,9 @@ private:
     // Each new element with an id, by its index, and the path section 3.2 gives it ("" when both its names are held).
     std::vector<std::pair<size_t, std::string>> NewPaths() const;
     void AssignPaths();
+
+    // OWWorldExport's reader, which holds each body it reads as read: no file, not edited (OWWorldExport.cpp).
+    friend struct OWExportBuilder;
 };
 
 }  // namespace OnlyWorlds

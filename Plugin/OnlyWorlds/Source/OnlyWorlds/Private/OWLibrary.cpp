@@ -4,6 +4,7 @@
 #include "OWLog.h"
 #include "OWWorld.h"
 #include "OWWorldArchive.h"
+#include "OWWorldExport.h"
 #include "OWWorldObject.h"
 #include "UObject/Package.h"
 
@@ -57,6 +58,24 @@ UOWWorld* UOWLibrary::OpenWorldFile(const FString& Path, FOWArchiveVerdict& Verd
 	}
 	std::unique_ptr<OnlyWorlds::OWWorld> World = OnlyWorlds::OWWorld::FromFiles(R.files);
 	return World ? Wrap(std::move(World)) : nullptr;  // never null after an accepted read: the archive refuses first
+}
+
+UOWWorld* UOWLibrary::OpenWorldExport(const FString& Path, FOWExportVerdict& Verdict)
+{
+	OnlyWorlds::OWExportRead R = OnlyWorlds::OWWorldExport::ReadFile(OWConvert::Path(Path));
+	Verdict = FOWExportVerdict();
+	Verdict.bAccepted = R.ok;
+	Verdict.Reason = Str(R.reason);
+	Verdict.Message = Str(R.message);
+	Verdict.WorldId = Str(R.world_id);
+	Verdict.SchemaVersion = Str(R.schema_version);
+	Verdict.ExportedAt = Str(R.exported_at);
+	if (!R.ok || !R.world)
+	{
+		UE_LOG(LogOnlyWorlds, Log, TEXT("OpenWorldExport: %s refused (%s: %s)"), *Path, *Verdict.Reason, *Verdict.Message);
+		return nullptr;
+	}
+	return Wrap(std::move(R.world));
 }
 
 FOWArchiveVerdict UOWLibrary::CheckWorldFile(const FString& Path)
