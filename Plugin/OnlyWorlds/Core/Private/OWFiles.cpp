@@ -106,6 +106,13 @@ bool RemoveTree(const std::string& dir) {
     return !fs::exists(P(dir), ec);
 }
 
+bool Move(const std::string& from, const std::string& to) {
+    std::error_code ec;
+    if (fs::exists(P(to), ec)) return false;
+    fs::rename(P(from), P(to), ec);
+    return !ec;
+}
+
 std::string Absolute(const std::string& path) {
     std::error_code ec;
     fs::path p = fs::absolute(P(path), ec).lexically_normal();

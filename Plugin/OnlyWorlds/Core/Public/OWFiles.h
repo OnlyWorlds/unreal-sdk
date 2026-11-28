@@ -26,6 +26,8 @@ OW_API bool IsDir(const std::string& path);
 OW_API std::vector<std::string> List(const std::string& dir, bool dirs);
 // Remove a folder and everything in it (a scratch folder); true when nothing is left.
 OW_API bool RemoveTree(const std::string& dir);
+// Move (rename) a file or a folder to a path that is not there; true when it moved. On one volume only.
+OW_API bool Move(const std::string& from, const std::string& to);
 // The path as an absolute, normalised one with '/' separators.
 OW_API std::string Absolute(const std::string& path);
 // The last segment of a path ("abbey" for "C:/worlds/abbey/").
