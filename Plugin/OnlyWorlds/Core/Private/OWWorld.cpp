@@ -351,6 +351,34 @@ std::string OWWorld::ElementFilename(const std::string& id, const std::string& n
     return slug + "--" + (full_id ? id : IdTail(id)) + ".json";
 }
 
+namespace {
+
+// Why a new element's id cannot name its file, or "" (folder spec section 3.2): a file name is made from an id only when
+// the id is one non-empty segment (no '/', no '\', not "." or "..") and the name passes the archive's own name checks
+// (OWWorldArchive::PathFault and NameFault, section 4.7's OW-16 and OW-22: no drive, no colon or other character Windows
+// refuses, no control character, no device name). The short name and the full-id form are both asked, whatever the name,
+// since the collision rule may take the full id at any time. In the TypeScript and Python packages' words.
+std::string IdRefusal(const OWElement& e) {
+    const std::string id = e.Id(), type = e.folder_type;
+    std::string why;
+    if (id.empty()) why = "it is empty";
+    else if (id.find_first_of("/\\") != std::string::npos) why = "it holds a path separator, / or \\";
+    else if (id == "." || id == "..") why = "it is . or ..";
+    else {
+        for (bool full : {false, true}) {
+            std::string file = OWWorld::ElementFilename(id, e.Name(), full);
+            std::string fault = OWWorldArchive::PathFault(file);
+            if (fault.empty()) fault = OWWorldArchive::NameFault(file);
+            if (fault.empty()) continue;
+            why = "its file name " + OWJson::Quote(file) + " " + fault;
+            break;
+        }
+    }
+    return why.empty() ? why : type + " element id " + OWJson::Quote(id) + " cannot be a file name: " + why + ".";
+}
+
+}  // namespace
+
 std::vector<std::pair<size_t, std::string>> OWWorld::NewPaths() const {
     std::vector<size_t> fresh;
     std::unordered_set<std::string> taken;  // case-folded as ASCII: on NTFS and APFS two spellings are one file
@@ -367,7 +395,8 @@ std::vector<std::pair<size_t, std::string>> OWWorld::NewPaths() const {
         const OWElement& e = elements[i];
         std::string id = e.Id();
         if (id.empty()) continue;  // WriteRefusal names it
-        if (!IsTypeFolder("elements", e.folder_type)) {  // no folder a reader reads: no path, no name taken from a sibling
+        // No folder a reader reads, or an id that names no file in it: no path, and no name taken from a sibling.
+        if (!IsTypeFolder("elements", e.folder_type) || !IdRefusal(e).empty()) {
             out.emplace_back(i, std::string());
             continue;
         }
@@ -427,6 +456,10 @@ std::string OWWorld::WriteRefusal(bool only_edited) const {
                    "slugs as the standard spells them (" + words + "): a reader reads no other type folder, so nothing is "
                    "written";
         }
+        // A new element's file name is made from its id: one that cannot be one file name in its type folder is refused,
+        // whatever its name (IdRefusal; NewPaths gives it no path, so it stays new after ToFiles).
+        if (e.source_path.empty())
+            if (std::string why = IdRefusal(e); !why.empty()) return why;
     }
     for (const auto& [i, path] : NewPaths()) {
         if (!path.empty()) continue;
@@ -454,6 +487,16 @@ bool OWWorld::WriteFolder(const std::string& path, bool only_edited, std::string
     if (std::string why = TypeFolderFault(path, rels); !why.empty()) {
         if (error) *error = "nothing written to the world folder " + path + ": " + why;
         return false;
+    }
+    // The second guard, whatever made a name: every file's resolved path lies inside the folder written.
+    const std::string inside = OWFiles::Absolute(path) + "/";
+    for (const auto& kv : files) {
+        if (OWFiles::Absolute(path + "/" + kv.first).rfind(inside, 0) != 0) {
+            if (error)
+                *error = "nothing written to the world folder " + path + ": the file " + OWJson::Quote(kv.first) +
+                         " would not lie inside it";
+            return false;
+        }
     }
     std::unordered_set<std::string> made;  // each folder made once, not once per file
     for (const auto& kv : files) {

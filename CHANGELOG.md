@@ -39,6 +39,20 @@ the detail a maintainer needs; the history before this file is in the git log.
   suite and through the plugin. To hold a download in an `OWWorldCache` is not offered: the file carries no change-feed
   cursor to resume a sync from; open it and read it through `UOWElements`.
 
+### Fixed
+
+- **A world folder write refuses an element id that cannot be one file name inside the folder** (empty, `/`, `\`, a
+  colon, a control character, `.` or `..`), before writing anything. A new element's id must be one non-empty
+  segment, and the file name made from it, short or with the full id, must pass the archive's own name checks
+  (`OWWorldArchive::PathFault` and `NameFault`, folder spec §4.7's OW-16 and OW-22, so a drive, a character Windows
+  refuses or a device name is refused too). `OWWorld::WriteRefusal` names the type, the id and why, in the words of
+  the TypeScript and Python packages (`character element id "a/b" cannot be a file name: it holds a path separator,
+  / or \.`); `WriteFolder` returns false with that line and `Pack` is not ok, on Blueprints too, a world opened from
+  the onlyworlds.com download included. Such an element takes no path in `ToFiles`. A UUID and an id such as `c-1`
+  are written as before.
+- **`WriteFolder` holds every resolved path inside the folder**, whatever made the name, and writes nothing when one
+  would leave it (the error names the file).
+
 ## [0.15.0] - 2026-11-28
 
 A Blueprint game can let a player join a world by an invite link: read the link, show what it opens, redeem it
