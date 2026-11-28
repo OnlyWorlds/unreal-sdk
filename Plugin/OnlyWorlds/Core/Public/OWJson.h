@@ -35,7 +35,8 @@ public:
     // A number from its JSON text, which must be a valid JSON number (not checked).
     static OWJsonValue NumberText(std::string text);
     static OWJsonValue Number(int64_t n);
-    // NaN and the infinities have no JSON form: they become null, as JSON.stringify writes them.
+    // NaN and the infinities have no JSON form: they become null, as JSON.stringify writes them, a null that remembers
+    // the number (NonFinite). OWClient refuses a request body that holds one, before sending.
     static OWJsonValue Number(double d);
     static OWJsonValue Array();
     static OWJsonValue Object();
@@ -53,6 +54,10 @@ public:
     const std::string& Text() const { return text_; }
     // A number as a double (0 when it is not a number).
     double AsDouble() const;
+    // The NaN or infinity a null was made from by Number(double): "NaN", "Infinity" or "-Infinity", as JavaScript's
+    // String(value) spells it; nullptr for every other value, a parsed null included. Equality and every writer read
+    // such a value as the null it is.
+    const char* NonFinite() const;
 
     // Array items, or an object's values (in key order).
     const std::vector<OWJsonValue>& Items() const { return items_; }
@@ -78,6 +83,7 @@ public:
 private:
     Kind kind_ = Kind::Null;
     bool bool_ = false;
+    uint8_t non_finite_ = 0;  // a null's number: 1 NaN, 2 Infinity, 3 -Infinity (Number(double) alone sets it)
     std::string text_;
     std::vector<std::string> keys_;
     std::vector<OWJsonValue> items_;
