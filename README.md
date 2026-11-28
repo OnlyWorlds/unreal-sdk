@@ -28,7 +28,7 @@ project becomes one with its first C++ class (**Tools → New C++ Class**).
 
 1. Put the plugin in the `Plugins` folder of your project's directory (beside the `.uproject`; make it if there is
    none), one of two ways:
-   - **The release zip**: `onlyworlds-unreal-0.16.0.zip`, from this repository's
+   - **The release zip**: `onlyworlds-unreal-0.16.1.zip`, from this repository's
      [Releases](https://github.com/OnlyWorlds/unreal-sdk/releases) page. It holds one folder, `OnlyWorlds/`: unpack
      it into `Plugins/`, so the plugin is at `Plugins/OnlyWorlds/OnlyWorlds.uplugin`.
    - **A clone** of this repository: copy its `Plugin/OnlyWorlds/` folder into your project as `Plugins/OnlyWorlds/`.
