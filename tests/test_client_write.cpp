@@ -1103,7 +1103,7 @@ OW_TEST(client_write_a_value_keel_would_store_as_another_is_refused_before_sendi
     };
     // Each one keel takes with a 200 and stores as something else (measured on production 2026-11-28). The core has no
     // propose, so the TypeScript SDK's sixth case has no route here.
-    Got<OWJsonValue> a, b, d, e, f, g;
+    Got<OWJsonValue> a, b, d, e, f;
     c.Create("character", Obj({{"name", OWJsonValue::String("K")}, {"height", OWJsonValue::Number(2.5)}}), {}, a.H());
     starts(a, "create: character.height is an integer field; 2.5 would be stored as another value");
     c.Upsert("character", NonFiniteId, Obj({{"name", OWJsonValue::String("K")}, {"height", OWJsonValue::String("7")}}), b.H());
@@ -1118,13 +1118,20 @@ OW_TEST(client_write_a_value_keel_would_store_as_another_is_refused_before_sendi
             {"character", Obj({{"name", OWJsonValue::String("L")}, {"supertype", OWJsonValue::Number(int64_t{12})}})}},
            {}, bulk.H());
     starts(bulk, "bulk: items[1]: character.supertype is a text field; 12 is not a string");
-    // Beyond the TypeScript SDK's: the generic link's type key is text; a NaN in an integer field is the kind's
-    // refusal, named as JSON.stringify names it (null).
+    // A number that is not finite is named by its own name, never the null JSON writes in its place (4.220.2): the
+    // kind's refusal, before the body's own NaN refusal.
+    const double inf = std::numeric_limits<double>::infinity();
+    Got<OWJsonValue> nan1, ninf, pinf;
+    c.Create("character", Obj({{"name", OWJsonValue::String("K")}, {"height", OWJsonValue::Number(std::numeric_limits<double>::quiet_NaN())}}),
+             {}, nan1.H());
+    starts(nan1, "create: character.height is an integer field; NaN would be stored");
+    c.Patch("character", NonFiniteId, Obj({{"height", OWJsonValue::Number(-inf)}}), {}, ninf.H());
+    starts(ninf, "patch: character.height is an integer field; -Infinity would be stored");
+    c.Patch("character", NonFiniteId, Obj({{"supertype", OWJsonValue::Number(inf)}}), {}, pinf.H());
+    starts(pinf, "patch: character.supertype is a text field; Infinity is not a string");
+    // Beyond the TypeScript SDK's: the generic link's type key is text.
     c.Patch("pin", NonFiniteId, Obj({{"element_type", OWJsonValue::Number(int64_t{12})}}), {}, f.H());
     starts(f, "patch: pin.element_type is a text field; 12 is not a string");
-    c.Patch("character", NonFiniteId, Obj({{"height", OWJsonValue::Number(std::numeric_limits<double>::quiet_NaN())}}), {},
-            g.H());
-    starts(g, "patch: character.height is an integer field; null would be stored as another value");
     t.Eq(fake->calls.size(), size_t{0}, "nothing sent");
 
     // What it lets through: a whole number (2.0 is one, as a double or as the text 2.0), null, a string in a text field,

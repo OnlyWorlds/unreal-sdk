@@ -16,6 +16,14 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The wrong-kind refusal names a number that is not finite by its own name.** A NaN or an infinity in an integer or
+  a text field was named `null`, as JSON writes it, which read as if `null` had been sent: `create: character.height
+  is an integer field; null would be stored as another value.` It now says `NaN would be stored`, and `Infinity` or
+  `-Infinity` for the infinities (`OWJsonValue::NonFinite`). Parity with the TypeScript SDK 4.220.2, its test vector
+  ported.
+
 ## [0.12.1] - 2026-11-28
 
 A standard field's value of the wrong kind is refused before sending (2.5, "7" or `true` in an integer field; a
