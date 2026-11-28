@@ -354,15 +354,21 @@ std::string OWWorld::ElementFilename(const std::string& id, const std::string& n
 namespace {
 
 // Why a new element's id cannot name its file, or "" (folder spec section 3.2): a file name is made from an id only when
-// the id is one non-empty segment (no '/', no '\', not "." or "..") and the name passes the archive's own name checks
-// (OWWorldArchive::PathFault and NameFault, section 4.7's OW-16 and OW-22: no drive, no colon or other character Windows
-// refuses, no control character, no device name). The short name and the full-id form are both asked, whatever the name,
-// since the collision rule may take the full id at any time. In the TypeScript and Python packages' words.
+// the id is one plain file name and the name passes the archive's own name checks. First the rules the TypeScript and
+// Python packages hold, in their order and their words (their shared cases, unsafe-ids.cases.json): empty, a '/' or
+// '\', a colon, a control character U+0000 to U+001F, "." or "..". Then the archive's name checks
+// (OWWorldArchive::PathFault and NameFault, section 4.7's OW-16 and OW-22), wider than theirs, in the archive's own
+// words: U+007F and U+0080 to U+009F, another character Windows refuses, a device name, a trailing dot or space. The
+// short name and the full-id form are both asked, whatever the name, since the collision rule may take the full id at
+// any time.
 std::string IdRefusal(const OWElement& e) {
     const std::string id = e.Id(), type = e.folder_type;
     std::string why;
     if (id.empty()) why = "it is empty";
     else if (id.find_first_of("/\\") != std::string::npos) why = "it holds a path separator, / or \\";
+    else if (id.find(':') != std::string::npos) why = "it holds a colon";
+    else if (std::any_of(id.begin(), id.end(), [](char c) { return static_cast<unsigned char>(c) < 0x20; }))
+        why = "it holds a control character";
     else if (id == "." || id == "..") why = "it is . or ..";
     else {
         for (bool full : {false, true}) {

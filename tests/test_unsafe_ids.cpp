@@ -121,15 +121,17 @@ OW_TEST(unsafe_ids_the_refusal_names_the_rule_in_the_words_the_other_packages_us
          "a backslash, named");
     t.Eq(WorldWith("..", "")->WriteRefusal(), std::string("character element id \"..\" cannot be a file name: it is . or ..."),
          "dot dot");
-    t.Ok(WorldWith("C:evil", "")->WriteRefusal().rfind(
-             "character element id \"C:evil\" cannot be a file name: its file name \"C:evil.json\" ", 0) == 0,
-         "a drive");
-    t.Ok(WorldWith("urn:uuid:" + U, "Probe Name")->WriteRefusal().rfind(
-             "character element id \"urn:uuid:" + U + "\" cannot be a file name: its file name \"probe-name--urn:uuid:" + U +
-                 ".json\" ", 0) == 0,
-         "a colon in the full-id form, though the short name is plain");
-    t.Ok(WorldWith(std::string("ctl\x01") + "id", "")->WriteRefusal().find("\"ctl\\u0001id\"") != std::string::npos,
+    t.Eq(WorldWith("C:evil", "")->WriteRefusal(),
+         std::string("character element id \"C:evil\" cannot be a file name: it holds a colon."), "a drive");
+    t.Eq(WorldWith("urn:uuid:" + U, "Probe Name")->WriteRefusal(),
+         "character element id \"urn:uuid:" + U + "\" cannot be a file name: it holds a colon.",
+         "a colon in the id, though the short name is plain");
+    t.Eq(WorldWith(std::string("ctl\x01") + "id", "")->WriteRefusal(),
+         std::string("character element id \"ctl\\u0001id\" cannot be a file name: it holds a control character."),
          "a control character, escaped");
+    // Behind those rules, the archive's name checks, wider, in their own words.
+    t.Ok(WorldWith("x\x7f", "")->WriteRefusal().rfind("character element id \"x\x7f\" cannot be a file name: its file name ", 0) == 0,
+         "U+007F, the name check's");
     t.Ok(WorldWith("con", "")->WriteRefusal().find("con.json") != std::string::npos, "a device name");
 }
 
