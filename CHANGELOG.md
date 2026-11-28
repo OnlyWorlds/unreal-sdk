@@ -17,6 +17,18 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- **A world on onlyworlds.com written as a world folder: the ExportWorldToFolder node, and
+  `OnlyWorlds::OWFolderExport::Export` in C++.** It reads the world the key reaches, with GET requests only, and writes
+  it as a folder the Python package's `export_world` would write, file for file. A game can ship that offline copy or
+  open it later with Open World Folder. The folder's `world.json` says where the copy came from: `source` (the server,
+  the world, when), `exported_as` (which part of the world the key reads, when the server can say) and `producer`
+  (`onlyworlds-unreal` and this version). A guest's copy keeps the elements it only knows of as such, without their
+  empty fields. The folder must not exist or must be empty. It is built beside its place and moved there last, so a
+  refused export leaves nothing behind: one element with no id, one id under two types, or an id that cannot be a file
+  name refuses the whole export. Map images are not downloaded.
+
 ## [0.16.1] - 2026-11-28
 
 A refused element id now says why in the same words as the TypeScript and Python packages, and their
