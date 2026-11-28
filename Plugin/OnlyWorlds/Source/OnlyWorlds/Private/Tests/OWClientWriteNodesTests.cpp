@@ -374,11 +374,11 @@ bool FOWClientWriteNodesBodiesTest::RunTest(const FString& Parameters)
 		auto Run = std::make_shared<OWW::FWriteRun>();
 		Run->Fake->Fallback = OWW::Respond(200, R"({"id": "c1"})");
 		UOWClientWrite* Node = UOWClientWrite::PatchElement(OWW::WriterConfig(), TEXT("character"), TEXT("c1"),
-			TEXT("{\"level\": 12345678901234567890, \"weight\": 1.50}"), false, -1);
+			TEXT("{\"level\": 12345678901234567890, \"x_weight\": 1.50}"), false, -1);
 		Run->Probe->Watch(Node);
 		OWW::Activated(Node, Run);
 		Only(TEXT("PatchElement, unconditional"), Run, TEXT("/character/c1/|") + Writer + TEXT("; Content-Type=application/json; X-OW-Client=unreal-sdk"),
-			TEXT("{\"level\":12345678901234567890,\"weight\":1.5}"));
+			TEXT("{\"level\":12345678901234567890,\"x_weight\":1.5}"));
 	}
 	{
 		auto Run = std::make_shared<OWW::FWriteRun>();
@@ -795,7 +795,16 @@ bool FOWClientWriteNodesRefusalsTest::RunTest(const FString& Parameters)
 		Bulk(UOWClientBulk::BulkWrite(Writer, { OWW::BulkItem(TEXT("character"), TEXT("{\"id\": \"c1\", \"known_of\": true}")) }, false, TEXT(""))),
 		TEXT("bulk: items[0]: this body is a known-of stub"));
 
-	TestEqual(TEXT("the refusals counted"), Count, 21);
+	// A value the server would store as another (the TypeScript SDK 4.220.0's check, the core's): a node's text reaches it.
+	Refused(TEXT("PatchElement, \"7\" in an integer field"),
+		Write(UOWClientWrite::PatchElement(Writer, TEXT("character"), TEXT("c1"), TEXT("{\"height\": \"7\"}"), false, 0)),
+		TEXT("patch: character.height is an integer field; \"7\" would be stored as another value."));
+	Refused(TEXT("BulkWrite, a number in a text field"),
+		Bulk(UOWClientBulk::BulkWrite(Writer, { OWW::BulkItem(TEXT("character"), TEXT("{\"name\": \"K\"}")),
+			OWW::BulkItem(TEXT("character"), TEXT("{\"name\": \"L\", \"supertype\": 12}")) }, false, TEXT(""))),
+		TEXT("bulk: items[1]: character.supertype is a text field; 12 is not a string."));
+
+	TestEqual(TEXT("the refusals counted"), Count, 23);
 	return true;
 }
 

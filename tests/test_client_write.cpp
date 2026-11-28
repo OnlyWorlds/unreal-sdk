@@ -1022,8 +1022,10 @@ OW_TEST(client_write_a_non_finite_number_anywhere_in_a_body_is_refused_by_name_w
             {"pin", Obj({{"id", OWJsonValue::String(NonFiniteId)}, {"x_weight", OWJsonValue::Number(-inf)}})}},
            {}, bulk.H());
     refused(bulk, "-Infinity at items[1].element.x_weight");
-    // Beyond the TypeScript SDK's: a NaN on a scalar string field, which Sanitize would otherwise send as "", and Upsert.
-    c.Create("character", Obj({{"name", OWJsonValue::Number(nan)}}), {}, d.H());
+    // Beyond the TypeScript SDK's: a NaN on a base string field, which Sanitize would otherwise send as "", and Upsert. On
+    // a type outside the standard, which the kind check (4.220.0) leaves alone; on a standard type the kind check
+    // refuses it first (client_write_a_value_keel_would_store_as_another_is_refused_before_sending).
+    c.Create("notatype", Obj({{"name", OWJsonValue::Number(nan)}}), {}, d.H());
     refused(d, "NaN at name");
     c.Upsert("character", NonFiniteId, Obj({{"name", OWJsonValue::String("K")}, {"x_up", OWJsonValue::Number(inf)}}), e.H());
     refused(e, "Infinity at x_up");
@@ -1080,4 +1082,66 @@ OW_TEST(client_write_a_bulk_element_200_deep_is_sent_and_the_envelope_counts) {
     t.Ok(deeper.Refused(), "an element 254 deep: refused (" + deeper.Why() + ")");
     if (deeper.reply.error) t.Eq(deeper.reply.error->message, TooDeep, "in the TypeScript SDK's words");
     t.Eq(fake->calls.size(), size_t{2}, "the 257-deep bulk not sent");
+}
+
+// -- A value the server would store as another (the TypeScript SDK's 4.220.0 vector) ----------------------------------
+
+OW_TEST(client_write_a_value_keel_would_store_as_another_is_refused_before_sending) {
+    auto fake = Fake();
+    OWClient c = Make(fake);
+    auto starts = [&](const auto& g, const std::string& want) {
+        t.Ok(g.Refused(), want + ": refused (" + g.Why() + ")");
+        if (!g.reply.error) return;
+        const std::string& m = g.reply.error->message;
+        t.Ok(m.rfind(want, 0) == 0, "the TypeScript SDK's words: " + want + " (got " + m + ")");
+        t.Ok(EndsNothingSent(m), want + ": it says nothing was sent");
+    };
+    auto list = [](std::vector<OWJsonValue> items) {
+        OWJsonValue a = OWJsonValue::Array();
+        for (OWJsonValue& v : items) a.Push(std::move(v));
+        return a;
+    };
+    // Each one keel takes with a 200 and stores as something else (measured on production 2026-11-28). The core has no
+    // propose, so the TypeScript SDK's sixth case has no route here.
+    Got<OWJsonValue> a, b, d, e, f, g;
+    c.Create("character", Obj({{"name", OWJsonValue::String("K")}, {"height", OWJsonValue::Number(2.5)}}), {}, a.H());
+    starts(a, "create: character.height is an integer field; 2.5 would be stored as another value");
+    c.Upsert("character", NonFiniteId, Obj({{"name", OWJsonValue::String("K")}, {"height", OWJsonValue::String("7")}}), b.H());
+    starts(b, "upsert: character.height is an integer field; \"7\" would be stored as another value");
+    c.Patch("character", NonFiniteId, Obj({{"height", OWJsonValue::Bool(true)}}), {}, d.H());
+    starts(d, "patch: character.height is an integer field; true would be stored");
+    c.Patch("character", NonFiniteId,
+            Obj({{"supertype", list({OWJsonValue::String("a"), OWJsonValue::String("b")})}}), {}, e.H());
+    starts(e, "patch: character.supertype is a text field; [\"a\",\"b\"] is not a string");
+    Got<OWBulkResult> bulk;
+    c.Bulk({{"character", Obj({{"name", OWJsonValue::String("K")}})},
+            {"character", Obj({{"name", OWJsonValue::String("L")}, {"supertype", OWJsonValue::Number(int64_t{12})}})}},
+           {}, bulk.H());
+    starts(bulk, "bulk: items[1]: character.supertype is a text field; 12 is not a string");
+    // Beyond the TypeScript SDK's: the generic link's type key is text; a NaN in an integer field is the kind's
+    // refusal, named as JSON.stringify names it (null).
+    c.Patch("pin", NonFiniteId, Obj({{"element_type", OWJsonValue::Number(int64_t{12})}}), {}, f.H());
+    starts(f, "patch: pin.element_type is a text field; 12 is not a string");
+    c.Patch("character", NonFiniteId, Obj({{"height", OWJsonValue::Number(std::numeric_limits<double>::quiet_NaN())}}), {},
+            g.H());
+    starts(g, "patch: character.height is an integer field; null would be stored as another value");
+    t.Eq(fake->calls.size(), size_t{0}, "nothing sent");
+
+    // What it lets through: a whole number (2.0 is one, as a double or as the text 2.0), null, a string in a text field,
+    // an extension of any kind, a link field, a type outside the schema; and ours, 1e3 and the pin's type key as text.
+    Got<OWJsonValue> ok1, ok2, ok3, ok4;
+    c.Patch("character", NonFiniteId,
+            Obj({{"height", OWJsonValue::Number(2.0)}, {"weight", OWJsonValue::Null()}, {"supertype", OWJsonValue::String("hero")},
+                 {"x_tool", list({OWJsonValue::Number(1.5), OWJsonValue::Bool(true)})}, {"species", OWJsonValue::Array()}}),
+            {}, ok1.H());
+    t.Ok(ok1.reply.Ok(), "the let-through body: sent (" + ok1.Why() + ")");
+    c.Patch("notatype", NonFiniteId, Obj({{"height", OWJsonValue::Number(2.5)}}), {}, ok2.H());
+    t.Ok(ok2.reply.Ok(), "a type outside the schema: sent (" + ok2.Why() + ")");
+    c.Patch("character", NonFiniteId, Obj({{"height", OWJsonValue::NumberText("2.0")}, {"weight", OWJsonValue::NumberText("1e3")}}), {},
+            ok3.H());
+    t.Ok(ok3.reply.Ok(), "2.0 and 1e3 as written: sent (" + ok3.Why() + ")");
+    c.Patch("pin", NonFiniteId, Obj({{"element_type", OWJsonValue::String("character")}, {"x", OWJsonValue::Number(int64_t{3})}}), {},
+            ok4.H());
+    t.Ok(ok4.reply.Ok(), "the pin's type key as text: sent (" + ok4.Why() + ")");
+    t.Eq(fake->calls.size(), size_t{4}, "four requests");
 }
