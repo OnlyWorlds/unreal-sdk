@@ -283,6 +283,14 @@ OnlyWorlds::OWClient* UOWClientNode::Begin()
 	return Client.get();
 }
 
+std::shared_ptr<OnlyWorlds::OWTransport> UOWClientNode::BeginKeyless()
+{
+	if (bActivated) return nullptr;
+	bActivated = true;
+	AddToRoot();
+	return Transport ? Transport : FOWHttpTransport::Make();
+}
+
 bool UOWClientNode::Answering()
 {
 	if (bAnswered) return false;

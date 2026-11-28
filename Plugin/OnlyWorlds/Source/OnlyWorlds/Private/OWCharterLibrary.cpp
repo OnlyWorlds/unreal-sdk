@@ -1,6 +1,7 @@
 #include "OWCharterLibrary.h"
 
 #include "OWCharter.h"
+#include "OWCharterDoor.h"
 #include "OWConvert.h"
 #include "OWJson.h"
 #include "OWLensDoor.h"
@@ -33,34 +34,6 @@ namespace
 		return Out;
 	}
 
-	FOWReadingAids AidsOfCore(const OnlyWorlds::OWReadingAids& Got)
-	{
-		FOWReadingAids Out;
-		if (Got.charter)
-		{
-			Out.bHasCharter = true;
-			Out.Charter.Id = OWConvert::Str(Got.charter->id);
-			Out.Charter.Type = OWConvert::Str(Got.charter->type);
-			Out.Charter.Name = OWConvert::Str(Got.charter->name);
-			Out.Charter.RulesJson = OWLensDoor::TextOf(Got.charter->rules);
-			Out.Charter.Skill = OWLensDoor::IdsOf(Got.charter->skill);
-		}
-		if (Got.guide)
-		{
-			Out.bHasGuide = true;
-			Out.Guide.Id = OWConvert::Str(Got.guide->id);
-			Out.Guide.Type = OWConvert::Str(Got.guide->type);
-			Out.Guide.Name = OWConvert::Str(Got.guide->name);
-		}
-		for (const OnlyWorlds::OWCharterDomain& D : Got.domains) Out.Domains.Add(DomainOfCore(D));
-		if (Got.strand)
-		{
-			Out.bHasStrand = true;
-			Out.StrandJson = OWLensDoor::TextOf(Got.strand->ToJson());
-		}
-		return Out;
-	}
-
 	// The world's reading aids for the reader, or false and the reason.
 	bool CharterRead(const UOWWorld* World, const FOWLensReader& Reader, bool bOpen, OnlyWorlds::OWReadingAids& Got, FString& Reason)
 	{
@@ -80,6 +53,34 @@ namespace
 	}
 }
 
+FOWReadingAids OWCharterDoor::AidsOfCore(const OnlyWorlds::OWReadingAids& Got)
+{
+	FOWReadingAids Out;
+	if (Got.charter)
+	{
+		Out.bHasCharter = true;
+		Out.Charter.Id = OWConvert::Str(Got.charter->id);
+		Out.Charter.Type = OWConvert::Str(Got.charter->type);
+		Out.Charter.Name = OWConvert::Str(Got.charter->name);
+		Out.Charter.RulesJson = OWLensDoor::TextOf(Got.charter->rules);
+		Out.Charter.Skill = OWLensDoor::IdsOf(Got.charter->skill);
+	}
+	if (Got.guide)
+	{
+		Out.bHasGuide = true;
+		Out.Guide.Id = OWConvert::Str(Got.guide->id);
+		Out.Guide.Type = OWConvert::Str(Got.guide->type);
+		Out.Guide.Name = OWConvert::Str(Got.guide->name);
+	}
+	for (const OnlyWorlds::OWCharterDomain& D : Got.domains) Out.Domains.Add(DomainOfCore(D));
+	if (Got.strand)
+	{
+		Out.bHasStrand = true;
+		Out.StrandJson = OWLensDoor::TextOf(Got.strand->ToJson());
+	}
+	return Out;
+}
+
 bool UOWCharter::CharterOf(const UOWWorld* World, const FOWLensReader& Reader, bool bOpen, FOWReadingAids& ReadingAids,
 	FString& Reason)
 {
@@ -87,7 +88,7 @@ bool UOWCharter::CharterOf(const UOWWorld* World, const FOWLensReader& Reader, b
 	Reason.Reset();
 	OnlyWorlds::OWReadingAids Got;
 	if (!CharterRead(World, Reader, bOpen, Got, Reason)) return false;
-	ReadingAids = AidsOfCore(Got);
+	ReadingAids = OWCharterDoor::AidsOfCore(Got);
 	return true;
 }
 
@@ -116,7 +117,7 @@ bool UOWCharter::ReadingAidsOf(const FString& AnswerJson, FOWReadingAids& Readin
 		Reason = TEXT("no reading aids in the answer");
 		return false;
 	}
-	ReadingAids = AidsOfCore(*Served);
+	ReadingAids = OWCharterDoor::AidsOfCore(*Served);
 	return true;
 }
 
