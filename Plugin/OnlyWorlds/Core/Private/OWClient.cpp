@@ -575,14 +575,21 @@ bool IsWholeNumber(const OWJsonValue& v) {
     return res.ec == std::errc() && std::isfinite(d) && std::floor(d) == d;
 }
 
+// A value as a refusal names it, the TypeScript SDK's shownValue (4.220.2): as Compact writes it, but a number that is
+// not finite by its own name (NaN, Infinity, -Infinity: OWJsonValue::NonFinite), never the null JSON writes in its place.
+std::string ShownValue(const OWJsonValue& v) {
+    if (const char* own = v.NonFinite()) return own;
+    return Compact(v);
+}
+
 // "" when every standard field of `element` holds its kind, else the refusal, in the TypeScript SDK's words (4.220.0's
 // checkKinds, the Python package's check_kinds): keel takes a value of another kind with a 200 and changes it (2.5, "7"
 // or true in an integer field stored as 2, 7 or 1, a list or a number in a text field as its text). An integer field
 // (OWLens::FieldsOf, kind Int) takes a whole number, never a boolean; a text field (the base strings, kind Text, and the
 // generic link's type key, kind GenericType, which the wire carries as text) a string; each or null. A null that was a
 // NaN or an infinity (OWJsonValue::NonFinite) is no null here: the kind is checked first, as the TypeScript SDK checks
-// it, and the value is named as JSON.stringify writes it (null). The body's own keys only; an extension, a link field
-// and a type outside the standard are not checked.
+// it, and the value is named by ShownValue. The body's own keys only; an extension, a link field and a type outside the
+// standard are not checked.
 std::string KindsWhy(const std::string& where, const OWJsonValue& element, std::string_view type) {
     const std::vector<OWLens::OWLensField> fields = OWLens::FieldsOf(type);
     if (fields.empty()) return "";
@@ -599,10 +606,10 @@ std::string KindsWhy(const std::string& where, const OWJsonValue& element, std::
         }
         const std::string field = std::string(type) + "." + key;
         if (integer && !IsWholeNumber(v))
-            return where + ": " + field + " is an integer field; " + Compact(v) + " would be stored as another value." +
+            return where + ": " + field + " is an integer field; " + ShownValue(v) + " would be stored as another value." +
                    NothingSent;
         if (text && !v.IsString())
-            return where + ": " + field + " is a text field; " + Compact(v) + " is not a string." + NothingSent;
+            return where + ": " + field + " is a text field; " + ShownValue(v) + " is not a string." + NothingSent;
     }
     return "";
 }
