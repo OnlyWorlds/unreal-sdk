@@ -10,7 +10,7 @@ It has two roads, and they give different things:
 - **A world on disk** (a world folder, or one `.owworld` file): `OpenWorldFolder` or `OpenWorldFile`, then
   `GetAll<Types>` (`GetAllCharacters`, …), gives every element as a Blueprint struct (`FOWCharacter`, …), with no
   server. This is the road for a Blueprint graph.
-- **The onlyworlds.com API**: the client's Blueprint nodes (**Read Element**, **List Elements**, the writes) answer each
+- **The onlyworlds.com API**: the client's Blueprint nodes (**ReadElement**, **ListElements**, the writes) answer each
   element as JSON text, and `<Type>FromJson` (`CharacterFromJson`, …) turns that text into the same struct a world on
   disk gives; in C++, `OWFromJson` does.
 
@@ -27,7 +27,7 @@ project becomes one with its first C++ class (**Tools → New C++ Class**).
 
 1. Put the plugin in the `Plugins` folder of your project's directory (beside the `.uproject`; make it if there is
    none), one of two ways:
-   - **The release zip**: `onlyworlds-unreal-0.14.0.zip`, from this repository's
+   - **The release zip**: `onlyworlds-unreal-0.15.0.zip`, from this repository's
      [Releases](https://github.com/OnlyWorlds/unreal-sdk/releases) page. It holds one folder, `OnlyWorlds/`: unpack
      it into `Plugins/`, so the plugin is at `Plugins/OnlyWorlds/OnlyWorlds.uplugin`.
    - **A clone** of this repository: copy its `Plugin/OnlyWorlds/` folder into your project as `Plugins/OnlyWorlds/`.
@@ -113,10 +113,10 @@ The client is the plugin's core, plain C++17 with no Unreal header, so its types
 `Client`, so the client is still there for the second call. Your module links against the core's classes and
 functions directly: the plugin's module exports them (`OW_API`).
 
-On Blueprints the same read is the **Read World** node: give it a config whose `ApiKey` is `0000000001`, and
+On Blueprints the same read is the **ReadWorld** node: give it a config whose `ApiKey` is `0000000001`, and
 `OnSuccess` hands you the world as JSON text, not a struct. The API's reads and element writes each have a node like
-it, with `OnSuccess` and `OnFailure`. An element read that way becomes its struct with `<Type>FromJson`: wire **Read
-Element**'s `Json` into **Character From Json**, then break the `FOWCharacter` as you would one from a folder.
+it, with `OnSuccess` and `OnFailure`. An element read that way becomes its struct with `<Type>FromJson`: wire **ReadElement**'s
+`Json` into **Character From Json**, then break the `FOWCharacter` as you would one from a folder.
 
 ### On Blueprints, from a world on disk
 
@@ -205,7 +205,7 @@ python codegen/generate_tools.py --check            # the tools list's pin holds
 python codegen/generate_presentation.py --check     # the generated sidecar matches presentation.json
 python codegen/generate_views.py --check            # views.json checked, OWViews.generated.cpp current
 python codegen/generate_frame_bits.py --check       # tests/data's frame bits match the map-space fixture
-python tools/release_zip.py v0.14.0                 # the release zip, from a tag or a commit, into dist/
+python tools/release_zip.py v0.15.0                 # the release zip, from a tag or a commit, into dist/
 python tools/check_exports.py                       # every core declaration a game module links against carries OW_API
 python tools/verify_promise.py                      # the written promise: no public name gone, each one listed
 python tools/mutants_promise.py                     # the promise check, watched failing once per rule

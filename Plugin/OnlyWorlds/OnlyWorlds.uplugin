@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
-	"Version": 17,
-	"VersionName": "0.14.0",
+	"Version": 18,
+	"VersionName": "0.15.0",
 	"FriendlyName": "OnlyWorlds",
 	"Description": "OnlyWorlds worlds in your game: a world folder or .owworld file on disk as Blueprint structs, and the onlyworlds.com API as JSON text through Blueprint nodes and C++. Win64, Unreal Engine 5.8.",
 	"Category": "OnlyWorlds",

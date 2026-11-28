@@ -4,18 +4,23 @@ Notable changes to the OnlyWorlds SDK for Unreal. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Where it stands.** 0.14.0 is the latest release. `onlyworlds-unreal-0.14.0.zip`, on the repository's Releases page,
+**Where it stands.** 0.15.0 is the latest release. `onlyworlds-unreal-0.15.0.zip`, on the repository's Releases page,
 holds the plugin folder to drop into a project's `Plugins/`, as source the project compiles; the [README](README.md)
 has the install and a first run. What a game can do with it: open a world on disk (a world folder or an `.owworld`
 file) and read its elements of all 22 types as Blueprint structs; read and write a world over the onlyworlds.com API
 from Blueprint nodes, which answer JSON text, and from C++; hold a world from the API and keep it current by the
-change feed; propose changes the world's owner accepts or declines in the game; set an element's image and attach files to it; and read a world it holds without a
+change feed; let a player join a world by an invite link, on Blueprints too; propose changes the world's owner accepts or declines in the game; set an element's image and attach files to it; and read a world it holds without a
 server (as a graph, as
 map geometry, by its own calendar, as one reader may see it), each reader giving the same answers as the other
 OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine 5.8, Win64. The entries below are in
 the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
+
+## [0.15.0] - 2026-11-28
+
+A Blueprint game can let a player join a world by an invite link: read the link, show what it opens, redeem it
+for a key. The core's join, on Blueprints. A minor release because it adds public API (below).
 
 ### Added
 
@@ -31,6 +36,12 @@ the detail a maintainer needs; the history before this file is in the git log.
   no body (`RawBody` is `""`, its message says the body was withheld), since a body may hold the key.
 - `UOWClientNode::BeginKeyless`, protected: a node's start for a call sent with no key and no client (the join's
   preview and redeem), through the node's transport.
+
+### Fixed
+
+- **The README names the client's async nodes as a graph shows them**: **ReadWorld**, **ReadElement** and
+  **ListElements**, where it had written them with spaces. An async node's title is its factory's name as written; a
+  plain function's (**Character From Json**, **Open World Folder**) is spaced. A test now holds the join nodes' titles.
 
 ## [0.14.0] - 2026-11-28
 
