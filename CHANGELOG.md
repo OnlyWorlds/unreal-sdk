@@ -17,6 +17,18 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Fixed
+
+- **An answer cut off while its body is read says so.** `FOWHttpTransport` already answered such an answer (a body
+  short of its `Content-Length`, a chunked body with no last chunk: curl's error 18) as a failure, so the client's
+  kind `Transport`, the TypeScript SDK 4.223.1's `OwNetworkError`, but in the engine's words, `no answer: Other`.
+  When a status had been read before the connection was lost, the failure now reads `the answer was lost while it
+  was read (status 200, Other)`; a request that got no status keeps `no answer: <reason>`. New automation tests,
+  `OnlyWorlds.Client.Transport.CutBody.*`, hold that a cut-off answer is a transport failure, never a value or kind
+  `Answer`, against a listener of their own on 127.0.0.1; a whole answer read to the end of the connection is the
+  value, and a whole body that is not JSON keeps kind `Answer`. The plugin's build adds the engine's `Sockets` module
+  only where those tests are compiled (inside this repository), never in a copy of the plugin in another project.
+
 ## [0.13.0] - 2026-11-28
 
 Proposed changes in a game, from C++ and on Blueprints: a player's write that became a proposal, its world's queue polled

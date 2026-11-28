@@ -17,6 +17,7 @@
 #include "OWConvert.h"
 
 #include <functional>
+#include <string>
 #include <utility>
 
 namespace
@@ -72,7 +73,18 @@ void FOWHttpTransport::Send(OnlyWorlds::OWRequest Request, OnlyWorlds::OWRespons
 			if (!bProcessed || !Res.IsValid())
 			{
 				const TCHAR* Why = Req.IsValid() ? LexToString(Req->GetFailureReason()) : TEXT("no request");
-				R.failure = "no answer: " + OWConvert::Utf8(FString(Why));
+				// A status already read means an answer had begun: the connection was lost while its body came in (a
+				// body short of its Content-Length, a chunked body with no last chunk; curl's error 18), for which the
+				// engine's failure reason is only "Other".
+				if (Res.IsValid() && Res->GetResponseCode() > 0)
+				{
+					R.failure = "the answer was lost while it was read (status " + std::to_string(Res->GetResponseCode()) +
+						", " + OWConvert::Utf8(FString(Why)) + ")";
+				}
+				else
+				{
+					R.failure = "no answer: " + OWConvert::Utf8(FString(Why));
+				}
 				Once->Answer(std::move(R));
 				return;
 			}

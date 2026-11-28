@@ -55,5 +55,11 @@ public class OnlyWorlds : ModuleRules
 		// copied into another project lists no OnlyWorlds test that cannot find its inputs.
 		bool bInRepository = Directory.Exists(Path.Combine(PluginDirectory, "..", "..", "codegen", "schema-dist"));
 		PrivateDefinitions.Add("OW_REPO_TESTS=" + (bInRepository ? "1" : "0"));
+		// Sockets: the transport's tests only (Private/Tests/OWCutBodyTests.cpp), whose server is a listener of their own
+		// on 127.0.0.1; the plugin copied into another project gains no module.
+		if (bInRepository)
+		{
+			PrivateDependencyModuleNames.Add("Sockets");
+		}
 	}
 }

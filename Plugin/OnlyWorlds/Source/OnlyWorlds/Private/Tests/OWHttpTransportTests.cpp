@@ -75,6 +75,7 @@ bool FOWHttpTransportNoConnectionTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("answered once"), Got.Calls, 1);
 		TestEqual(TEXT("status 0: no answer"), Got.Value.status, 0);
 		TestFalse(TEXT("the failure says why"), Got.Value.failure.empty());
+		TestTrue(TEXT("no status was read: no answer, not a lost one"), Got.Value.failure.rfind("no answer: ", 0) == 0);
 		AddInfo(FString(TEXT("failure: ")) + UTF8_TO_TCHAR(Got.Value.failure.c_str()));
 	});
 	return true;
