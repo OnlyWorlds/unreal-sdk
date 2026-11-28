@@ -118,6 +118,10 @@ std::string KeelPath(const OWRequest& r) {
     return "/api/v2" + path;
 }
 
+bool EndsWith(const std::string& s, const std::string& end) {
+    return s.size() >= end.size() && s.compare(s.size() - end.size(), end.size(), end) == 0;
+}
+
 std::vector<std::string> Segments(const std::string& path) {
     std::vector<std::string> out;
     size_t start = 0;
@@ -218,6 +222,34 @@ void Writes(OWClient& c, FakeTransport& fake) {
     fake.body = "{}";
 }
 
+// Every proposal call, every option given, the queue's two lists with a tag: 9 requests on a world key, 4 of them with a
+// body (a propose, a decline with its reason, two reviews).
+void Proposals(OWClient& c, FakeTransport& fake) {
+    fake.body = "{}";
+    OWProposeOptions keyed;
+    keyed.expires = "2026-12-21T00:00:00Z";
+    keyed.idempotency_key = "k3";
+    c.Propose("character", "c1", Json("{\"name\":\"Bo\",\"world\":\"w1\",\"x_tool\":1}"), "a source", keyed,
+              Ignore<OWProposal>());
+    OWProposalQuery every;
+    every.state = "all";
+    every.since = "2026-10-22T00:00:00Z";
+    every.limit = 5;
+    every.cursor = "c";
+    every.if_none_match = "W/\"t:1\"";
+    fake.body = "{\"data\":[],\"has_more\":false}";
+    c.ListProposals("character", "c1", every, Ignore<OWProposalPage>());
+    every.element = "c1";
+    c.WorldProposals(every, Ignore<OWProposalPage>());
+    fake.body = "{}";
+    c.AcceptProposal("character", "c1", "p1", Ignore<OWProposalAccepted>());
+    c.DeclineProposal("character", "c1", "p1", std::string("not canon"), Ignore<OWProposal>());
+    c.DeclineProposal("character", "c1", "p1", std::nullopt, Ignore<OWProposal>());
+    c.WithdrawProposal("character", "c1", "p1", Ignore<OWJsonValue>());
+    c.ReviewNewElement("character", "c1", OWReviewed::Accept, std::nullopt, Ignore<OWReviewed>());
+    c.ReviewNewElement("character", "c1", OWReviewed::Decline, std::string("not canon"), Ignore<OWReviewed>());
+}
+
 // Every read call and every write, every option given, on each credential: keel's requests, which the checks below
 // judge. An agent seat's client reads too, so a declaration sent on a read would be seen.
 const std::vector<OWRequest>& Record() {
@@ -265,6 +297,7 @@ const std::vector<OWRequest>& Record() {
                  {"ow_w_test", "0000"}, {"0123456789", "0000"}, {"ow_r_test", ""}, {"ow_w_seat", "ow_s_x"}}) {
             auto c = make(key, pin, std::nullopt, key == "ow_w_seat");
             Writes(*c, *fake);
+            Proposals(*c, *fake);
             fake->body = "{}";
             c->Health(Ignore<OWJsonValue>());
             c->GetWorld(Ignore<OWJsonValue>());
@@ -299,7 +332,8 @@ const std::vector<OWRequest>& Record() {
             OWListOptions parent;
             parent.filter = {{"parent_location", "p1"}};
             c->List("location", parent, Ignore<OWPage>());
-            Writes(*c, *fake);  // refused, nothing sent: neither writes
+            Writes(*c, *fake);     // refused, nothing sent: neither writes
+            Proposals(*c, *fake);  // refused, nothing sent: neither proposes nor reads the queue
         }
         // Joining is keyless, so it is not on the client; the same transport records it. The redeem passes every
         // option. A person's join goes on an account token.
@@ -378,17 +412,26 @@ OW_TEST(client_wire_every_header_is_one_keel_declares) {
 }
 
 OW_TEST(client_wire_no_read_sends_a_body_and_every_write_body_is_a_json_object) {
+    size_t bodiless = 0;
     for (const OWRequest& call : Record()) {
         std::string label = call.method + " " + call.url;
-        if (call.method == "GET" || call.method == "DELETE") {
+        std::string why;
+        const OWJsonValue* op = Find(call, &why);
+        // A write may go with no body where keel declares none (an accept), or where keel's page makes it optional (a
+        // decline's reason: proposals.md, "Accept, decline, withdraw"); a body it does send is still a JSON object.
+        bool may_go_bare = op && (!op->Find("body") || EndsWith(KeelPath(call), "/decline"));
+        if (call.method == "GET" || call.method == "DELETE" || (may_go_bare && !call.body)) {
             t.Ok(!call.body.has_value(), label);
             t.Ok(call.Header("Content-Type") == nullptr, label + ": no body, no media type");
+            if (call.method != "GET" && call.method != "DELETE") ++bodiless;
             continue;
         }
+        t.Ok(op == nullptr || op->Find("body") != nullptr, label + ": a body where keel declares none");
         OWJsonParseResult parsed = OWJson::Parse(call.body.value_or(""));
         t.Ok(parsed.ok && parsed.value.IsObject(), label + ": a JSON object");
         t.Eq(call.Header("Content-Type") ? *call.Header("Content-Type") : std::string(), "application/json", label);
     }
+    t.Eq(bodiless, size_t(4 * 2), "an accept and a decline without a reason on each world key go bare, nothing else");
 }
 
 namespace {
@@ -441,15 +484,17 @@ OW_TEST(client_wire_every_body_key_is_one_keel_declares) {
             ++checked;
         }
     }
-    t.Eq(checked, size_t(4 * (6 + 2) + 3), "six bodies and two bulk items on each world key, and the three joins");
+    t.Eq(checked, size_t(4 * (6 + 2 + 4) + 3),
+         "six bodies, two bulk items and four proposal bodies on each world key, and the three joins");
 }
 
 OW_TEST(client_wire_the_recording_covers_every_read_and_write) {
     // An empty recording would pass the checks above with nothing checked.
     const std::vector<OWRequest>& calls = Record();
-    t.Eq(calls.size(), size_t(4 * (12 + 7) + 6 + 5 + 3),
-         "12 reads and 7 writes on each world key (ListAll one page), 6 reads on an account token, 5 on no key (its "
-         "roster refused); neither writes; the keyless preview and redeem, and a person's join on an account token");
+    t.Eq(calls.size(), size_t(4 * (12 + 7 + 9) + 6 + 5 + 3),
+         "12 reads, 7 writes and 9 proposal calls on each world key (ListAll one page), 6 reads on an account token, 5 "
+         "on no key (its roster refused); neither writes nor proposes; the keyless preview and redeem, and a person's "
+         "join on an account token");
     std::set<std::string> paths;
     size_t world = 0, agent_pin_reads = 0;
     bool tag = false, pin = false, bearer = false, head = false, after = false;
@@ -469,7 +514,10 @@ OW_TEST(client_wire_the_recording_covers_every_read_and_write) {
                           "GET /api/v2/changes", "POST /api/v2/character", "PUT /api/v2/character/c1",
                           "PATCH /api/v2/character/c1", "DELETE /api/v2/character/c1",
                           "POST /api/v2/character/c1/links/friends", "POST /api/v2/bulk", "POST /api/v2/join/preview",
-                          "POST /api/v2/join", "POST /api/v2/account/join"})
+                          "POST /api/v2/join", "POST /api/v2/account/join", "POST /api/v2/character/c1/proposals",
+                          "GET /api/v2/character/c1/proposals", "GET /api/v2/world/proposals",
+                          "POST /api/v2/character/c1/proposals/p1/accept", "POST /api/v2/character/c1/proposals/p1/decline",
+                          "DELETE /api/v2/character/c1/proposals/p1", "POST /api/v2/character/c1/review"})
         t.Ok(paths.count(p) == 1, std::string(p) + " is recorded");
     for (const char* h : {"If-Match", "Idempotency-Key", "X-OW-Client", "X-OW-Agent", "Content-Type"})
         t.Ok(std::any_of(calls.begin(), calls.end(), [&](const OWRequest& c) { return c.Header(h) != nullptr; }),
@@ -547,6 +595,46 @@ OW_TEST(client_wire_the_bulk_result_reads_what_keel_serves_and_every_key_of_a_sl
     std::sort(slots.begin(), slots.end());
     std::sort(read.begin(), read.end());
     t.Eq(Joined(read), Joined(slots), "OWBulkSlot reads every key of a slot, and only those");
+}
+
+OW_TEST(client_wire_a_proposal_row_reads_every_key_keel_serves_on_one_and_only_those) {
+    // The row is the same on every route that answers one and on all 22 types: the queue's and an element's list
+    // (data[].), and the proposal a propose, an accept and a decline answer (proposal.). Both ways, as OWChange's.
+    std::vector<std::string> read = OWProposal::Keys();
+    std::sort(read.begin(), read.end());
+    t.Ok(read.size() == 20, "OWProposal reads the twenty keys");
+    size_t rows = 0;
+    auto same = [&](const std::vector<std::string>& keys, const std::string& prefix, const std::string& label) {
+        std::vector<std::string> served = Below(keys, prefix);
+        std::sort(served.begin(), served.end());
+        t.Eq(Joined(read), Joined(served), "OWProposal and " + label);
+        ++rows;
+    };
+    same(Response("/api/v2/world/proposals", "GET"), "data[].", "GET /world/proposals");
+    for (const std::string& type : OWLens::TypeOrder()) {
+        const std::string at = "/api/v2/" + type + "/{id}/proposals";
+        same(Response(at, "GET"), "data[].", "GET " + at);
+        same(Response(at, "POST"), "proposal.", "POST " + at);
+        same(Response(at + "/{pid}/accept", "POST"), "proposal.", "the accept on " + type);
+        same(Response(at + "/{pid}/decline", "POST"), "proposal.", "the decline on " + type);
+    }
+    t.Eq(rows, size_t(1 + 22 * 4), "the queue, and four answers on each type");
+    // The answers around the row, each to the top level keel serves.
+    struct Around {
+        const std::vector<std::string>* read;
+        std::string path;
+        const char* method;
+    };
+    for (const Around& a : std::vector<Around>{{&OWProposalPage::Keys(), "/api/v2/world/proposals", "GET"},
+                                               {&OWProposalPage::Keys(), "/api/v2/location/{id}/proposals", "GET"},
+                                               {&OWProposalAccepted::Keys(), "/api/v2/location/{id}/proposals/{pid}/accept", "POST"},
+                                               {&OWReviewed::Keys(), "/api/v2/location/{id}/review", "POST"}}) {
+        std::vector<std::string> mine = *a.read, served = Top(Response(a.path, a.method));
+        std::sort(mine.begin(), mine.end());
+        std::sort(served.begin(), served.end());
+        t.Ok(!mine.empty(), a.path + ": keys read");
+        t.Eq(Joined(mine), Joined(served), std::string(a.method) + " " + a.path + ", its top level");
+    }
 }
 
 OW_TEST(client_wire_the_reading_aids_are_the_packet_owcharter_served_reads) {

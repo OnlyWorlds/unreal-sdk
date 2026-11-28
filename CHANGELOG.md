@@ -16,6 +16,29 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- **Proposed changes, in C++ and on Blueprints.** A member who may not write an element, or an AI seat in a world that
+  takes its writes as proposals, can propose a change, and the world's owner or a co-builder accepts or declines it
+  in the game. In C++, `OWClient::Propose`, `ListProposals` (one element's) and `WorldProposals` (the world's queue:
+  proposed changes and new elements written as proposed, in one order), `AcceptProposal`, `DeclineProposal`,
+  `WithdrawProposal` and `ReviewNewElement`, answering the row as an `OWProposal` (in `OWProposal.h`) with every key
+  the API serves, a new element's evidence and expires as the JSON values they are, and every number to the digit;
+  `OWProposal::Of` reads the row a write that became a proposal carries in `OWApiError::proposal`. A proposal's
+  fields are cleaned and refused as a `Patch` body is, a value of the wrong kind included (`propose:
+  character.height is an integer field; 1.5 would be stored as another value.`). The errors that come with them have
+  helpers: `IsFieldNotVisible`, `IsTooManyOpen`, `IsStaleProposal` (with `Conflicts()`, each moved field then and
+  now, and `Current()`), `IsProposedOnly`, `IsOwnProposal`, `IsNotProposed`, `IsReviewByAnother`,
+  `IsReviewMarkEmpty`. On Blueprints, `ProposeChange`, `AcceptProposal`, `DeclineProposal`, `WithdrawProposal`
+  (`UOWClientProposal`, answering an `FOWProposal`), `ListElementProposals` and `ListWorldProposals`
+  (`UOWClientProposals`, an `FOWProposalPage`), and `AcceptNewElement` and `DeclineNewElement` on `UOWClientWrite`;
+  a stale accept's `FOWApiError` carries `Conflicts`. Parity with the Unity SDK's proposal calls and the TypeScript
+  SDK's.
+- **The proposal lists poll cheaply.** Pass the `ETag` a list answered as the next call's `if_none_match`
+  (`IfNoneMatch` on Blueprints), sent exactly as it came: when nothing moved the server answers 304, which reads as
+  `unchanged` (`bUnchanged`) with no rows, refunded against the request budget. The client keeps no tag of its own;
+  a 304 to a call that sent none is an error.
+
 ### Fixed
 
 - **The wrong-kind refusal names a number that is not finite by its own name.** A NaN or an infinity in an integer or

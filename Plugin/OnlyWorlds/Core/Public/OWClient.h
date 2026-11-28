@@ -29,7 +29,8 @@
 // bare client, which sends the health pulse alone. The health pulse carries no credential. The writes (Create, Upsert,
 // Patch, Delete, EditLinks, Bulk) go with the PIN, X-OW-Client (the config's `client`) and, on a client the config
 // declares an agent, X-OW-Agent; an account token and a keyless client write nothing (refused, nothing sent). Mirrors
-// the TypeScript SDK's `OwV2Client`.
+// the TypeScript SDK's `OwV2Client`. The proposal calls (Propose ... ReviewNewElement) go with the PIN too, and
+// X-OW-Client on the three keel declares it on, never X-OW-Agent.
 //
 //   OWClientConfig config;
 //   config.api_key = "ow_w_...";
@@ -47,6 +48,7 @@
 #include "OWApi.h"
 #include "OWApiError.h"
 #include "OWJson.h"
+#include "OWProposal.h"
 #include "OWTransport.h"
 
 #include <cstddef>
@@ -432,6 +434,71 @@ public:
     // sent: no items, an item without a type, an element that is not an object, a known-of stub (each named by its
     // index). Mirrors the TypeScript SDK's `bulk`.
     void Bulk(const std::vector<OWBulkItem>& items, const OWBulkOptions& options, OWHandler<OWBulkResult> done);
+
+    // -- Proposed changes (OWProposal.h) -----------------------------------------------------------------------------
+    //
+    // A proposal is a record kept beside an element, never in its body: the element does not change until the world's
+    // owner or a co-builder accepts it. No proposal act writes to the change feed; an accept's write does, as one row by
+    // the keeper: poll the queue (WorldProposals, conditional on its ETag), not the feed, to learn of new proposals.
+    // Propose, AcceptProposal and ReviewNewElement carry X-OW-Client (keel keeps it as the row's `client`); none carries
+    // X-OW-Agent, which keel's document declares on none of these routes. Each goes with the PIN as every write does
+    // (the lists are reads: no PIN); an account token and a keyless client are refused, nothing sent. The type, the id
+    // and the proposal's id are each one path segment, checked and escaped. Mirrors the TypeScript SDK's propose ...
+    // reviewNewElement and the Unity SDK's ProposeAsync ... ReviewNewElementAsync.
+
+    // POST /{type}/{id}/proposals with {fields, evidence, expires?}: propose a change to an element without making it,
+    // answering the row (201). `fields` are the fields to change and their new values, as in a Patch body (a JSON
+    // object), cleaned as Patch cleans one (Sanitize) and refused as one is (a known-of stub; a value of another kind);
+    // it names only fields this key's view of the element holds. `evidence` is what the change rests on, text or an
+    // element id, 1 to 2,000 characters. options.expires and options.idempotency_key as OWProposeOptions says. Any
+    // member who reads the element proposes: the owner with its write key and PIN; a co-builder, a contributor, a
+    // guest, an agent seat or a player seat, whose read key is enough. keel's refusals: 422 IsFieldNotVisible, 422
+    // IsTooManyOpen, 403 IsReviewByAnother, 400 invalid_link, 403 for a read key with no member, 404 for an element this
+    // key cannot see, 422 invalid_request (param fields) for a proposal that changes nothing. Mirrors the TypeScript
+    // SDK's `propose`.
+    void Propose(const std::string& type, const std::string& id, const OWJsonValue& fields, const std::string& evidence,
+                 const OWProposeOptions& options, OWHandler<OWProposal> done);
+    // GET /{type}/{id}/proposals: one element's proposals, newest first: every row for the owner's and a co-builder's
+    // keys, a member's own for any other; any member key that reads the element, a read key included. The query as
+    // OWProposalQuery says; its `element` is the queue's alone and is refused here, nothing sent. Conditional with
+    // query.if_none_match. Mirrors the TypeScript SDK's `listProposals`.
+    void ListProposals(const std::string& type, const std::string& id, const OWProposalQuery& query,
+                       OWHandler<OWProposalPage> done);
+    // GET /world/proposals: the world's queue, newest first, both kinds of row in one order (OWProposal::IsNewElement):
+    // every row for the owner's and a co-builder's keys (the owner's read key, or its write key with no PIN, included), a
+    // member's own for any other; a demo key gets a 404. A marked new element is listed under open, lapsed and all,
+    // never accepted or declined; keel reads at most the 500 newest. Conditional with query.if_none_match. Mirrors the
+    // TypeScript SDK's `worldProposals`.
+    void WorldProposals(const OWProposalQuery& query, OWHandler<OWProposalPage> done);
+    // POST /{type}/{id}/proposals/{pid}/accept, no body: write the proposal's fields to the element as one ordinary
+    // write by this key (changed_by the keeper, a new change_seq, a change feed row); the row turns accepted. The
+    // world's owner key or a co-builder's, with its PIN; never the proposer's own (403 IsOwnProposal), never an agent
+    // seat's while the world holds them (403 IsProposedOnly). Refused with nothing written when a proposed field moved
+    // since (409 IsStaleProposal, with Conflicts() and Current(); the row stays open) or a proposed link names an element
+    // deleted since (400 invalid_link). A lapsed proposal may still be accepted; a decided one is a 422. Mirrors the
+    // TypeScript SDK's `acceptProposal`.
+    void AcceptProposal(const std::string& type, const std::string& id, const std::string& pid,
+                        OWHandler<OWProposalAccepted> done);
+    // POST /{type}/{id}/proposals/{pid}/decline: the row turns declined, with {reason} when `reason` is given (at most
+    // 2,000 characters; "" is sent as given), no body without; the element does not change. The same keys and refusals
+    // as AcceptProposal, but no stale check. Answers the row. Mirrors the TypeScript SDK's `declineProposal`.
+    void DeclineProposal(const std::string& type, const std::string& id, const std::string& pid,
+                         const std::optional<std::string>& reason, OWHandler<OWProposal> done);
+    // DELETE /{type}/{id}/proposals/{pid}: the proposer takes back its own undecided proposal, with any of its keys: the
+    // row goes (204), answering null. A keeper's key on another member's row is a 403; any other key a 404; a decided row
+    // a 422. Mirrors the TypeScript SDK's `withdrawProposal`.
+    void WithdrawProposal(const std::string& type, const std::string& id, const std::string& pid,
+                          OWHandler<OWJsonValue> done);
+    // POST /{type}/{id}/review with {decision, reason?}: settle a new element written as proposed, one carrying
+    // x_review_proposed (the queue's IsNewElement row). OWReviewed::Accept clears the mark (a write by this key) and
+    // answers the element; OWReviewed::Decline deletes it (a tombstone, the links to it scrubbed, its open proposals
+    // dropped) and answers `deleted`, its id. `reason` goes with a decline only (at most 2,000 characters, answered back
+    // and kept nowhere). The owner's key or a co-builder's, with its PIN. keel's refusals: 422 IsNotProposed, 403
+    // IsProposedOnly, 403 for any key but a keeper's. Refused, nothing sent: a decision other than the two, and a reason
+    // with an accept (keel answers it 422). A 200 without the key its decision settles is an error of kind Answer, never
+    // read as settled. Mirrors the TypeScript SDK's `reviewNewElement`.
+    void ReviewNewElement(const std::string& type, const std::string& id, const std::string& decision,
+                          const std::optional<std::string>& reason, OWHandler<OWReviewed> done);
 
     // The name sent as X-OW-Client when the config gives none.
     static const char* const DefaultClientName;  // "unreal-sdk"

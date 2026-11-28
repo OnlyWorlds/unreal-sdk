@@ -111,6 +111,65 @@ namespace
 		return Out;
 	}
 
+	// A JSON value as text, or "" for none (a null fields or base).
+	FString JsonOrEmpty(const OWJsonValue& Value)
+	{
+		return Value.IsNull() ? FString() : JsonText(Value);
+	}
+
+	FOWProposal ProposalOf(const OnlyWorlds::OWProposal& P)
+	{
+		FOWProposal Out;
+		Out.Kind = Str(P.kind);
+		Out.bIsNewElement = P.IsNewElement();
+		Out.Id = Str(P.id);
+		Out.ElementType = Str(P.element_type);
+		Out.ElementId = Str(P.element_id);
+		Out.House = TextOr(P.house);
+		Out.State = Str(P.state);
+		Out.FieldsJson = JsonOrEmpty(P.fields);
+		if (P.omitted)
+			for (const std::string& Name : *P.omitted) Out.Omitted.Add(Str(Name));
+		Out.BaseJson = JsonOrEmpty(P.base);
+		Out.BaseSeq = P.base_seq;
+		// A string as itself, any other value its JSON text, "" for none.
+		Out.Evidence = TextOr(P.EvidenceText());
+		Out.Expires = TextOr(P.ExpiresText());
+		Out.By = TextOr(P.by);
+		Out.Via = TextOr(P.via);
+		Out.Client = TextOr(P.client);
+		Out.DecidedBy = TextOr(P.decided_by);
+		Out.DecidedAt = TextOr(P.decided_at);
+		Out.DeclineReason = TextOr(P.decline_reason);
+		Out.CreatedAt = TextOr(P.created_at);
+		Out.UpdatedAt = TextOr(P.updated_at);
+		Out.Json = JsonText(P.ToJson());
+		return Out;
+	}
+
+	FOWProposalPage ProposalPageOf(const OnlyWorlds::OWProposalPage& P)
+	{
+		FOWProposalPage Out;
+		for (const OnlyWorlds::OWProposal& Row : P.data) Out.Proposals.Add(ProposalOf(Row));
+		Out.bHasMore = P.has_more;
+		Out.NextCursor = Str(P.next_cursor);
+		Out.ETag = TextOr(P.etag);
+		Out.bUnchanged = P.unchanged;
+		return Out;
+	}
+
+	OnlyWorlds::OWProposalQuery ProposalQueryOf(const FOWProposalQuery& Q)
+	{
+		OnlyWorlds::OWProposalQuery Out;
+		Out.state = Utf8(Q.State);
+		Out.since = Utf8(Q.Since);
+		Out.element = Utf8(Q.Element);
+		if (Q.Limit > 0) Out.limit = Q.Limit;
+		Out.cursor = Utf8(Q.Cursor);
+		Out.if_none_match = Utf8(Q.IfNoneMatch);
+		return Out;
+	}
+
 	FOWChangesPage PageOf(const OnlyWorlds::OWChangesPage& P)
 	{
 		FOWChangesPage Out;
@@ -188,6 +247,13 @@ FOWApiError OWClientShared::ErrorOf(const OnlyWorlds::OWApiError& E)
 	Out.Proposal = E.proposal ? JsonText(*E.proposal) : FString();
 	const std::optional<OWJsonValue> Now = E.Current();
 	Out.Current = Now ? JsonText(*Now) : FString();
+	for (const OnlyWorlds::OWProposalConflict& C : E.Conflicts())
+	{
+		FOWProposalConflict& Row = Out.Conflicts.AddDefaulted_GetRef();
+		Row.Field = Str(C.field);
+		Row.BaseJson = JsonText(C.base);
+		Row.CurrentJson = JsonText(C.current);
+	}
 	return Out;
 }
 
@@ -453,6 +519,19 @@ UOWClientWrite* UOWClientWrite::EditElementLinks(const FOWClientConfig& Config, 
 	return Node;
 }
 
+UOWClientWrite* UOWClientWrite::AcceptNewElement(const FOWClientConfig& Config, const FString& Type, const FString& Id)
+{
+	return Make(Config, EWrite::AcceptNew, Type, Id);
+}
+
+UOWClientWrite* UOWClientWrite::DeclineNewElement(const FOWClientConfig& Config, const FString& Type, const FString& Id,
+	const FString& Reason)
+{
+	UOWClientWrite* Node = Make(Config, EWrite::DeclineNew, Type, Id);
+	Node->ReasonText = Reason;
+	return Node;
+}
+
 void UOWClientWrite::Activate()
 {
 	OnlyWorlds::OWClient* C = Begin();
@@ -505,6 +584,25 @@ void UOWClientWrite::Activate()
 		if (AddIds.Num() > 0) Change.add = Utf8s(AddIds);
 		if (RemoveIds.Num() > 0) Change.remove = Utf8s(RemoveIds);
 		C->EditLinks(TypeWord, IdText, Utf8(LinkField), Change, When, Done);
+		break;
+	}
+	case EWrite::AcceptNew:
+	case EWrite::DeclineNew:
+	{
+		// The review's answer as a write's: the element kept, or nothing after a decline (as after a delete). "" sends no
+		// reason: a graph has no absent string.
+		const bool bKeep = Write == EWrite::AcceptNew;
+		std::optional<std::string> Reason;
+		if (!bKeep && !ReasonText.IsEmpty()) Reason = Utf8(ReasonText);
+		C->ReviewNewElement(TypeWord, IdText, bKeep ? OnlyWorlds::OWReviewed::Accept : OnlyWorlds::OWReviewed::Decline, Reason,
+			[Done](OnlyWorlds::OWReply<OnlyWorlds::OWReviewed> Reviewed)
+			{
+				OnlyWorlds::OWReply<OWJsonValue> Out;
+				Out.error = std::move(Reviewed.error);
+				Out.response = std::move(Reviewed.response);
+				if (!Out.error && Reviewed.value.element) Out.value = std::move(*Reviewed.value.element);
+				Done(std::move(Out));
+			});
 		break;
 	}
 	}
@@ -570,4 +668,165 @@ void UOWClientBulk::Answer(OnlyWorlds::OWReply<OnlyWorlds::OWBulkResult> Reply)
 	if (Reply.Ok()) OnSuccess.Broadcast(BulkResultOf(Reply.value), FOWApiError());
 	else OnFailure.Broadcast(FOWBulkResult(), ErrorOf(*Reply.error));
 	Release();
+}
+
+// -- UOWClientProposal ------------------------------------------------------------------------------------------------
+
+UOWClientProposal* UOWClientProposal::Make(const FOWClientConfig& Config, EAct Which, const FString& Type, const FString& Id,
+	const FString& ProposalId)
+{
+	UOWClientProposal* Node = NewObject<UOWClientProposal>();
+	Node->Settings = Config;
+	Node->Act = Which;
+	Node->ElementType = Type;
+	Node->ElementId = Id;
+	Node->RowId = ProposalId;
+	return Node;
+}
+
+UOWClientProposal* UOWClientProposal::ProposeChange(const FOWClientConfig& Config, const FString& Type, const FString& Id,
+	const FString& FieldsJson, const FString& Evidence, const FString& Expires, const FString& IdempotencyKey)
+{
+	UOWClientProposal* Node = Make(Config, EAct::Propose, Type, Id, FString());
+	Node->BodyText = FieldsJson;
+	Node->EvidenceText = Evidence;
+	Node->ExpiresText = Expires;
+	Node->KeyText = IdempotencyKey;
+	return Node;
+}
+
+UOWClientProposal* UOWClientProposal::AcceptProposal(const FOWClientConfig& Config, const FString& Type, const FString& Id,
+	const FString& ProposalId)
+{
+	return Make(Config, EAct::Accept, Type, Id, ProposalId);
+}
+
+UOWClientProposal* UOWClientProposal::DeclineProposal(const FOWClientConfig& Config, const FString& Type, const FString& Id,
+	const FString& ProposalId, const FString& Reason)
+{
+	UOWClientProposal* Node = Make(Config, EAct::Decline, Type, Id, ProposalId);
+	Node->ReasonText = Reason;
+	return Node;
+}
+
+UOWClientProposal* UOWClientProposal::WithdrawProposal(const FOWClientConfig& Config, const FString& Type, const FString& Id,
+	const FString& ProposalId)
+{
+	return Make(Config, EAct::Withdraw, Type, Id, ProposalId);
+}
+
+void UOWClientProposal::Activate()
+{
+	OnlyWorlds::OWClient* C = Begin();
+	if (!C) return;
+	TWeakObjectPtr<UOWClientProposal> Self(this);
+	auto Done = [Self](OnlyWorlds::OWReply<OnlyWorlds::OWProposal> Reply)
+	{
+		if (UOWClientProposal* Node = Self.Get()) Node->Answer(std::move(Reply), FString());
+	};
+	const std::string TypeWord = Utf8(ElementType);
+	const std::string IdText = Utf8(ElementId);
+	const std::string Pid = Utf8(RowId);
+	switch (Act)
+	{
+	case EAct::Propose:
+	{
+		// The fields' text is read here, unless the core refuses before it reads a body (a client it would not build):
+		// its refusal then comes first, as it would in C++.
+		std::string Why;
+		OWJsonValue Fields = C->Error().empty() ? BodyOf(BodyText, "propose", "FieldsJson", Why) : OWJsonValue();
+		if (!Why.empty()) return Answer(RefusedReply<OnlyWorlds::OWProposal>(Why), FString());
+		OnlyWorlds::OWProposeOptions O;
+		O.expires = Utf8(ExpiresText);
+		O.idempotency_key = Utf8(KeyText);
+		C->Propose(TypeWord, IdText, Fields, Utf8(EvidenceText), O, Done);
+		break;
+	}
+	case EAct::Accept:
+		C->AcceptProposal(TypeWord, IdText, Pid, [Self](OnlyWorlds::OWReply<OnlyWorlds::OWProposalAccepted> Reply)
+		{
+			UOWClientProposal* Node = Self.Get();
+			if (!Node) return;
+			OnlyWorlds::OWReply<OnlyWorlds::OWProposal> Row;
+			Row.error = std::move(Reply.error);
+			Row.response = std::move(Reply.response);
+			FString Element;
+			if (!Row.error)
+			{
+				Row.value = std::move(Reply.value.proposal);
+				Element = JsonText(Reply.value.element);
+			}
+			Node->Answer(std::move(Row), Element);
+		});
+		break;
+	case EAct::Decline:
+	{
+		// "" sends no reason: a graph has no absent string.
+		std::optional<std::string> Reason;
+		if (!ReasonText.IsEmpty()) Reason = Utf8(ReasonText);
+		C->DeclineProposal(TypeWord, IdText, Pid, Reason, Done);
+		break;
+	}
+	case EAct::Withdraw:
+		C->WithdrawProposal(TypeWord, IdText, Pid, [Self](OnlyWorlds::OWReply<OWJsonValue> Reply)
+		{
+			UOWClientProposal* Node = Self.Get();
+			if (!Node) return;
+			OnlyWorlds::OWReply<OnlyWorlds::OWProposal> Row;
+			Row.error = std::move(Reply.error);
+			Row.response = std::move(Reply.response);
+			Node->Answer(std::move(Row), FString());
+		});
+		break;
+	}
+}
+
+void UOWClientProposal::Answer(OnlyWorlds::OWReply<OnlyWorlds::OWProposal> Reply, const FString& Element)
+{
+	if (!Answering()) return;
+	// A withdraw answers no row: an empty one, as a delete's Json is "".
+	if (Reply.Ok() && Act == EAct::Withdraw) OnSuccess.Broadcast(FOWProposal(), FString(), FOWApiError());
+	else if (Reply.Ok()) OnSuccess.Broadcast(ProposalOf(Reply.value), Element, FOWApiError());
+	else OnFailure.Broadcast(FOWProposal(), FString(), ErrorOf(*Reply.error));
+	Release();
+}
+
+// -- UOWClientProposals -----------------------------------------------------------------------------------------------
+
+UOWClientProposals* UOWClientProposals::ListElementProposals(const FOWClientConfig& Config, const FString& Type, const FString& Id,
+	const FOWProposalQuery& Query)
+{
+	UOWClientProposals* Node = NewObject<UOWClientProposals>();
+	Node->Settings = Config;
+	Node->ElementType = Type;
+	Node->ElementId = Id;
+	Node->ListQuery = Query;
+	return Node;
+}
+
+UOWClientProposals* UOWClientProposals::ListWorldProposals(const FOWClientConfig& Config, const FOWProposalQuery& Query)
+{
+	UOWClientProposals* Node = NewObject<UOWClientProposals>();
+	Node->Settings = Config;
+	Node->bWorld = true;
+	Node->ListQuery = Query;
+	return Node;
+}
+
+void UOWClientProposals::Activate()
+{
+	OnlyWorlds::OWClient* C = Begin();
+	if (!C) return;
+	TWeakObjectPtr<UOWClientProposals> Self(this);
+	auto Done = [Self](OnlyWorlds::OWReply<OnlyWorlds::OWProposalPage> Reply)
+	{
+		UOWClientProposals* Node = Self.Get();
+		if (!Node || !Node->Answering()) return;
+		if (Reply.Ok()) Node->OnSuccess.Broadcast(ProposalPageOf(Reply.value), FOWApiError());
+		else Node->OnFailure.Broadcast(FOWProposalPage(), ErrorOf(*Reply.error));
+		Node->Release();
+	};
+	const OnlyWorlds::OWProposalQuery Q = ProposalQueryOf(ListQuery);
+	if (bWorld) C->WorldProposals(Q, Done);
+	else C->ListProposals(Utf8(ElementType), Utf8(ElementId), Q, Done);
 }
