@@ -172,6 +172,9 @@ struct How {
     // X-OW-Client alone, never X-OW-Agent: the proposal routes keel's document declares it on (a propose, an accept, a
     // review).
     bool named = false;
+    // X-OW-Agent alone on an agent client, never X-OW-Client: the file ticket, the one files route keel's document
+    // declares it on (its upload's added_by.agent then reads true).
+    bool agent = false;
     // A write keel may answer 202 with {proposal} (an upsert, a patch, a link edit): a 202 is then a proposal, never
     // the element.
     bool proposable = false;
@@ -257,7 +260,7 @@ void Request(const StatePtr& s, const std::string& method, const std::string& pa
     // Presence is the declaration, the value is never stored: opt-in, and on the element writes alone, where keel's
     // document declares it. The client's name goes on the same writes, and on the three proposal routes keel declares it
     // on, and never on a read.
-    if (s->agent && how.write) request.headers.emplace_back("X-OW-Agent", "1");
+    if (s->agent && (how.write || how.agent)) request.headers.emplace_back("X-OW-Agent", "1");
     if (how.write || how.named) request.headers.emplace_back("X-OW-Client", s->client_name);
     if (!how.if_none_match.empty()) request.headers.emplace_back("If-None-Match", how.if_none_match);
     if (how.if_match) request.headers.emplace_back("If-Match", "\"" + std::to_string(*how.if_match) + "\"");
@@ -1472,6 +1475,269 @@ void OWClient::ReviewNewElement(const std::string& type, const std::string& id, 
                            ": the review's outcome is unknown");
             }
         }));
+    });
+}
+
+// -- Images and files -------------------------------------------------------------------------------------------------
+//
+// Each upload and removal is two steps: a ticket from keel through Request (its credential rules, the PIN as on every
+// write), then HostSend to the URL the ticket names, with the ticket alone. Mirrors the TypeScript SDK's
+// createMediaTicket ... removeFile.
+
+namespace {
+
+// A reply carried into another type's: its error and response, no value (a ticket's refusal is the upload's).
+template <typename T, typename U>
+OWReply<T> Carried(OWReply<U> r) {
+    OWReply<T> out;
+    out.error = std::move(r.error);
+    out.response = std::move(r.response);
+    return out;
+}
+
+// An answer read by T::Of: keel's or the host's object; anything else is kind Answer.
+template <typename T>
+OWHandler<OWJsonValue> TypedAnswer(std::string route, OWHandler<T> done) {
+    return [route, done](OWReply<OWJsonValue> raw) {
+        done(Then<T>(Object(std::move(raw), route), [&](OWJsonValue& body, OWReply<T>& r) {
+            std::optional<T> v = T::Of(body);
+            if (!v) return Bad(r, route + " answered a body that is not a JSON object");
+            r.value = std::move(*v);
+        }));
+    };
+}
+
+// Bytes past a ticket's max_bytes: a 413 too_large before any byte is sent, as the host would answer, with the
+// TypeScript SDK's words and body.
+OWApiError TooLarge(const char* what, size_t size, int64_t max) {
+    OWApiError e = OWApiError::Of(OWApiError::Kind::Api,
+                                  std::string(what) + " is " + std::to_string(size) +
+                                      " bytes; this ticket accepts at most " + std::to_string(max) + "." + NothingSent,
+                                  413,
+                                  "{\"error\":\"too_large\",\"max_bytes\":" + std::to_string(max) +
+                                      ",\"got\":" + std::to_string(size) + "}");
+    e.code = "too_large";
+    return e;
+}
+
+// The second step of a ticketed call: one POST to the upload host's URL the ticket names, whole, with the ticket as its
+// Bearer and X-Key when given, the bytes when there are any, and nothing of this client's (no key, PIN, account token
+// or X-OW-*). Not a keel request, so none of Request's rules apply. The host's refusal is FromResponse's, which reads
+// its {"error": "<code>"} as the code; no answer is kind Transport in the TypeScript SDK's words, naming the URL and
+// never the ticket.
+void HostSend(const StatePtr& s, const std::string& what, const std::string& host_url, const std::string& ticket,
+              const std::string& key, std::optional<std::string> bytes, OWHandler<OWJsonValue> done) {
+    OWRequest request;
+    request.method = "POST";
+    request.url = host_url;
+    request.headers.emplace_back("Authorization", "Bearer " + ticket);
+    if (!key.empty()) request.headers.emplace_back("X-Key", key);
+    request.body = std::move(bytes);
+    const std::string route = "POST " + host_url;
+    auto answered = std::make_shared<bool>(false);
+    s->transport->Send(std::move(request), [what, route, answered, done](OWResponse response) {
+        if (*answered) return;
+        *answered = true;
+        OWReply<OWJsonValue> r;
+        if (response.status == 0 || !response.failure.empty()) {
+            std::string why = response.failure.empty() ? "no answer" : response.failure;
+            r.error =
+                OWApiError::Of(OWApiError::Kind::Transport, "OnlyWorlds " + what + " failed: " + route + ": " + why);
+        } else if (!response.IsSuccess()) {
+            r.error = OWApiError::FromResponse(response, static_cast<int64_t>(std::time(nullptr)));
+        } else {
+            OWJsonParseResult parsed = OWJson::Parse(response.body);
+            if (parsed.ok) {
+                r.value = std::move(parsed.value);
+            } else {
+                r.error = OWApiError::Of(OWApiError::Kind::Answer,
+                                         route + " answered " + std::to_string(response.status) +
+                                             " with a body that is not JSON",
+                                         response.status, response.body);
+            }
+        }
+        r.response = std::move(response);
+        done(std::move(r));
+    });
+}
+
+void MediaTicketOn(const StatePtr& s, OWHandler<OWMediaTicket> done) {
+    std::string path = "/media/ticket";
+    Request(s, "POST", path, {}, How{}, TypedAnswer<OWMediaTicket>("POST " + path, std::move(done)));
+}
+
+void RemovalTicketOn(const StatePtr& s, const std::string& key_or_url, OWHandler<OWRemovalTicket> done) {
+    OWJsonValue body = OWJsonValue::Object();
+    body.Set("key", OWJsonValue::String(OWMedia::ObjectKey(key_or_url)));
+    std::string why;
+    How how;
+    how.body = BodyText(body, why);
+    if (!why.empty()) return Refuse(done, why);
+    std::string path = "/media/remove-ticket";
+    Request(s, "POST", path, {}, how, TypedAnswer<OWRemovalTicket>("POST " + path, std::move(done)));
+}
+
+// The refusal of a name whose kind keel cannot tell, in the TypeScript SDK's words.
+std::string KindWhy(const std::string& name) {
+    size_t cut = name.find_last_of("/\\");
+    std::string base = cut == std::string::npos ? name : name.substr(cut + 1);
+    std::string allowed;
+    for (const auto& [ext, kind] : OWMedia::FileExtensions()) allowed += (allowed.empty() ? "." : " .") + ext;
+    return "Cannot tell the kind of " + OWJson::Quote(base) +
+           " from its name: a file on an element must end in one of " + allowed + " (or pass kind)." + NothingSent;
+}
+
+void FileTicketOn(const StatePtr& s, const std::string& type, const std::string& id, const OWFileTicketRequest& req,
+                  OWHandler<OWFileTicket> done) {
+    if (!s->error.empty()) return Refuse(done, NotBuilt(*s));
+    if (OWUnicode::StripWhite(req.name).empty())
+        return Refuse(done, std::string("CreateFileTicket needs the file's name, with its extension.") + NothingSent);
+    const std::string kind = req.kind ? *req.kind : OWMedia::FileKindOf(req.name);
+    if (!req.kind && kind.empty()) return Refuse(done, KindWhy(req.name));
+    std::string why;
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/files";
+    if (!why.empty()) return Refuse(done, why);
+    OWJsonValue body = OWJsonValue::Object();
+    body.Set("name", OWJsonValue::String(req.name));
+    body.Set("kind", OWJsonValue::String(kind));
+    body.Set("size", OWJsonValue::Number(req.size));
+    if (req.label) body.Set("label", OWJsonValue::String(*req.label));
+    How how;
+    how.agent = true;
+    how.body = BodyText(body, why);
+    if (!why.empty()) return Refuse(done, why);
+    Request(s, "POST", path, {}, how, TypedAnswer<OWFileTicket>("POST " + path, std::move(done)));
+}
+
+}  // namespace
+
+void OWClient::CreateMediaTicket(OWHandler<OWMediaTicket> done) { MediaTicketOn(state_, std::move(done)); }
+
+void OWClient::UploadImage(const OWBytes& image, const OWUploadImageOptions& options, OWHandler<OWUploadedImage> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    StatePtr s = state_;
+    auto bytes = std::make_shared<std::string>(image.begin(), image.end());
+    const std::string key = options.key;
+    auto send = [s, bytes, key, done](const OWMediaTicket& ticket) {
+        if (static_cast<int64_t>(bytes->size()) > ticket.max_bytes) {
+            OWReply<OWUploadedImage> r;
+            r.error = TooLarge("Image", bytes->size(), ticket.max_bytes);
+            return done(std::move(r));
+        }
+        HostSend(s, "image upload", ticket.upload_url, ticket.ticket, key, *bytes,
+                 TypedAnswer<OWUploadedImage>("POST " + ticket.upload_url, done));
+    };
+    if (options.ticket) return send(*options.ticket);
+    MediaTicketOn(s, [send, done](OWReply<OWMediaTicket> t) {
+        if (!t.Ok()) return done(Carried<OWUploadedImage>(std::move(t)));
+        send(t.value);
+    });
+}
+
+void OWClient::CreateRemovalTicket(const std::string& key_or_url, OWHandler<OWRemovalTicket> done) {
+    RemovalTicketOn(state_, key_or_url, std::move(done));
+}
+
+void OWClient::RemoveImage(const std::string& key_or_url, const std::optional<OWRemovalTicket>& ticket,
+                           OWHandler<OWRemovedImage> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    StatePtr s = state_;
+    auto send = [s, done](const OWRemovalTicket& t) {
+        HostSend(s, "image removal", t.remove_url, t.ticket, "", std::nullopt,
+                 TypedAnswer<OWRemovedImage>("POST " + t.remove_url, done));
+    };
+    if (ticket) return send(*ticket);
+    RemovalTicketOn(s, key_or_url, [send, done](OWReply<OWRemovalTicket> t) {
+        if (!t.Ok()) return done(Carried<OWRemovedImage>(std::move(t)));
+        send(t.value);
+    });
+}
+
+void OWClient::ListFiles(const std::string& type, const std::string& id, OWHandler<std::vector<OWFileRow>> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why;
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/files";
+    if (!why.empty()) return Refuse(done, why);
+    const std::string route = "GET " + path;
+    Request(state_, "GET", path, {}, How{}, [route, done](OWReply<OWJsonValue> raw) {
+        done(Then<std::vector<OWFileRow>>(Object(std::move(raw), route),
+                                          [](OWJsonValue& body, OWReply<std::vector<OWFileRow>>& r) {
+                                              const OWJsonValue* data = body.Find("data");
+                                              if (!data || !data->IsArray()) return;
+                                              for (const OWJsonValue& row : data->Items())
+                                                  if (std::optional<OWFileRow> f = OWFileRow::Of(row))
+                                                      r.value.push_back(std::move(*f));
+                                          }));
+    });
+}
+
+void OWClient::WorldFiles(OWHandler<OWWorldFiles> done) {
+    std::string path = "/world/files";
+    Request(state_, "GET", path, {}, How{}, TypedAnswer<OWWorldFiles>("GET " + path, std::move(done)));
+}
+
+void OWClient::CreateFileTicket(const std::string& type, const std::string& id, const OWFileTicketRequest& request,
+                                OWHandler<OWFileTicket> done) {
+    FileTicketOn(state_, type, id, request, std::move(done));
+}
+
+void OWClient::UploadFile(const std::string& type, const std::string& id, const OWBytes& file,
+                          const OWUploadFileOptions& options, OWHandler<OWUploadedFile> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    StatePtr s = state_;
+    auto bytes = std::make_shared<std::string>(file.begin(), file.end());
+    const int64_t size = static_cast<int64_t>(bytes->size());
+    auto progress = options.on_progress;
+    auto send = [s, bytes, size, progress, done](const OWFileTicket& ticket) {
+        if (size > ticket.max_bytes) {
+            OWReply<OWUploadedFile> r;
+            r.error = TooLarge("File", bytes->size(), ticket.max_bytes);
+            return done(std::move(r));
+        }
+        auto stored = [size, progress, done](OWReply<OWUploadedFile> r) {
+            if (r.Ok() && progress) progress(size, size);
+            done(std::move(r));
+        };
+        HostSend(s, "file upload", ticket.upload_url, ticket.ticket, "", *bytes,
+                 TypedAnswer<OWUploadedFile>("POST " + ticket.upload_url, stored));
+    };
+    if (options.ticket) return send(*options.ticket);
+    if (OWUnicode::StripWhite(options.name).empty()) {
+        return Refuse(done, std::string("UploadFile needs the file's name, with its extension (options.name), or a "
+                                        "ticket from CreateFileTicket.") + NothingSent);
+    }
+    OWFileTicketRequest req;
+    req.name = options.name;
+    req.kind = options.kind;
+    req.size = size;
+    req.label = options.label;
+    FileTicketOn(s, type, id, req, [send, done](OWReply<OWFileTicket> t) {
+        if (!t.Ok()) return done(Carried<OWUploadedFile>(std::move(t)));
+        send(t.value);
+    });
+}
+
+// The file's id is `fileId` here, the TypeScript SDK's name for it, which a refusal names.
+void OWClient::FileDownloadLink(const std::string& type, const std::string& id, const std::string& fileId,
+                                OWHandler<OWFileDownload> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why;
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/files/" + Seg("fileId", fileId, why) + "/download";
+    if (!why.empty()) return Refuse(done, why);
+    Request(state_, "GET", path, {}, How{}, TypedAnswer<OWFileDownload>("GET " + path, std::move(done)));
+}
+
+void OWClient::RemoveFile(const std::string& type, const std::string& id, const std::string& fileId,
+                          OWHandler<OWJsonValue> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why;
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/files/" + Seg("fileId", fileId, why);
+    if (!why.empty()) return Refuse(done, why);
+    How how;
+    how.allow_empty = true;
+    Request(state_, "DELETE", path, {}, how, [done](OWReply<OWJsonValue> r) {
+        if (r.Ok()) r.value = OWJsonValue();
+        done(std::move(r));
     });
 }
 

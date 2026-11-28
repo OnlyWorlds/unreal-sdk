@@ -17,6 +17,32 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- **Parity with the TypeScript SDK's file and image routes.** A game can set a picture for an element or attach a
+  file to one (a screenshot, a save, notes) and read them back. On `OWClient` (`OWMedia.h` holds the types):
+  `CreateMediaTicket`, `UploadImage`, `CreateRemovalTicket` and `RemoveImage`; `ListFiles`, `WorldFiles`,
+  `CreateFileTicket`, `UploadFile`, `FileDownloadLink` and `RemoveFile`; `OWMedia::FileKindOf`,
+  `OWMedia::FileExtensions` and `OWMedia::ObjectKey`; and on `OWApiError`, `IsQuotaExceeded`, `IsFileTooLarge`,
+  `IsFilesFull` and `IsNotAuthor`. An upload is two steps: a ticket from the API with the key and its PIN, then the
+  bytes straight to the upload host the ticket names, with the ticket as their Bearer and nothing else of the
+  client's. Bytes past a ticket's `max_bytes` are refused before any byte is sent (413 `too_large`), and a name whose
+  extension the API takes no file with is refused naming the ones it takes. The upload host's refusals arrive with
+  their codes; no answer from it names its URL, never the ticket. The TypeScript SDK's files and image tests are
+  ported, but for its four `XMLHttpRequest` progress tests (`on_progress` is called once, after success, as the
+  TypeScript SDK calls it where there is no `XMLHttpRequest`); every new keel request is held to keel's document.
+- **Images and files on Blueprints** (`OWFileNodes.h`): `UploadImage` and `UploadImageFromDisk`, `RemoveImage`,
+  `ListElementFiles`, `ListWorldFiles`, `UploadElementFile` and `UploadElementFileFromDisk`, `ReadFileDownloadLink`
+  and `RemoveElementFile`. An upload takes an Array of Byte, or a path: the engine's own image nodes write a
+  screenshot or a render to disk by path, and the `FromDisk` nodes read that file themselves.
+
+### Changed
+
+- **A request body with no `Content-Type` goes as `application/octet-stream`** (`FOWHttpTransport`). Unreal's curl
+  request asserts that a POST or a DELETE names its type or holds only URL-safe bytes, so an upload's raw bytes
+  would have stopped the editor and any Development game. Every request to the API already names
+  `application/json`, and keeps it.
+
 ## [0.13.1] - 2026-11-28
 
 An answer whose connection drops while its body comes in says so: the answer was lost while it was read, with

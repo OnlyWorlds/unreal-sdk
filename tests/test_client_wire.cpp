@@ -250,9 +250,66 @@ void Proposals(OWClient& c, FakeTransport& fake) {
     c.ReviewNewElement("character", "c1", OWReviewed::Decline, std::string("not canon"), Ignore<OWReviewed>());
 }
 
+// The upload host's address in the recording: its requests are the host's, judged by HostRecord's test, not keel's.
+const std::string Host = "https://upload.example.test/v1/";
+
+// Every image and file call, every option given: 10 requests to keel on a world key (the two tickets twice, a ticket
+// step of an upload or a removal each), 4 of them with a body (the removal ticket twice, the file ticket twice), and 3
+// to the upload host. One body answers every step: a ticket's keys beside a list's.
+void Files(OWClient& c, FakeTransport& fake) {
+    fake.body = "{\"ticket\":\"t.sig\",\"upload_url\":\"" + Host + "upload\",\"remove_url\":\"" + Host +
+                "remove\",\"max_bytes\":100,\"data\":[]}";
+    c.CreateMediaTicket(Ignore<OWMediaTicket>());
+    OWUploadImageOptions image;
+    image.key = "u/w1/x.png";
+    c.UploadImage(OWBytes{0x89, 0x50}, image, Ignore<OWUploadedImage>());
+    c.CreateRemovalTicket("https://media.example.test/u/w1/x.png", Ignore<OWRemovalTicket>());
+    c.RemoveImage("u/w1/x.png", std::nullopt, Ignore<OWRemovedImage>());
+    c.ListFiles("character", "c1", Ignore<std::vector<OWFileRow>>());
+    c.WorldFiles(Ignore<OWWorldFiles>());
+    OWFileTicketRequest ticket;
+    ticket.name = "notes.md";
+    ticket.kind = "md";
+    ticket.size = 3;
+    ticket.label = "description";
+    c.CreateFileTicket("character", "c1", ticket, Ignore<OWFileTicket>());
+    OWUploadFileOptions file;
+    file.name = "notes.md";
+    file.label = "description";
+    c.UploadFile("character", "c1", OWBytes{'a', 'b', 'c'}, file, Ignore<OWUploadedFile>());
+    c.FileDownloadLink("character", "c1", "f1", Ignore<OWFileDownload>());
+    c.RemoveFile("character", "c1", "f1", Ignore<OWJsonValue>());
+    fake.body = "{}";
+}
+
+// Every request the recording made, keel's and the upload host's.
+const std::vector<OWRequest>& RecordAll();
+
 // Every read call and every write, every option given, on each credential: keel's requests, which the checks below
-// judge. An agent seat's client reads too, so a declaration sent on a read would be seen.
+// judge. An agent seat's client reads too, so a declaration sent on a read would be seen. The upload host's requests
+// are left out: keel's document does not describe that host.
 const std::vector<OWRequest>& Record() {
+    static const std::vector<OWRequest> calls = [] {
+        std::vector<OWRequest> keel;
+        for (const OWRequest& r : RecordAll())
+            if (r.url.rfind(Host, 0) != 0) keel.push_back(r);
+        return keel;
+    }();
+    return calls;
+}
+
+// The upload host's requests alone.
+const std::vector<OWRequest>& HostRecord() {
+    static const std::vector<OWRequest> calls = [] {
+        std::vector<OWRequest> host;
+        for (const OWRequest& r : RecordAll())
+            if (r.url.rfind(Host, 0) == 0) host.push_back(r);
+        return host;
+    }();
+    return calls;
+}
+
+const std::vector<OWRequest>& RecordAll() {
     static const std::vector<OWRequest> calls = [] {
         auto fake = std::make_shared<FakeTransport>();
         auto make = [&](const std::string& key, const std::string& pin, std::optional<std::string> world,
@@ -298,6 +355,7 @@ const std::vector<OWRequest>& Record() {
             auto c = make(key, pin, std::nullopt, key == "ow_w_seat");
             Writes(*c, *fake);
             Proposals(*c, *fake);
+            Files(*c, *fake);
             fake->body = "{}";
             c->Health(Ignore<OWJsonValue>());
             c->GetWorld(Ignore<OWJsonValue>());
@@ -334,6 +392,7 @@ const std::vector<OWRequest>& Record() {
             c->List("location", parent, Ignore<OWPage>());
             Writes(*c, *fake);     // refused, nothing sent: neither writes
             Proposals(*c, *fake);  // refused, nothing sent: neither proposes nor reads the queue
+            Files(*c, *fake);      // refused, nothing sent: neither asks for a ticket nor reads a file
         }
         // Joining is keyless, so it is not on the client; the same transport records it. The redeem passes every
         // option. A person's join goes on an account token.
@@ -431,7 +490,8 @@ OW_TEST(client_wire_no_read_sends_a_body_and_every_write_body_is_a_json_object) 
         t.Ok(parsed.ok && parsed.value.IsObject(), label + ": a JSON object");
         t.Eq(call.Header("Content-Type") ? *call.Header("Content-Type") : std::string(), "application/json", label);
     }
-    t.Eq(bodiless, size_t(4 * 2), "an accept and a decline without a reason on each world key go bare, nothing else");
+    t.Eq(bodiless, size_t(4 * (2 + 2)),
+         "an accept, a decline without a reason and the two image tickets on each world key go bare, nothing else");
 }
 
 namespace {
@@ -484,17 +544,18 @@ OW_TEST(client_wire_every_body_key_is_one_keel_declares) {
             ++checked;
         }
     }
-    t.Eq(checked, size_t(4 * (6 + 2 + 4) + 3),
-         "six bodies, two bulk items and four proposal bodies on each world key, and the three joins");
+    t.Eq(checked, size_t(4 * (6 + 2 + 4 + 4) + 3),
+         "six bodies, two bulk items, four proposal bodies and four ticket bodies on each world key, and the three "
+         "joins");
 }
 
 OW_TEST(client_wire_the_recording_covers_every_read_and_write) {
     // An empty recording would pass the checks above with nothing checked.
     const std::vector<OWRequest>& calls = Record();
-    t.Eq(calls.size(), size_t(4 * (12 + 7 + 9) + 6 + 5 + 3),
-         "12 reads, 7 writes and 9 proposal calls on each world key (ListAll one page), 6 reads on an account token, 5 "
-         "on no key (its roster refused); neither writes nor proposes; the keyless preview and redeem, and a person's "
-         "join on an account token");
+    t.Eq(calls.size(), size_t(4 * (12 + 7 + 9 + 10) + 6 + 5 + 3),
+         "12 reads, 7 writes, 9 proposal calls and 10 image and file calls on each world key (ListAll one page), 6 "
+         "reads on an account token, 5 on no key (its roster refused); neither writes, proposes nor asks for a ticket; "
+         "the keyless preview and redeem, and a person's join on an account token");
     std::set<std::string> paths;
     size_t world = 0, agent_pin_reads = 0;
     bool tag = false, pin = false, bearer = false, head = false, after = false;
@@ -517,7 +578,11 @@ OW_TEST(client_wire_the_recording_covers_every_read_and_write) {
                           "POST /api/v2/join", "POST /api/v2/account/join", "POST /api/v2/character/c1/proposals",
                           "GET /api/v2/character/c1/proposals", "GET /api/v2/world/proposals",
                           "POST /api/v2/character/c1/proposals/p1/accept", "POST /api/v2/character/c1/proposals/p1/decline",
-                          "DELETE /api/v2/character/c1/proposals/p1", "POST /api/v2/character/c1/review"})
+                          "DELETE /api/v2/character/c1/proposals/p1", "POST /api/v2/character/c1/review",
+                          "POST /api/v2/media/ticket", "POST /api/v2/media/remove-ticket",
+                          "GET /api/v2/character/c1/files", "GET /api/v2/world/files",
+                          "POST /api/v2/character/c1/files",
+                          "GET /api/v2/character/c1/files/f1/download", "DELETE /api/v2/character/c1/files/f1"})
         t.Ok(paths.count(p) == 1, std::string(p) + " is recorded");
     for (const char* h : {"If-Match", "Idempotency-Key", "X-OW-Client", "X-OW-Agent", "Content-Type"})
         t.Ok(std::any_of(calls.begin(), calls.end(), [&](const OWRequest& c) { return c.Header(h) != nullptr; }),
@@ -762,4 +827,54 @@ OW_TEST(client_wire_every_error_code_a_helper_names_is_one_keel_lists) {
     }
     t.Ok(pairs >= 4, "the status-and-code helpers were read");
     for (auto& [code, why] : Reserved) t.Ok(!listed->Has(code), "'" + code + "' is listed by keel now; drop it from Reserved");
+}
+
+// -- Images and files ------------------------------------------------------------------------------------------------
+
+OW_TEST(client_wire_the_upload_hosts_requests_carry_the_ticket_alone) {
+    // Left out of keel's checks above; held here: three on each world key (an image upload, an image removal, a file
+    // upload), each a POST to the URL the ticket named, with the ticket as its Bearer, X-Key on the image upload, and
+    // nothing of the client's.
+    const std::vector<OWRequest>& host = HostRecord();
+    t.Eq(host.size(), size_t(4 * 3), "three on each world key");
+    for (const OWRequest& r : host) {
+        std::string label = r.method + " " + r.url;
+        t.Eq(r.method, std::string("POST"), label);
+        t.Ok(r.url == Host + "upload" || r.url == Host + "remove", label + ": the ticket's own URL");
+        const std::string* bearer = r.Header("Authorization");
+        t.Eq(bearer ? *bearer : std::string(), std::string("Bearer t.sig"), label);
+        for (const char* h : {"API-Key", "API-Pin", "X-OW-Agent", "X-OW-Client", "Content-Type", "Idempotency-Key"})
+            t.Ok(r.Header(h) == nullptr, label + ": no " + h);
+        size_t own = r.Header("X-Key") ? 2 : 1;
+        t.Eq(r.headers.size(), own, label + ": the Bearer, and X-Key when given, alone");
+    }
+}
+
+OW_TEST(client_wire_the_image_and_file_answers_read_every_key_keel_serves_and_only_those) {
+    struct Case {
+        const std::vector<std::string>* read;
+        std::string path;
+        const char* method;
+        std::string prefix;
+    };
+    size_t cases = 0;
+    for (const Case& c : std::vector<Case>{
+             {&OWMediaTicket::Keys(), "/api/v2/media/ticket", "POST", ""},
+             {&OWIssuedTo::Keys(), "/api/v2/media/ticket", "POST", "issued_to."},
+             {&OWRemovalTicket::Keys(), "/api/v2/media/remove-ticket", "POST", ""},
+             {&OWFileRow::Keys(), "/api/v2/location/{id}/files", "GET", "data[]."},
+             {&OWWorldFiles::Keys(), "/api/v2/world/files", "GET", ""},
+             {&OWWorldFileRow::Keys(), "/api/v2/world/files", "GET", "data[]."},
+             {&OWFileTicket::Keys(), "/api/v2/location/{id}/files", "POST", ""},
+             {&OWIssuedTo::Keys(), "/api/v2/location/{id}/files", "POST", "issued_to."},
+             {&OWFileDownload::Keys(), "/api/v2/location/{id}/files/{file_id}/download", "GET", ""},
+         }) {
+        std::vector<std::string> mine = *c.read, served = Below(Response(c.path, c.method), c.prefix);
+        std::sort(mine.begin(), mine.end());
+        std::sort(served.begin(), served.end());
+        t.Ok(!served.empty(), c.path + ": keel documents the answer");
+        t.Eq(Joined(mine), Joined(served), std::string(c.method) + " " + c.path + " " + c.prefix);
+        ++cases;
+    }
+    t.Eq(cases, size_t(9), "the nine answers");
 }

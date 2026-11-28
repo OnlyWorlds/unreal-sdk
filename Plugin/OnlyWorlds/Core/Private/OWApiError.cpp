@@ -225,6 +225,10 @@ bool OWApiError::IsOwnProposal() const { return status == 403 && code == "own_pr
 bool OWApiError::IsNotProposed() const { return status == 422 && code == "not_proposed"; }
 bool OWApiError::IsReviewByAnother() const { return status == 403 && code == "review_by_another"; }
 bool OWApiError::IsReviewMarkEmpty() const { return status == 422 && code == "review_mark_empty"; }
+bool OWApiError::IsQuotaExceeded() const { return status == 429 && code == "quota_exceeded"; }
+bool OWApiError::IsFileTooLarge() const { return status == 413 && code == "file_too_large"; }
+bool OWApiError::IsFilesFull() const { return status == 403 && code == "files_full"; }
+bool OWApiError::IsNotAuthor() const { return status == 403 && code == "not_author"; }
 
 std::vector<OWProposalConflict> OWApiError::Conflicts() const {
     std::vector<OWProposalConflict> out;

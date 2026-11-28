@@ -48,6 +48,7 @@
 #include "OWApi.h"
 #include "OWApiError.h"
 #include "OWJson.h"
+#include "OWMedia.h"
 #include "OWProposal.h"
 #include "OWTransport.h"
 
@@ -499,6 +500,85 @@ public:
     // read as settled. Mirrors the TypeScript SDK's `reviewNewElement`.
     void ReviewNewElement(const std::string& type, const std::string& id, const std::string& decision,
                           const std::optional<std::string>& reason, OWHandler<OWReviewed> done);
+
+    // -- Images (OWMedia.h) ------------------------------------------------------------------------------------------
+    //
+    // An image is two steps: a ticket from keel (a write: the key and its PIN, no X-OW-*), then the bytes straight to
+    // the upload host the ticket names, as a POST with Authorization: Bearer <ticket> and nothing else of this
+    // client's: no key, PIN, account token or X-OW-*. The host's refusals arrive as kind Api with its code (its
+    // {"error": "<code>"} read as one); no answer from it is kind Transport naming its URL, never the ticket. An
+    // account token and a keyless client are refused at the ticket, nothing sent. Mirrors the TypeScript SDK's
+    // createMediaTicket ... removeImage and the Unity SDK's CreateMediaTicketAsync ... RemoveImageAsync.
+
+    // POST /media/ticket, no body: permission to upload one image into this world, short-lived (exp) and single-use,
+    // counted toward the world's daily limit. UploadImage asks for one itself; ask here to send the bytes yourself.
+    // keel's refusals: 403 storage_full (the account's image storage is used up), 429 quota_exceeded
+    // (IsQuotaExceeded, with retry_after) or rate_limited (wrong PINs), 503 media_unavailable. Mirrors the TypeScript
+    // SDK's `createMediaTicket`.
+    void CreateMediaTicket(OWHandler<OWMediaTicket> done);
+    // Upload one image and get its permanent public URL: a ticket (CreateMediaTicket, unless options.ticket is given),
+    // then the bytes to its upload_url, with X-Key when options.key is not empty. webp, png, jpeg or avif, read from the
+    // bytes (never SVG or gif). Answers the host's 201; set its url as an element's image_url yourself (Patch). Bytes
+    // past the ticket's max_bytes answer kind Api 413 too_large before any byte is sent. The host's refusals: 401
+    // ticket_expired / ticket_used / ticket_invalid, 400 bad_key, 409 exists, 413 too_large, 415 unsupported_type, 502
+    // write_failed (nothing stored; the ticket is still unspent). A ticket is spent once the upload succeeds. Mirrors
+    // the TypeScript SDK's `uploadImage`.
+    void UploadImage(const OWBytes& image, const OWUploadImageOptions& options, OWHandler<OWUploadedImage> done);
+    // POST /media/remove-ticket with {key}: permission to remove one image. `key_or_url` is the object key, or the whole
+    // image_url (OWMedia::ObjectKey takes its path). The image's uploader may remove it, and so may the world's owner
+    // key. keel's refusals: 403 permission_error, 404 not_found, 409 removal_in_flight and upload_pending (both with
+    // retry_after). Mirrors the TypeScript SDK's `createRemovalTicket`.
+    void CreateRemovalTicket(const std::string& key_or_url, OWHandler<OWRemovalTicket> done);
+    // Remove one uploaded image: a removal ticket (CreateRemovalTicket, unless `ticket` is given), then a POST with no
+    // body to its remove_url. The bytes go back to the uploading account's storage; elements still showing the image
+    // keep their image_url (the ticket's `referenced` counts them), and a cached copy can linger (cache may_linger).
+    // The host's refusals: 401 ticket_expired / ticket_used / ticket_invalid, 403 not_removable, 502 remove_failed.
+    // Mirrors the TypeScript SDK's `removeImage`.
+    void RemoveImage(const std::string& key_or_url, const std::optional<OWRemovalTicket>& ticket,
+                     OWHandler<OWRemovedImage> done);
+
+    // -- Files on elements (OWMedia.h) -------------------------------------------------------------------------------
+    //
+    // A file is seen by whoever may see its element, and never rides on the element: not in its body, its change_seq
+    // or the change feed. An upload is the image's two steps. The reads (ListFiles, WorldFiles, FileDownloadLink) go
+    // with the key alone; the ticket and the removal with its PIN. The type, the id and the file's id are each one path
+    // segment, checked and escaped. Mirrors the TypeScript SDK's listFiles ... removeFile.
+
+    // GET /{type}/{id}/files: the element's files, newest first, the rows of keel's {data} (no paging; none: empty).
+    // An element this key cannot see is a 404 not_found. Mirrors the TypeScript SDK's `listFiles`.
+    void ListFiles(const std::string& type, const std::string& id, OWHandler<std::vector<OWFileRow>> done);
+    // GET /world/files: every file in the world this key may see, newest first, each with its element's type and id, and
+    // the world's used_bytes of cap_bytes. Mirrors the TypeScript SDK's `worldFiles`.
+    void WorldFiles(OWHandler<OWWorldFiles> done);
+    // POST /{type}/{id}/files with {name, kind, size, label?}: permission to upload one file onto this element, 10
+    // minutes and single-use. The kind is read from the name when request.kind is absent; a name that is empty, or
+    // whose extension keel takes no file with, is refused, nothing sent, naming the extensions it takes. X-OW-Agent on
+    // an agent client (the one files route keel's document lists it on), no X-OW-Client, no Idempotency-Key (the
+    // single-use ticket is the idempotency). keel's refusals: 413 file_too_large (IsFileTooLarge), 403 files_full
+    // (IsFilesFull) or not_author (IsNotAuthor), 422 invalid_request (param kind, name, size or label), 429
+    // quota_exceeded (IsQuotaExceeded) or rate_limited, 503 media_unavailable. Mirrors the TypeScript SDK's
+    // `createFileTicket`.
+    void CreateFileTicket(const std::string& type, const std::string& id, const OWFileTicketRequest& request,
+                          OWHandler<OWFileTicket> done);
+    // Attach one file to an element: a ticket (CreateFileTicket with the bytes' length as its size, unless
+    // options.ticket is given), then the bytes, raw, to its upload_url with the ticket alone. Answers the host's 201
+    // (key, fid, bytes, type, etag); the file is listed once the host has reported it, which can be a moment after.
+    // Without a ticket, a name is needed (refused, nothing sent). Bytes past the ticket's max_bytes answer kind Api 413
+    // too_large before any byte is sent. The host's refusals: 401 ticket_expired / ticket_invalid / ticket_used, 409
+    // exists, 413 too_large, 415 unsupported_type (the bytes are not the kind), 502 write_failed. options.on_progress
+    // is called once, after success. Mirrors the TypeScript SDK's `uploadFile`.
+    void UploadFile(const std::string& type, const std::string& id, const OWBytes& file,
+                    const OWUploadFileOptions& options, OWHandler<OWUploadedFile> done);
+    // GET /{type}/{id}/files/{fileId}/download: a link to the file (url, from the download host, as an attachment), exp
+    // (5 minutes after issue), and its name, kind and size. The link is the credential: use it at once, never store or
+    // share it. Mirrors the TypeScript SDK's `fileDownloadLink`.
+    void FileDownloadLink(const std::string& type, const std::string& id, const std::string& file_id,
+                          OWHandler<OWFileDownload> done);
+    // DELETE /{type}/{id}/files/{fileId}: remove a file for real, out of the lists and the world's total at once.
+    // Answers null on the 204. The world's owner key may, and so may the key of whoever added it; any other is 403
+    // permission_error, a file not there 404 not_found. Mirrors the TypeScript SDK's `removeFile`.
+    void RemoveFile(const std::string& type, const std::string& id, const std::string& file_id,
+                    OWHandler<OWJsonValue> done);
 
     // The name sent as X-OW-Client when the config gives none.
     static const char* const DefaultClientName;  // "unreal-sdk"
