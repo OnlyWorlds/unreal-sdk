@@ -565,8 +565,51 @@ const char* KindName(const OWJsonValue& v) {
     return "";
 }
 
+// A whole finite number: an integer literal, or a number whose text reads as a double with no fraction (2.0, 1e3).
+bool IsWholeNumber(const OWJsonValue& v) {
+    if (!v.IsNumber()) return false;
+    const std::string& text = v.Text();
+    if (text.find_first_of(".eE") == std::string::npos) return true;
+    double d = 0;
+    auto res = std::from_chars(text.data(), text.data() + text.size(), d);
+    return res.ec == std::errc() && std::isfinite(d) && std::floor(d) == d;
+}
+
+// "" when every standard field of `element` holds its kind, else the refusal, in the TypeScript SDK's words (4.220.0's
+// checkKinds, the Python package's check_kinds): keel takes a value of another kind with a 200 and changes it (2.5, "7"
+// or true in an integer field stored as 2, 7 or 1, a list or a number in a text field as its text). An integer field
+// (OWLens::FieldsOf, kind Int) takes a whole number, never a boolean; a text field (the base strings, kind Text, and the
+// generic link's type key, kind GenericType, which the wire carries as text) a string; each or null. A null that was a
+// NaN or an infinity (OWJsonValue::NonFinite) is no null here: the kind is checked first, as the TypeScript SDK checks
+// it, and the value is named as JSON.stringify writes it (null). The body's own keys only; an extension, a link field
+// and a type outside the standard are not checked.
+std::string KindsWhy(const std::string& where, const OWJsonValue& element, std::string_view type) {
+    const std::vector<OWLens::OWLensField> fields = OWLens::FieldsOf(type);
+    if (fields.empty()) return "";
+    static const std::vector<std::string> base = {"name", "description", "supertype", "subtype", "image_url"};
+    for (size_t i = 0; i < element.Size(); ++i) {
+        const std::string& key = element.Keys()[i];
+        const OWJsonValue& v = element.Items()[i];
+        if (v.IsNull() && !v.NonFinite()) continue;
+        bool integer = false, text = std::find(base.begin(), base.end(), key) != base.end();
+        for (const OWLens::OWLensField& f : fields) {
+            if (key != f.name) continue;
+            integer = f.kind == OWLens::OWFieldKind::Int;
+            text = f.kind == OWLens::OWFieldKind::Text || f.kind == OWLens::OWFieldKind::GenericType;
+        }
+        const std::string field = std::string(type) + "." + key;
+        if (integer && !IsWholeNumber(v))
+            return where + ": " + field + " is an integer field; " + Compact(v) + " would be stored as another value." +
+                   NothingSent;
+        if (text && !v.IsString())
+            return where + ": " + field + " is a text field; " + Compact(v) + " is not a string." + NothingSent;
+    }
+    return "";
+}
+
 // The body of an element write: Sanitize's copy of `element`; else `why` says what is refused (a body that is not an
-// object; a known-of stub, with the words of the Unity SDK's RefuseKnownOf and the TypeScript SDK's refuseKnownOf).
+// object; a known-of stub, with the words of the Unity SDK's RefuseKnownOf and the TypeScript SDK's refuseKnownOf; a
+// value of another kind, KindsWhy).
 OWJsonValue WriteBody(const std::string& where, const OWJsonValue& element, std::string_view type, std::string& why) {
     if (!element.IsObject()) {
         why = where + ": the element is a JSON object; got " + KindName(element) + "." + NothingSent;
@@ -578,6 +621,8 @@ OWJsonValue WriteBody(const std::string& where, const OWJsonValue& element, std:
                       "mean to change." + NothingSent;
         return {};
     }
+    why = KindsWhy(where, element, type);
+    if (!why.empty()) return {};
     return OWClient::Sanitize(element, type);
 }
 
