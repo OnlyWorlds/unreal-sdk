@@ -16,6 +16,31 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Added
+
+- **`OWJsonValue::NonFinite()`: the NaN or infinity a null was made from.** `OWJsonValue::Number(double)` still makes
+  a NaN or an infinity a null, as `JSON.stringify` writes it, and every writer, reader and comparison reads it as the
+  null it is; the value now remembers the number, `"NaN"`, `"Infinity"` or `"-Infinity"` (nullptr for any other
+  value, a parsed null included), so the client can refuse it by name (below).
+
+### Changed
+
+- **A NaN or an infinity in a request body is refused before sending, by name and with its place**, where it was
+  sent as `null`, which cleared the field without a word: onlyworlds.com could not tell it from a `null` that was
+  meant. `Create`, `Upsert`, `Patch` and `Bulk` answer kind `Refused`: `a request body holds NaN at x_score, which
+  JSON cannot carry: send a finite number, or null to clear the field. Nothing was sent.` The place is read in the
+  body as sent, a list index in brackets (`items[1].element.x_weight` in a `Bulk`). `Sanitize` no longer turns such a
+  null on a string field into `""`. Parity with the TypeScript SDK 4.219.2, its test vector ported.
+- **A request body nested more than 256 deep is refused before sending**, its top counted as 1, where onlyworlds.com
+  stops reading a body: `a request body is nested more than 256 deep (an object or list at the top is depth 1), past
+  what onlyworlds.com reads. Nothing was sent.` It was sent, and answered 422. The envelope counts: a bulk item's
+  element sits at depth 4, so an element 200 deep, the most the server stores counted from the element, is a body 203
+  deep and is sent; past 200 in an element is the server's 422 that names its key. A body with both faults is refused
+  for its depth. Blueprint nodes are unchanged: their element text is parsed at the standard's 200 and holds no NaN.
+  Parity with the TypeScript SDK 4.219.3, its test vector ported (its 200,000-deep case at 5,000: a value that deep is
+  copied and freed level by level on the caller's stack, and the test runner held 5,000 and not 7,000 before the
+  refusal).
+
 ## [0.11.0] - 2026-11-27
 
 An error names the size limit a write passed, in C++ and on Blueprints. Parity with the TypeScript SDK 4.219.0. A

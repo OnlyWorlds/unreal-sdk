@@ -35,7 +35,11 @@ OWJsonValue OWJsonValue::NumberText(std::string text) {
 OWJsonValue OWJsonValue::Number(int64_t n) { return NumberText(std::to_string(n)); }
 
 OWJsonValue OWJsonValue::Number(double d) {
-    if (!std::isfinite(d)) return Null();
+    if (!std::isfinite(d)) {
+        OWJsonValue v;
+        v.non_finite_ = std::isnan(d) ? 1 : (d > 0 ? 2 : 3);
+        return v;
+    }
     return NumberText(OWJson::NumberToString(d));
 }
 
@@ -49,6 +53,15 @@ OWJsonValue OWJsonValue::Object() {
     OWJsonValue v;
     v.kind_ = Kind::Object;
     return v;
+}
+
+const char* OWJsonValue::NonFinite() const {
+    switch (non_finite_) {
+        case 1: return "NaN";
+        case 2: return "Infinity";
+        case 3: return "-Infinity";
+        default: return nullptr;
+    }
 }
 
 double OWJsonValue::AsDouble() const {

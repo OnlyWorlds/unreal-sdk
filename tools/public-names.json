@@ -1545,6 +1545,7 @@
   "OnlyWorlds::OWJsonValue::Kind::Number": {},
   "OnlyWorlds::OWJsonValue::Kind::Object": {},
   "OnlyWorlds::OWJsonValue::Kind::String": {},
+  "OnlyWorlds::OWJsonValue::NonFinite": {},
   "OnlyWorlds::OWJsonValue::Null": {},
   "OnlyWorlds::OWJsonValue::Number": {},
   "OnlyWorlds::OWJsonValue::NumberText": {},

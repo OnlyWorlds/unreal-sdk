@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <set>
@@ -940,4 +941,143 @@ OW_TEST(client_write_the_lens_fields_are_the_schemas_kinds) {
             if (f.kind == OWLens::OWFieldKind::Text) got.insert(f.name);
         t.Ok(got == want, type + ": OWLens's Text fields are schema.json's scalar_str fields");
     }
+}
+
+// -- A body holding a non-finite number, or nested past 256 (the TypeScript SDK's 4.219.2 and 4.219.3) --------------
+
+namespace {
+
+const char* const NonFiniteId = "11111111-2222-4333-8444-555555555555";
+const std::string TooDeep = "a request body is nested more than 256 deep (an object or list at the top is depth 1), past "
+                            "what onlyworlds.com reads. Nothing was sent.";
+
+std::string Holds(const std::string& what) {
+    return "a request body holds " + what + ", which JSON cannot carry: send a finite number, or null to clear the "
+           "field. Nothing was sent.";
+}
+
+// `levels` - 1 arrays around 1, the object that holds it `levels` deep (the TypeScript SDK's nest()), built inward by
+// moves: the parser stops at 200.
+OWJsonValue Nest(int levels) {
+    OWJsonValue v = OWJsonValue::Number(int64_t{1});
+    for (int i = 1; i < levels; ++i) {
+        OWJsonValue a = OWJsonValue::Array();
+        a.Push(std::move(v));
+        v = std::move(a);
+    }
+    return v;
+}
+
+// An object of the members given, each moved in.
+OWJsonValue Obj(std::vector<std::pair<std::string, OWJsonValue>> members) {
+    OWJsonValue o = OWJsonValue::Object();
+    for (auto& [k, v] : members) o.Set(k, std::move(v));
+    return o;
+}
+
+// How deep a JSON text's objects and arrays open, its top value at 1.
+int TextDepth(const std::string& text) {
+    int depth = 0, most = 0;
+    bool in_string = false, escaped = false;
+    for (char c : text) {
+        if (in_string) {
+            if (escaped) escaped = false;
+            else if (c == '\\') escaped = true;
+            else if (c == '"') in_string = false;
+        } else if (c == '"') {
+            in_string = true;
+        } else if (c == '{' || c == '[') {
+            most = std::max(most, ++depth);
+        } else if (c == '}' || c == ']') {
+            --depth;
+        }
+    }
+    return most;
+}
+
+const char* const BulkAnswer = "{\"errors\":false,\"items\":[]}";
+
+}  // namespace
+
+OW_TEST(client_write_a_non_finite_number_anywhere_in_a_body_is_refused_by_name_with_its_place) {
+    const double nan = std::numeric_limits<double>::quiet_NaN(), inf = std::numeric_limits<double>::infinity();
+    auto fake = Fake();
+    OWClient c = Make(fake);
+    auto refused = [&](const auto& g, const std::string& want) {
+        t.Ok(g.Refused(), want + ": refused (" + g.Why() + ")");
+        if (g.reply.error) t.Eq(g.reply.error->message, Holds(want), want + ": in the TypeScript SDK's words");
+    };
+    Got<OWJsonValue> a, b, d, e;
+    c.Patch("character", NonFiniteId, Obj({{"x_score", OWJsonValue::Number(nan)}}), {}, a.H());
+    refused(a, "NaN at x_score");
+    // The TypeScript SDK's patchWorld case, through Patch: the body is the partial itself, so the place is the same.
+    OWJsonValue scale = OWJsonValue::Array();
+    scale.Push(OWJsonValue::Number(int64_t{1}));
+    scale.Push(OWJsonValue::Number(int64_t{2}));
+    scale.Push(OWJsonValue::Number(inf));
+    c.Patch("character", NonFiniteId, Obj({{"x_tool", Obj({{"scale", std::move(scale)}})}}), {}, b.H());
+    refused(b, "Infinity at x_tool.scale[2]");
+    Got<OWBulkResult> bulk;
+    c.Bulk({{"pin", Obj({{"id", OWJsonValue::String(NonFiniteId)}, {"x", OWJsonValue::Number(int64_t{1})}})},
+            {"pin", Obj({{"id", OWJsonValue::String(NonFiniteId)}, {"x_weight", OWJsonValue::Number(-inf)}})}},
+           {}, bulk.H());
+    refused(bulk, "-Infinity at items[1].element.x_weight");
+    // Beyond the TypeScript SDK's: a NaN on a scalar string field, which Sanitize would otherwise send as "", and Upsert.
+    c.Create("character", Obj({{"name", OWJsonValue::Number(nan)}}), {}, d.H());
+    refused(d, "NaN at name");
+    c.Upsert("character", NonFiniteId, Obj({{"name", OWJsonValue::String("K")}, {"x_up", OWJsonValue::Number(inf)}}), e.H());
+    refused(e, "Infinity at x_up");
+    t.Eq(fake->calls.size(), size_t{0}, "nothing sent");
+}
+
+OW_TEST(client_write_a_body_past_256_deep_is_refused_and_256_is_sent_whole) {
+    auto fake = Fake();
+    OWClient c = Make(fake);
+    auto refused = [&](const auto& g, const std::string& label) {
+        t.Ok(g.Refused(), label + ": refused (" + g.Why() + ")");
+        if (g.reply.error) t.Eq(g.reply.error->message, TooDeep, label + ": in the TypeScript SDK's words");
+    };
+    Got<OWJsonValue> a, far, both, sent;
+    c.Patch("character", NonFiniteId, Obj({{"x_tool", Nest(257)}}), {}, a.H());
+    refused(a, "257 deep");
+    // Far past the line, the same refusal. The TypeScript SDK's case is 200,000 deep; here a value is copied, written and
+    // freed level by level on the runner's stack, and before the refusal this runner held 5,000 levels and died at 7,000
+    // (measured on 0.11.0), so the case is 5,000.
+    {
+        OWJsonValue deep = OWJsonValue::Object();
+        deep.Set("x_tool", Nest(5000));
+        c.Patch("character", NonFiniteId, deep, {}, far.H());
+    }
+    refused(far, "5,000 deep");
+    c.Patch("character", NonFiniteId,
+            Obj({{"x_score", OWJsonValue::Number(std::numeric_limits<double>::quiet_NaN())}, {"x_tool", Nest(257)}}), {},
+            both.H());
+    refused(both, "past the line and holding NaN: the depth is named");
+    t.Eq(fake->calls.size(), size_t{0}, "nothing sent");
+    c.Patch("character", NonFiniteId, Obj({{"x_tool", Nest(256)}}), {}, sent.H());
+    t.Ok(sent.reply.Ok(), "256 deep: sent (" + sent.Why() + ")");
+    t.Eq(fake->calls.size(), size_t{1}, "256 deep: one request");
+    t.Eq(TextDepth(fake->Last().body.value_or("")), 256, "256 deep: sent whole, every level");
+}
+
+OW_TEST(client_write_a_bulk_element_200_deep_is_sent_and_the_envelope_counts) {
+    auto fake = Fake(BulkAnswer);
+    OWClient c = Make(fake);
+    Got<OWBulkResult> a, b, deeper;
+    // An element 200 deep, counted from the element as keel stores it, is sent: it sits at depth 4 of the body
+    // ({items: [{element}]}), so the body is 203 deep.
+    c.Bulk({{"character", Obj({{"id", OWJsonValue::String(NonFiniteId)}, {"name", OWJsonValue::String("K")},
+                               {"x_tool", Nest(200)}})}},
+           {}, a.H());
+    t.Ok(a.reply.Ok(), "an element 200 deep: sent (" + a.Why() + ")");
+    t.Eq(fake->calls.size(), size_t{1}, "one request");
+    t.Eq(TextDepth(fake->Last().body.value_or("")), 203, "the element whole, under the envelope");
+    // The envelope counts: an element 253 deep is a body 256 deep, sent; 254 is 257, refused.
+    c.Bulk({{"character", Obj({{"id", OWJsonValue::String(NonFiniteId)}, {"x_tool", Nest(253)}})}}, {}, b.H());
+    t.Ok(b.reply.Ok(), "an element 253 deep: sent (" + b.Why() + ")");
+    t.Eq(TextDepth(fake->Last().body.value_or("")), 256, "253 deep: a body 256 deep");
+    c.Bulk({{"character", Obj({{"id", OWJsonValue::String(NonFiniteId)}, {"x_tool", Nest(254)}})}}, {}, deeper.H());
+    t.Ok(deeper.Refused(), "an element 254 deep: refused (" + deeper.Why() + ")");
+    if (deeper.reply.error) t.Eq(deeper.reply.error->message, TooDeep, "in the TypeScript SDK's words");
+    t.Eq(fake->calls.size(), size_t{2}, "the 257-deep bulk not sent");
 }

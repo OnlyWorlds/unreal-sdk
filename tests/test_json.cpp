@@ -83,6 +83,23 @@ OW_TEST(json_layout_and_key_order) {
     t.Eq(again.Find("k3") ? again.Find("k3")->Text() : std::string(), std::string("99"), "and takes the last value");
 }
 
+OW_TEST(json_a_non_finite_number_is_a_null_that_remembers_it) {
+    const double nan = std::numeric_limits<double>::quiet_NaN(), inf = std::numeric_limits<double>::infinity();
+    auto spelled = [](const OWJsonValue& v) { return std::string(v.NonFinite() ? v.NonFinite() : "<none>"); };
+    for (auto [d, want] : {std::make_pair(nan, "NaN"), std::make_pair(inf, "Infinity"), std::make_pair(-inf, "-Infinity")}) {
+        OWJsonValue v = OWJsonValue::Number(d);
+        t.Ok(v.IsNull(), std::string(want) + ": a null, as JSON.stringify writes it");
+        t.Eq(spelled(v), want, "it remembers the number");
+        t.Eq(OWJson::Stringify(v), "null\n", std::string(want) + ": written null");
+        t.Ok(v == OWJsonValue::Null(), std::string(want) + ": equal as values to null");
+        OWJsonValue copy = v;
+        t.Eq(spelled(copy), want, "a copy remembers it too");
+    }
+    t.Eq(spelled(OWJsonValue::Null()), "<none>", "a null made as one");
+    t.Eq(spelled(OWJson::Parse("null").value), "<none>", "a null parsed");
+    t.Eq(spelled(OWJsonValue::Number(1.5)), "<none>", "a finite number");
+}
+
 OW_TEST(json_parser_is_strict) {
     const char* bad[] = {"{\"a\":}", "[1,]", "{\"a\":1,}", "\"a\x01\"", "01", "+1", "1.", ".5", "1e", "-", "NaN",
                          "Infinity", "{} x", "// c\n{}", "{'a':1}", "[\"\\x\"]", "\"\\u12\"", "{\"a\" 1}", "[1 2]",

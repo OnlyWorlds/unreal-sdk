@@ -506,6 +506,53 @@ std::string Compact(const OWJsonValue& v) {
     return out;
 }
 
+// The deepest request body keel's reader takes, its top counted as 1 (it answers 422 past it).
+constexpr int BodyMaxDepth = 256;
+
+// A request body as the compact text sent, or "" with `why` set, in the TypeScript SDK's words (4.219.2 and 4.219.3),
+// for the two bodies keel cannot read as written: one nested more than BodyMaxDepth deep, an object or array at the top
+// at 1, the envelope of a bulk included (what keel stores is held to the standard's 200 counted from the element a value
+// sits in, and keel refuses past that by name, so no value keel would store is refused here); and one holding a NaN or an
+// infinity (OWJsonValue::NonFinite), named with its place (items[1].element.x_weight), which would be written null and
+// clear the field without a word. A body with both is refused for its depth. Walked with a stack of its own, in the
+// order Compact writes it, so Compact's own recursion is held to the line.
+std::string BodyText(const OWJsonValue& body, std::string& why) {
+    struct At {
+        const OWJsonValue* value;
+        int parent;
+        std::string place;
+    };
+    std::string non_finite;
+    std::vector<At> stack{{&body, 0, ""}};
+    while (!stack.empty()) {
+        At at = std::move(stack.back());
+        stack.pop_back();
+        const OWJsonValue& v = *at.value;
+        if (v.IsObject() || v.IsArray()) {
+            int depth = at.parent + 1;
+            if (depth > BodyMaxDepth) {
+                why = "a request body is nested more than " + std::to_string(BodyMaxDepth) +
+                      " deep (an object or list at the top is depth 1), past what onlyworlds.com reads." + NothingSent;
+                return "";
+            }
+            for (size_t i = v.Size(); i-- > 0;) {
+                std::string place = v.IsArray() ? at.place + "[" + std::to_string(i) + "]"
+                                    : at.place.empty() ? v.Keys()[i]
+                                                       : at.place + "." + v.Keys()[i];
+                stack.push_back({&v.Items()[i], depth, std::move(place)});
+            }
+        } else if (non_finite.empty() && v.NonFinite()) {
+            non_finite = std::string(v.NonFinite()) + " at " + (at.place.empty() ? "the top" : at.place);
+        }
+    }
+    if (!non_finite.empty()) {
+        why = "a request body holds " + non_finite +
+              ", which JSON cannot carry: send a finite number, or null to clear the field." + NothingSent;
+        return "";
+    }
+    return Compact(body);
+}
+
 const char* KindName(const OWJsonValue& v) {
     switch (v.kind()) {
         case OWJsonValue::Kind::Null: return "null";
@@ -863,7 +910,8 @@ void OWJoin::Redeem(const std::string& code, const OWRedeemOptions& options, con
     if (options.character) body.Set("character", OWJsonValue::String(*options.character));
     How how;
     how.auth = false;
-    how.body = Compact(body);
+    how.body = BodyText(body, why);
+    if (!why.empty()) return Refuse(done, why);
     const std::string route = "POST /join/";
     Request(Keyless(where), "POST", "/join/", {}, how, [route, done](OWReply<OWJsonValue> raw) {
         done(Then<OWJoined>(Object(std::move(raw), route), [](OWJsonValue& answer, OWReply<OWJoined>& r) {
@@ -899,8 +947,9 @@ OWJsonValue OWClient::Sanitize(const OWJsonValue& payload, std::string_view type
     OWJsonValue body = payload;
     for (const std::string& f : ReadOnlyFields()) body.Erase(f);
     for (size_t i = 0; i < body.Size(); ++i) {
-        // string-empty-is-unset: "" is the wire's unset, and keel has no null to store.
-        if (body.Items()[i].IsNull() && std::find(strings.begin(), strings.end(), body.Keys()[i]) != strings.end())
+        // string-empty-is-unset: "" is the wire's unset, and keel has no null to store. A null that was a NaN or an
+        // infinity is kept, for the body's own refusal (BodyText) to name.
+        if (body.Items()[i].IsNull() && !body.Items()[i].NonFinite() && std::find(strings.begin(), strings.end(), body.Keys()[i]) != strings.end())
             body.Items()[i] = OWJsonValue::String("");
     }
     return body;
@@ -935,7 +984,8 @@ void OWClient::Create(const std::string& type, const OWJsonValue& element, const
     if (!why.empty()) return Refuse(done, why);
     How how;
     how.write = true;
-    how.body = Compact(body);
+    how.body = BodyText(body, why);
+    if (!why.empty()) return Refuse(done, why);
     how.idempotency_key = options.idempotency_key;
     ElementWrite(state_, "POST", path, how, std::move(done));
 }
@@ -951,7 +1001,8 @@ void OWClient::Upsert(const std::string& type, const std::string& id, const OWJs
     How how;
     how.write = true;
     how.proposable = true;
-    how.body = Compact(body);
+    how.body = BodyText(body, why);
+    if (!why.empty()) return Refuse(done, why);
     ElementWrite(state_, "PUT", path, how, std::move(done));
 }
 
@@ -967,7 +1018,8 @@ void OWClient::Patch(const std::string& type, const std::string& id, const OWJso
     How how;
     how.write = true;
     how.proposable = true;
-    how.body = Compact(body);
+    how.body = BodyText(body, why);
+    if (!why.empty()) return Refuse(done, why);
     how.if_match = options.if_match;
     ElementWrite(state_, "PATCH", path, how, std::move(done));
 }
@@ -1006,7 +1058,8 @@ void OWClient::EditLinks(const std::string& type, const std::string& id, const s
     How how;
     how.write = true;
     how.proposable = true;
-    how.body = Compact(body);
+    how.body = BodyText(body, why);
+    if (!why.empty()) return Refuse(done, why);
     how.if_match = options.if_match;
     ElementWrite(state_, "POST", path, how, std::move(done));
 }
@@ -1034,9 +1087,11 @@ void OWClient::Bulk(const std::vector<OWBulkItem>& items, const OWBulkOptions& o
     body.Set("items", std::move(list));
     body.Set("atomic", OWJsonValue::Bool(options.atomic));
     if (options.create_only) body.Set("create_only", OWJsonValue::Bool(true));
+    std::string why;
     How how;
     how.write = true;
-    how.body = Compact(body);
+    how.body = BodyText(body, why);
+    if (!why.empty()) return Refuse(done, why);
     how.idempotency_key = options.idempotency_key;
     Request(state_, "POST", "/bulk/", {}, how, [done](OWReply<OWJsonValue> raw) {
         done(Then<OWBulkResult>(Object(std::move(raw), "POST /bulk/"),
