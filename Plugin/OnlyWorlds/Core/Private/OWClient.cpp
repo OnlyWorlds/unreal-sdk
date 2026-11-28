@@ -169,6 +169,9 @@ struct How {
     std::optional<int64_t> if_match;
     // An element write: X-OW-Client, and X-OW-Agent on an agent client, the operations keel's document declares both on.
     bool write = false;
+    // X-OW-Client alone, never X-OW-Agent: the proposal routes keel's document declares it on (a propose, an accept, a
+    // review).
+    bool named = false;
     // A write keel may answer 202 with {proposal} (an upsert, a patch, a link edit): a 202 is then a proposal, never
     // the element.
     bool proposable = false;
@@ -252,9 +255,10 @@ void Request(const StatePtr& s, const std::string& method, const std::string& pa
     if (how.body) request.headers.emplace_back("Content-Type", "application/json");
     if (!how.idempotency_key.empty()) request.headers.emplace_back("Idempotency-Key", how.idempotency_key);
     // Presence is the declaration, the value is never stored: opt-in, and on the element writes alone, where keel's
-    // document declares it. The client's name goes on the same writes and never on a read.
+    // document declares it. The client's name goes on the same writes, and on the three proposal routes keel declares it
+    // on, and never on a read.
     if (s->agent && how.write) request.headers.emplace_back("X-OW-Agent", "1");
-    if (how.write) request.headers.emplace_back("X-OW-Client", s->client_name);
+    if (how.write || how.named) request.headers.emplace_back("X-OW-Client", s->client_name);
     if (!how.if_none_match.empty()) request.headers.emplace_back("If-None-Match", how.if_none_match);
     if (how.if_match) request.headers.emplace_back("If-Match", "\"" + std::to_string(*how.if_match) + "\"");
     request.body = how.body;
@@ -1148,6 +1152,326 @@ void OWClient::Bulk(const std::vector<OWBulkItem>& items, const OWBulkOptions& o
     Request(state_, "POST", "/bulk/", {}, how, [done](OWReply<OWJsonValue> raw) {
         done(Then<OWBulkResult>(Object(std::move(raw), "POST /bulk/"),
                                 [](OWJsonValue& answer, OWReply<OWBulkResult>& r) { BulkOf(answer, r); }));
+    });
+}
+
+
+// -- Proposed changes ------------------------------------------------------------------------------------------------
+
+namespace {
+
+// A JSON value keel serves, as itself; absent for null or no key.
+std::optional<OWJsonValue> ValueOf(const OWJsonValue* v) {
+    if (!v || v->IsNull()) return std::nullopt;
+    return *v;
+}
+
+OWJsonValue TextOrNull(const std::optional<std::string>& s) { return s ? OWJsonValue::String(*s) : OWJsonValue(); }
+OWJsonValue ValueOrNull(const std::optional<OWJsonValue>& v) { return v ? *v : OWJsonValue(); }
+
+// A JSON value as text: a string as itself, any other value its compact JSON.
+std::optional<std::string> AsText(const std::optional<OWJsonValue>& v) {
+    if (!v) return std::nullopt;
+    return v->IsString() ? v->Text() : Compact(*v);
+}
+
+// A proposal list's query, in the Unity SDK's order: state, since, element, limit (the page size when absent), cursor.
+Query ProposalQueryOf(const OWProposalQuery& q, int64_t page_size) {
+    Query out;
+    if (!q.state.empty()) out.emplace_back("state", q.state);
+    if (!q.since.empty()) out.emplace_back("since", q.since);
+    if (!q.element.empty()) out.emplace_back("element", q.element);
+    out.emplace_back("limit", std::to_string(q.limit.value_or(page_size)));
+    if (!q.cursor.empty()) out.emplace_back("cursor", q.cursor);
+    return out;
+}
+
+// A list's request: the query's tag sent as If-None-Match exactly as given, and a 304 read by the answer (PageAnswer).
+How ListHow(const OWProposalQuery& q) {
+    How how;
+    how.if_none_match = q.if_none_match.value_or("");
+    how.not_modified = true;
+    return how;
+}
+
+// "" when the query's tag may be sent; else the refusal, in the TypeScript SDK's words (4.221.0): a tag given is the
+// etag of an earlier read, never empty.
+std::string TagWhy(const char* call, const OWProposalQuery& q) {
+    if (!q.if_none_match || !q.if_none_match->empty()) return "";
+    return std::string(call) + ": if_none_match is the etag of an earlier read, a non-empty string; got \"\"." +
+           NothingSent;
+}
+
+// A list's answer, as the TypeScript SDK's taggedList (4.221.0) reads it: {data, has_more, next_cursor} read into rows,
+// the ETag beside it (absent when none came); a 304 to a call that sent `tag` is unchanged, with no rows, its etag the
+// 304's own or else the tag sent; a 304 to a call that sent none is an error, never a page.
+OWHandler<OWJsonValue> PageAnswer(std::string route, std::string tag, OWHandler<OWProposalPage> done) {
+    return [route, tag, done](OWReply<OWJsonValue> raw) {
+        std::optional<std::string> etag;
+        if (raw.response)
+            if (const std::string* sent = raw.response->Header("ETag")) etag = *sent;
+        if (raw.Ok() && raw.response && raw.response->status == 304) {
+            OWReply<OWProposalPage> r;
+            r.response = std::move(raw.response);
+            if (tag.empty()) {
+                r.error = OWApiError::Of(OWApiError::Kind::Api,
+                                         route + " answered 304 Not Modified to a read that sent no If-None-Match: there "
+                                                 "is no list to return",
+                                         304, r.response->body);
+                return done(std::move(r));
+            }
+            r.value.unchanged = true;
+            r.value.etag = etag ? *etag : tag;
+            return done(std::move(r));
+        }
+        OWReply<OWProposalPage> r =
+            Then<OWProposalPage>(Object(std::move(raw), route), [&](OWJsonValue& body, OWReply<OWProposalPage>& out) {
+                if (const OWJsonValue* rows = body.Find("data"); rows && !rows->IsNull()) {
+                    if (!rows->IsArray()) return Bad(out, route + " answered data that is not a list");
+                    for (const OWJsonValue& row : rows->Items()) {
+                        std::optional<OWProposal> p = OWProposal::Of(row);
+                        if (!p) return Bad(out, route + " answered a row that is not a proposal");
+                        out.value.data.push_back(std::move(*p));
+                    }
+                }
+                const OWJsonValue* more = body.Find("has_more");
+                out.value.has_more = more && more->IsBool() && more->AsBool();
+                out.value.next_cursor = TextOf(body.Find("next_cursor")).value_or("");
+            });
+        if (r.Ok()) r.value.etag = etag;
+        done(std::move(r));
+    };
+}
+
+// An answer whose `proposal` is the row (a propose, a decline): the row, else an error of kind Answer.
+OWHandler<OWJsonValue> RowAnswer(std::string route, OWHandler<OWProposal> done) {
+    return [route, done](OWReply<OWJsonValue> raw) {
+        done(Then<OWProposal>(Object(std::move(raw), route), [&](OWJsonValue& body, OWReply<OWProposal>& r) {
+            std::optional<OWProposal> row = OWProposal::Of(body.Find("proposal") ? *body.Find("proposal") : OWJsonValue());
+            if (!row) return Bad(r, route + " answered no proposal");
+            r.value = std::move(*row);
+        }));
+    };
+}
+
+}  // namespace
+
+bool OWProposal::IsNewElement() const { return kind == KindNewElement; }
+std::optional<std::string> OWProposal::EvidenceText() const { return AsText(evidence); }
+std::optional<std::string> OWProposal::ExpiresText() const { return AsText(expires); }
+
+const std::vector<std::string>& OWProposal::Keys() {
+    static const std::vector<std::string> keys = {
+        "kind",     "id",       "element_type", "element_id", "house",      "state",          "fields",
+        "omitted",  "base",     "base_seq",     "evidence",   "expires",    "by",             "via",
+        "client",   "decided_by", "decided_at", "decline_reason", "created_at", "updated_at"};
+    return keys;
+}
+
+std::optional<OWProposal> OWProposal::Of(const OWJsonValue& row) {
+    if (!row.IsObject()) return std::nullopt;
+    OWProposal p;
+    p.kind = TextOf(row.Find("kind")).value_or("");
+    p.id = TextOf(row.Find("id")).value_or("");
+    p.element_type = TextOf(row.Find("element_type")).value_or("");
+    p.element_id = TextOf(row.Find("element_id")).value_or("");
+    p.house = TextOf(row.Find("house"));
+    p.state = TextOf(row.Find("state")).value_or("");
+    if (const OWJsonValue* f = row.Find("fields"); f && f->IsObject()) p.fields = *f;
+    if (const OWJsonValue* o = row.Find("omitted"); o && o->IsArray()) {
+        p.omitted.emplace();
+        for (const OWJsonValue& name : o->Items())
+            if (name.IsString()) p.omitted->push_back(name.Text());
+    }
+    if (const OWJsonValue* b = row.Find("base"); b && b->IsObject()) p.base = *b;
+    p.base_seq = IntOf(row.Find("base_seq")).value_or(0);
+    p.evidence = ValueOf(row.Find("evidence"));
+    p.expires = ValueOf(row.Find("expires"));
+    p.by = TextOf(row.Find("by"));
+    p.via = TextOf(row.Find("via"));
+    p.client = TextOf(row.Find("client"));
+    p.decided_by = TextOf(row.Find("decided_by"));
+    p.decided_at = TextOf(row.Find("decided_at"));
+    p.decline_reason = TextOf(row.Find("decline_reason"));
+    p.created_at = TextOf(row.Find("created_at"));
+    p.updated_at = TextOf(row.Find("updated_at"));
+    return p;
+}
+
+OWJsonValue OWProposal::ToJson() const {
+    OWJsonValue out = OWJsonValue::Object();
+    out.Set("kind", kind.empty() ? OWJsonValue() : OWJsonValue::String(kind));
+    out.Set("id", OWJsonValue::String(id));
+    out.Set("element_type", OWJsonValue::String(element_type));
+    out.Set("element_id", OWJsonValue::String(element_id));
+    out.Set("house", TextOrNull(house));
+    out.Set("state", OWJsonValue::String(state));
+    out.Set("fields", fields);
+    OWJsonValue names;
+    if (omitted) {
+        names = OWJsonValue::Array();
+        for (const std::string& name : *omitted) names.Push(OWJsonValue::String(name));
+    }
+    out.Set("omitted", std::move(names));
+    out.Set("base", base);
+    out.Set("base_seq", OWJsonValue::Number(base_seq));
+    out.Set("evidence", ValueOrNull(evidence));
+    out.Set("expires", ValueOrNull(expires));
+    out.Set("by", TextOrNull(by));
+    out.Set("via", TextOrNull(via));
+    out.Set("client", TextOrNull(client));
+    out.Set("decided_by", TextOrNull(decided_by));
+    out.Set("decided_at", TextOrNull(decided_at));
+    out.Set("decline_reason", TextOrNull(decline_reason));
+    out.Set("created_at", TextOrNull(created_at));
+    out.Set("updated_at", TextOrNull(updated_at));
+    return out;
+}
+
+const std::vector<std::string>& OWProposalPage::Keys() {
+    static const std::vector<std::string> keys = {"data", "has_more", "next_cursor"};
+    return keys;
+}
+const std::vector<std::string>& OWProposalAccepted::Keys() {
+    static const std::vector<std::string> keys = {"proposal", "element"};
+    return keys;
+}
+const std::vector<std::string>& OWReviewed::Keys() {
+    static const std::vector<std::string> keys = {"element", "deleted"};
+    return keys;
+}
+
+void OWClient::Propose(const std::string& type, const std::string& id, const OWJsonValue& fields,
+                       const std::string& evidence, const OWProposeOptions& options, OWHandler<OWProposal> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    if (!fields.IsObject()) {
+        return Refuse(done, std::string("propose: fields must be an object of the fields to change and their new "
+                                        "values, as in a PATCH body.") + NothingSent);
+    }
+    std::string why;
+    OWJsonValue cleaned = WriteBody("propose", fields, type, why);
+    if (!why.empty()) return Refuse(done, why);
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/proposals";
+    if (!why.empty()) return Refuse(done, why);
+    OWJsonValue body = OWJsonValue::Object();
+    body.Set("fields", std::move(cleaned));
+    body.Set("evidence", OWJsonValue::String(evidence));
+    if (!options.expires.empty()) body.Set("expires", OWJsonValue::String(options.expires));
+    How how;
+    how.named = true;
+    how.body = BodyText(body, why);
+    if (!why.empty()) return Refuse(done, why);
+    how.idempotency_key = options.idempotency_key;
+    Request(state_, "POST", path, {}, how, RowAnswer("POST " + path, std::move(done)));
+}
+
+void OWClient::ListProposals(const std::string& type, const std::string& id, const OWProposalQuery& query,
+                             OWHandler<OWProposalPage> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    if (!query.element.empty()) {
+        return Refuse(done, std::string("ListProposals: element filters the world's queue (WorldProposals); one "
+                                        "element's list is already one element's.") + NothingSent);
+    }
+    std::string why = TagWhy("ListProposals", query);
+    if (!why.empty()) return Refuse(done, why);
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/proposals";
+    if (!why.empty()) return Refuse(done, why);
+    Request(state_, "GET", path, ProposalQueryOf(query, state_->page_size), ListHow(query),
+            PageAnswer("GET " + path, query.if_none_match.value_or(""), std::move(done)));
+}
+
+void OWClient::WorldProposals(const OWProposalQuery& query, OWHandler<OWProposalPage> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    const std::string why = TagWhy("WorldProposals", query);
+    if (!why.empty()) return Refuse(done, why);
+    std::string path = "/world/proposals";
+    Request(state_, "GET", path, ProposalQueryOf(query, state_->page_size), ListHow(query),
+            PageAnswer("GET " + path, query.if_none_match.value_or(""), std::move(done)));
+}
+
+void OWClient::AcceptProposal(const std::string& type, const std::string& id, const std::string& pid,
+                              OWHandler<OWProposalAccepted> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why;
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/proposals/" + Seg("pid", pid, why) + "/accept";
+    if (!why.empty()) return Refuse(done, why);
+    How how;
+    how.named = true;
+    const std::string route = "POST " + path;
+    Request(state_, "POST", path, {}, how, [route, done](OWReply<OWJsonValue> raw) {
+        done(Then<OWProposalAccepted>(Object(std::move(raw), route), [&](OWJsonValue& body, OWReply<OWProposalAccepted>& r) {
+            std::optional<OWProposal> row = OWProposal::Of(body.Find("proposal") ? *body.Find("proposal") : OWJsonValue());
+            const OWJsonValue* element = body.Find("element");
+            if (!row) return Bad(r, route + " answered no proposal");
+            if (!element || !element->IsObject()) return Bad(r, route + " answered no element");
+            r.value.proposal = std::move(*row);
+            r.value.element = *element;
+        }));
+    });
+}
+
+void OWClient::DeclineProposal(const std::string& type, const std::string& id, const std::string& pid,
+                               const std::optional<std::string>& reason, OWHandler<OWProposal> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why;
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/proposals/" + Seg("pid", pid, why) + "/decline";
+    if (!why.empty()) return Refuse(done, why);
+    How how;
+    if (reason) {
+        OWJsonValue body = OWJsonValue::Object();
+        body.Set("reason", OWJsonValue::String(*reason));
+        how.body = BodyText(body, why);
+    }
+    Request(state_, "POST", path, {}, how, RowAnswer("POST " + path, std::move(done)));
+}
+
+void OWClient::WithdrawProposal(const std::string& type, const std::string& id, const std::string& pid,
+                                OWHandler<OWJsonValue> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    std::string why;
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/proposals/" + Seg("pid", pid, why);
+    if (!why.empty()) return Refuse(done, why);
+    How how;
+    how.allow_empty = true;
+    Request(state_, "DELETE", path, {}, how, [done](OWReply<OWJsonValue> r) {
+        if (r.Ok()) r.value = OWJsonValue();
+        done(std::move(r));
+    });
+}
+
+void OWClient::ReviewNewElement(const std::string& type, const std::string& id, const std::string& decision,
+                                const std::optional<std::string>& reason, OWHandler<OWReviewed> done) {
+    if (!state_->error.empty()) return Refuse(done, NotBuilt(*state_));
+    const bool accept = decision == OWReviewed::Accept;
+    if (!accept && decision != OWReviewed::Decline) {
+        return Refuse(done, "ReviewNewElement: decision must be 'accept' or 'decline', got " + OWJson::Quote(decision) +
+                                "." + NothingSent);
+    }
+    // keel takes {decision: accept} or {decision: decline, reason?}: a reason with an accept is its 422.
+    if (reason && accept)
+        return Refuse(done, std::string("ReviewNewElement: a reason goes with a decline only.") + NothingSent);
+    std::string why;
+    std::string path = "/" + Seg("type", type, why) + "/" + Seg("id", id, why) + "/review";
+    if (!why.empty()) return Refuse(done, why);
+    OWJsonValue body = OWJsonValue::Object();
+    body.Set("decision", OWJsonValue::String(decision));
+    if (reason) body.Set("reason", OWJsonValue::String(*reason));
+    How how;
+    how.named = true;
+    how.body = BodyText(body, why);
+    if (!why.empty()) return Refuse(done, why);
+    const std::string route = "POST " + path;
+    Request(state_, "POST", path, {}, how, [route, accept, done](OWReply<OWJsonValue> raw) {
+        done(Then<OWReviewed>(Object(std::move(raw), route), [&](OWJsonValue& answer, OWReply<OWReviewed>& r) {
+            if (const OWJsonValue* e = answer.Find("element"); e && e->IsObject()) r.value.element = *e;
+            if (const OWJsonValue* d = answer.Find("deleted"); d && d->IsString()) r.value.deleted = d->Text();
+            // keel answers exactly one of the two; a 200 without the one this decision settles is never read as settled.
+            if (accept ? !r.value.element : !r.value.deleted) {
+                int status = r.response ? r.response->status : 0;
+                Bad(r, route + " answered " + std::to_string(status) + " without its " + (accept ? "element" : "deleted") +
+                           ": the review's outcome is unknown");
+            }
+        }));
     });
 }
 

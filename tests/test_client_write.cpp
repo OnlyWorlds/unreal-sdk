@@ -1101,8 +1101,8 @@ OW_TEST(client_write_a_value_keel_would_store_as_another_is_refused_before_sendi
         for (OWJsonValue& v : items) a.Push(std::move(v));
         return a;
     };
-    // Each one keel takes with a 200 and stores as something else (measured on production 2026-11-28). The core has no
-    // propose, so the TypeScript SDK's sixth case has no route here.
+    // Each one keel takes with a 200 and stores as something else (measured on production 2026-11-28), the TypeScript
+    // SDK's six cases in its order.
     Got<OWJsonValue> a, b, d, e, f;
     c.Create("character", Obj({{"name", OWJsonValue::String("K")}, {"height", OWJsonValue::Number(2.5)}}), {}, a.H());
     starts(a, "create: character.height is an integer field; 2.5 would be stored as another value");
@@ -1118,6 +1118,9 @@ OW_TEST(client_write_a_value_keel_would_store_as_another_is_refused_before_sendi
             {"character", Obj({{"name", OWJsonValue::String("L")}, {"supertype", OWJsonValue::Number(int64_t{12})}})}},
            {}, bulk.H());
     starts(bulk, "bulk: items[1]: character.supertype is a text field; 12 is not a string");
+    Got<OWProposal> proposal;
+    c.Propose("character", NonFiniteId, Obj({{"height", OWJsonValue::Number(1.5)}}), "a source", {}, proposal.H());
+    starts(proposal, "propose: character.height is an integer field; 1.5 would be stored");
     // A number that is not finite is named by its own name, never the null JSON writes in its place (4.220.2): the
     // kind's refusal, before the body's own NaN refusal.
     const double inf = std::numeric_limits<double>::infinity();

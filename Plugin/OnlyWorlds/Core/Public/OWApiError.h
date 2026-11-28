@@ -45,6 +45,15 @@ struct OW_API OWFieldsRefusal {
     OWJsonValue ToJson() const;
 };
 
+// One proposed field that moved since the proposal was made, on a 409 stale_proposal (OWApiError::Conflicts): its value
+// then and now, each the JSON value as served. Mirrors the Unity SDK's `OWProposalConflict` and the TypeScript SDK's
+// `OwProposalConflict`.
+struct OWProposalConflict {
+    std::string field;
+    OWJsonValue base;
+    OWJsonValue current;
+};
+
 struct OW_API OWApiError {
     enum class Kind : uint8_t { Api, Transport, Refused, Answer };
 
@@ -162,6 +171,35 @@ struct OW_API OWApiError {
     // The account has no PIN yet, and a member writes with their own (409 pin_required); accepting a link needs none, a
     // write key for the membership does. Mirrors the TypeScript SDK's `isPinRequired`.
     bool IsPinRequired() const;
+    // OWClient::Propose named a field this key's view of the element does not hold, one a known-of stub withholds (422
+    // field_not_visible). Mirrors the TypeScript SDK's `isFieldNotVisible`.
+    bool IsFieldNotVisible() const;
+    // OWClient::Propose past the open proposals a proposer may hold: five on one element, fifty in one world (422
+    // too_many_open; lapsed rows do not count). Mirrors the TypeScript SDK's `isTooManyOpen`.
+    bool IsTooManyOpen() const;
+    // OWClient::AcceptProposal: a proposed field moved since the proposal was made, and nothing was written (409
+    // stale_proposal); the row stays open. Conflicts() lists each moved field, Current() is the element now. Mirrors the
+    // TypeScript SDK's `isStaleProposal`.
+    bool IsStaleProposal() const;
+    // An agent seat's accept, decline or review while the world holds its writes as proposals, or the member a new
+    // element's mark names reviewing it (403 proposed_only). Mirrors the TypeScript SDK's `isProposedOnly`.
+    bool IsProposedOnly() const;
+    // A keeper accepting or declining a proposal it made itself (403 own_proposal). Mirrors the TypeScript SDK's
+    // `isOwnProposal`.
+    bool IsOwnProposal() const;
+    // OWClient::ReviewNewElement on an element that carries no x_review_proposed mark: never marked, or an accept
+    // already landed (422 not_proposed). Mirrors the TypeScript SDK's `isNotProposed`.
+    bool IsNotProposed() const;
+    // A write or a proposal below co-builder that sets a review mark whose `by` is not the writer's own membership id
+    // (403 review_by_another). Mirrors the TypeScript SDK's `isReviewByAnother`.
+    bool IsReviewByAnother() const;
+    // A write carrying an empty review mark (422 review_mark_empty). Mirrors the TypeScript SDK's `isReviewMarkEmpty`.
+    bool IsReviewMarkEmpty() const;
+    // On a 409 stale_proposal (IsStaleProposal): each proposed field that moved, from the `conflicts` list beside the
+    // envelope, in keel's order. Empty on any other error, when keel sent none, or when the body is not JSON; an item
+    // that is not an object or whose `field` is not a string is left out. Mirrors the Unity SDK's `Conflicts` and the
+    // TypeScript SDK's `OwStaleProposalError.conflicts`.
+    std::vector<OWProposalConflict> Conflicts() const;
     // Worth sending again later: a 429 or a 5xx, and the three 409s that clear by themselves; never a used-up daily
     // allowance or a service turned off. Mirrors the Unity SDK's IsRetryable (the TypeScript SDK names each code:
     // `isBusy`, `isRateLimited`, `isIdempotencyInFlight`).

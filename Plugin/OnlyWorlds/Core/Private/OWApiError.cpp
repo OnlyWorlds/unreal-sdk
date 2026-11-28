@@ -217,6 +217,33 @@ bool OWApiError::IsCharacterInvalid() const {
 bool OWApiError::IsWorldFull() const { return status == 422 && code == "world_full"; }
 bool OWApiError::IsAlreadyMember() const { return status == 409 && code == "already_member"; }
 bool OWApiError::IsPinRequired() const { return status == 409 && code == "pin_required"; }
+bool OWApiError::IsFieldNotVisible() const { return status == 422 && code == "field_not_visible"; }
+bool OWApiError::IsTooManyOpen() const { return status == 422 && code == "too_many_open"; }
+bool OWApiError::IsStaleProposal() const { return status == 409 && code == "stale_proposal"; }
+bool OWApiError::IsProposedOnly() const { return status == 403 && code == "proposed_only"; }
+bool OWApiError::IsOwnProposal() const { return status == 403 && code == "own_proposal"; }
+bool OWApiError::IsNotProposed() const { return status == 422 && code == "not_proposed"; }
+bool OWApiError::IsReviewByAnother() const { return status == 403 && code == "review_by_another"; }
+bool OWApiError::IsReviewMarkEmpty() const { return status == 422 && code == "review_mark_empty"; }
+
+std::vector<OWProposalConflict> OWApiError::Conflicts() const {
+    std::vector<OWProposalConflict> out;
+    if (!IsStaleProposal() || raw_body.empty()) return out;
+    OWJsonParseResult parsed = OWJson::Parse(raw_body);
+    // Beside the envelope, as Current() reads `current`.
+    const OWJsonValue* items = parsed.ok && parsed.value.IsObject() ? parsed.value.Find("conflicts") : nullptr;
+    if (!items || !items->IsArray()) return out;
+    for (const OWJsonValue& item : items->Items()) {
+        const OWJsonValue* field = item.IsObject() ? item.Find("field") : nullptr;
+        if (!field || !field->IsString()) continue;
+        OWProposalConflict c;
+        c.field = field->Text();
+        if (const OWJsonValue* v = item.Find("base")) c.base = *v;
+        if (const OWJsonValue* v = item.Find("current")) c.current = *v;
+        out.push_back(std::move(c));
+    }
+    return out;
+}
 
 std::optional<OWJsonValue> OWApiError::Current() const {
     // The Unity SDK's Current: on any 412, and on a 409 stale_proposal.

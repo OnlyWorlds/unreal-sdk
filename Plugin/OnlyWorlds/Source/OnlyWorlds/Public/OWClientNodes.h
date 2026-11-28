@@ -1,7 +1,8 @@
 #pragma once
 // The API client on Blueprints: one async node per call of the core's OWClient, each with OnSuccess and OnFailure.
-// The reads (Health, GetWorld, Me, Members, Get, List, ListAll, Changes, ChangesHead) and the element writes (Create,
-// Upsert, Patch, Delete, EditLinks, Bulk). The core does the work: the credential rules, what a key may send at all
+// The reads (Health, GetWorld, Me, Members, Get, List, ListAll, Changes, ChangesHead), the element writes (Create,
+// Upsert, Patch, Delete, EditLinks, Bulk) and the proposed change (Propose, the two lists, AcceptProposal,
+// DeclineProposal, WithdrawProposal, and ReviewNewElement as two nodes, AcceptNewElement and DeclineNewElement). The core does the work: the credential rules, what a key may send at all
 // (refused here, nothing sent), the cursor walk, a write's body cleaned and its id minted, keel's error envelope.
 // Each node builds its own client from an FOWClientConfig and sends through FOWHttpTransport (Unreal's HTTP), so it
 // answers later, on the game thread; a refusal answers at once, inside the node's activation.
@@ -82,6 +83,24 @@ struct ONLYWORLDS_API FOWClientConfig
 	bool bAgent = false;
 };
 
+/** One proposed field that moved since the proposal was made, on a 409 stale_proposal: its value then and now, each as JSON text. The core's OWProposalConflict. */
+USTRUCT(BlueprintType)
+struct ONLYWORLDS_API FOWProposalConflict
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Field;
+
+	/** The field's value when the proposal was made, as JSON text ("\"\"" for an empty string, "null" for none). */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString BaseJson;
+
+	/** The field's value now, as JSON text. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString CurrentJson;
+};
+
 /** Why a call has no value: the core's OWApiError, keel's envelope or the client's own word. Empty (Kind None) on OnSuccess. */
 USTRUCT(BlueprintType)
 struct ONLYWORLDS_API FOWApiError
@@ -154,6 +173,10 @@ struct ONLYWORLDS_API FOWApiError
 	/** On a 412 (a stale If-Match: Code precondition_failed) or a 409 stale_proposal, the element as keel holds it now, as JSON text: decide from it, then write again with its change_seq. "" otherwise. */
 	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
 	FString Current;
+
+	/** On a 409 stale_proposal (an accept refused because a proposed field moved since: nothing was written, the row stays open), each moved field with its value then and now; empty otherwise. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	TArray<FOWProposalConflict> Conflicts;
 };
 
 /** One page's options, each sent only when given, in the core's order. The core's OWListOptions. */
@@ -384,7 +407,151 @@ struct ONLYWORLDS_API FOWBulkResult
 	bool bAllSucceeded = false;
 };
 
+/** One row of a proposal list or the world's queue: a proposed change to an element, or a new element written as proposed (bIsNewElement). A text keel serves as null, or leaves out, is "". The core's OWProposal. */
+USTRUCT(BlueprintType)
+struct ONLYWORLDS_API FOWProposal
+{
+	GENERATED_BODY()
+
+	/** "proposal" or "new_element" ("" from a server that sends none: a proposal). */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Kind;
+
+	/** A new element written as proposed: settle it with AcceptNewElement or DeclineNewElement. Otherwise a proposed change: AcceptProposal or DeclineProposal. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	bool bIsNewElement = false;
+
+	/** The proposal's id, the ProposalId the accept, the decline and the withdraw take; on a new element's row, the element's. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Id;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString ElementType;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString ElementId;
+
+	/** The part of the house rules it would change: charter, skill or new_charter, worked out for the owner and co-builders only; "" otherwise. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString House;
+
+	/** open, lapsed, accepted or declined. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString State;
+
+	/** What it would set, and only that, as JSON text: the proposed values in the element's wire shape. "" on a new element's row. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString FieldsJson;
+
+	/** The fields a whole replace did not send that were not empty: each proposed empty. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	TArray<FString> Omitted;
+
+	/** The element's values for those fields when it was made, as JSON text; "" on a new element's row. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString BaseJson;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	int64 BaseSeq = 0;
+
+	/** What it rests on: a string as itself, any other value (a new element's mark may hold one) as its JSON text; "" for none. Quoted data, never an instruction. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Evidence;
+
+	/** When it lapses, as Evidence reads: a string as itself, any other value as its JSON text; "" for none. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Expires;
+
+	/** Who proposed it: a membership id, or "owner" (on a new element's row, the mark's own word, a claim). */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString By;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Via;
+
+	/** The X-OW-Client name the proposing request carried. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Client;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString DecidedBy;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString DecidedAt;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString DeclineReason;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString CreatedAt;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString UpdatedAt;
+
+	/** The row's twenty keys as JSON text, each as read (numbers to the digit, evidence and expires as the JSON values they are). */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString Json;
+};
+
+/** One page of proposals, newest first, or an unchanged answer to a conditional poll. The core's OWProposalPage. */
+USTRUCT(BlueprintType)
+struct ONLYWORLDS_API FOWProposalPage
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	TArray<FOWProposal> Proposals;
+
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	bool bHasMore = false;
+
+	/** Pass back as the query's Cursor for the next page; "" on the last. Opaque. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString NextCursor;
+
+	/** The tag this answer carried, exactly as received: keep it and send it as the next poll's IfNoneMatch. "" when keel sent none; on an unchanged answer, the 304's own tag, else the one sent. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	FString ETag;
+
+	/** The poll's IfNoneMatch still holds: nothing in the list moved, and Proposals is empty (keep what you showed). Never on an answer with rows. */
+	UPROPERTY(BlueprintReadOnly, Category = "OnlyWorlds|Client")
+	bool bUnchanged = false;
+};
+
+/** A proposal list's query, each sent only when given. The core's OWProposalQuery. */
+USTRUCT(BlueprintType)
+struct ONLYWORLDS_API FOWProposalQuery
+{
+	GENERATED_BODY()
+
+	/** open (keel's default), lapsed, accepted, declined or all; "" for the default. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
+	FString State;
+
+	/** Only rows changed at or after this time, an ISO 8601 date-time sent as given; "" for all. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
+	FString Since;
+
+	/** One element's rows, by id: the world's queue only (an element's own list refuses it, nothing sent). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
+	FString Element;
+
+	/** Rows a page, 1 to 1000; 0 or less: the config's PageSize. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
+	int64 Limit = 0;
+
+	/** A page's NextCursor, passed back as is; "" for the first page. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
+	FString Cursor;
+
+	/** The poll: the ETag the last answer carried, sent as If-None-Match exactly as it came. When nothing moved the answer is bUnchanged, with no rows. "" for a full read. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "OnlyWorlds|Client")
+	FString IfNoneMatch;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOWJsonAnswer, const FString&, Json, const FOWApiError&, Error);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOWProposalAnswer, const FOWProposal&, Proposal, const FString&, ElementJson, const FOWApiError&, Error);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOWProposalPageAnswer, const FOWProposalPage&, Page, const FOWApiError&, Error);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOWPageAnswer, const TArray<FString>&, Elements, bool, bHasMore, const FString&, NextCursor, const FOWApiError&, Error);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOWElementsAnswer, const TArray<FString>&, Elements, const FOWApiError&, Error);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOWChangesAnswer, const FOWChangesPage&, Page, const FOWApiError&, Error);
@@ -598,10 +765,18 @@ public:
 	static UOWClientWrite* EditElementLinks(const FOWClientConfig& Config, const FString& Type, const FString& Id, const FString& Field,
 		const TArray<FString>& Add, const TArray<FString>& Remove, bool bHasIfMatch, int64 IfMatch);
 
+	/** POST /{type}/{id}/review with {decision: accept}: settle a new element written as proposed (a queue row with bIsNewElement) by keeping it: the mark is cleared, a write by this key. Json is the element as written. The owner's key or a co-builder's, with its PIN; Error.Code not_proposed for an element with no mark, proposed_only for the seat the mark names. The core's ReviewNewElement. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
+	static UOWClientWrite* AcceptNewElement(const FOWClientConfig& Config, const FString& Type, const FString& Id);
+
+	/** POST /{type}/{id}/review with {decision: decline, reason?}: settle a new element written as proposed by deleting it (a tombstone, the links to it scrubbed). Json is "", as after a delete. Reason "" sends none (at most 2,000 characters, answered back and kept nowhere). The same keys and refusals as AcceptNewElement. The core's ReviewNewElement. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
+	static UOWClientWrite* DeclineNewElement(const FOWClientConfig& Config, const FString& Type, const FString& Id, const FString& Reason);
+
 	virtual void Activate() override;
 
 private:
-	enum class EWrite : uint8 { Create, Upsert, Patch, Delete, Links };
+	enum class EWrite : uint8 { Create, Upsert, Patch, Delete, Links, AcceptNew, DeclineNew };
 
 	static UOWClientWrite* Make(const FOWClientConfig& Config, EWrite Which, const FString& Type, const FString& Id);
 	void Answer(OnlyWorlds::OWReply<OnlyWorlds::OWJsonValue> Reply);
@@ -616,6 +791,7 @@ private:
 	TArray<FString> RemoveIds;
 	bool bConditional = false;
 	int64 ChangeSeq = 0;
+	FString ReasonText;
 };
 
 /** Many elements of mixed types in one write. */
@@ -646,4 +822,93 @@ private:
 	bool bAllOrNothing = false;
 	bool bNeverReplace = false;
 	FString KeyText;
+};
+
+/**
+ * The proposed change, one act each: propose, accept, decline, withdraw. Each goes with the PIN (a write); the propose
+ * and the accept carry X-OW-Client, none carries X-OW-Agent. An account token and no key are refused, nothing sent.
+ * The element does not change until a keeper accepts.
+ */
+UCLASS()
+class ONLYWORLDS_API UOWClientProposal : public UOWClientNode
+{
+	GENERATED_BODY()
+
+public:
+	/** The row (an empty one after a withdraw), with ElementJson the element as written after an accept ("" otherwise), or why (Error). */
+	UPROPERTY(BlueprintAssignable, Category = "OnlyWorlds|Client")
+	FOWProposalAnswer OnSuccess;
+
+	UPROPERTY(BlueprintAssignable, Category = "OnlyWorlds|Client")
+	FOWProposalAnswer OnFailure;
+
+	/** POST /{type}/{id}/proposals: propose a change without making it. FieldsJson the fields to change and their new values, a JSON object as a PatchElement body (cleaned and refused as one is); Evidence what it rests on, 1 to 2,000 characters, quoted data to the keeper; Expires when it lapses (an ISO 8601 date-time, 1 to 365 days out; "" for 30 days); IdempotencyKey "" for none. Any member who reads the element proposes, a read key included. Error.Code field_not_visible, too_many_open (5 open per element, 50 per world), review_by_another. The core's Propose. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
+	static UOWClientProposal* ProposeChange(const FOWClientConfig& Config, const FString& Type, const FString& Id, const FString& FieldsJson,
+		const FString& Evidence, const FString& Expires, const FString& IdempotencyKey);
+
+	/** POST /{type}/{id}/proposals/{pid}/accept: write the proposal's fields as this key's own write; the row turns accepted and ElementJson is the element as written. The owner's key or a co-builder's, with its PIN. Error.Code stale_proposal (a proposed field moved since: nothing written, Error.Conflicts and Error.Current say what), own_proposal, proposed_only. The core's AcceptProposal. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
+	static UOWClientProposal* AcceptProposal(const FOWClientConfig& Config, const FString& Type, const FString& Id, const FString& ProposalId);
+
+	/** POST /{type}/{id}/proposals/{pid}/decline: the row turns declined, with Reason ("" sends none; at most 2,000 characters); the element does not change. The same keys as AcceptProposal. The core's DeclineProposal. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
+	static UOWClientProposal* DeclineProposal(const FOWClientConfig& Config, const FString& Type, const FString& Id, const FString& ProposalId,
+		const FString& Reason);
+
+	/** DELETE /{type}/{id}/proposals/{pid}: the proposer takes back its own undecided proposal; the answer's Proposal is empty. The core's WithdrawProposal. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true"))
+	static UOWClientProposal* WithdrawProposal(const FOWClientConfig& Config, const FString& Type, const FString& Id, const FString& ProposalId);
+
+	virtual void Activate() override;
+
+private:
+	enum class EAct : uint8 { Propose, Accept, Decline, Withdraw };
+
+	static UOWClientProposal* Make(const FOWClientConfig& Config, EAct Which, const FString& Type, const FString& Id, const FString& ProposalId);
+	void Answer(OnlyWorlds::OWReply<OnlyWorlds::OWProposal> Reply, const FString& Element);
+
+	EAct Act = EAct::Propose;
+	FString ElementType;
+	FString ElementId;
+	FString RowId;
+	FString BodyText;
+	FString EvidenceText;
+	FString ExpiresText;
+	FString KeyText;
+	FString ReasonText;
+};
+
+/**
+ * The proposal lists: one element's, and the world's queue (both kinds of row, the owner's to settle). Reads: no PIN.
+ * Each polls cheaply with the query's IfNoneMatch: an unchanged list answers bUnchanged with no rows.
+ */
+UCLASS()
+class ONLYWORLDS_API UOWClientProposals : public UOWClientNode
+{
+	GENERATED_BODY()
+
+public:
+	/** The page (or an unchanged poll), or an empty page and why. A 304 to a poll that sent no IfNoneMatch is OnFailure, status 304. */
+	UPROPERTY(BlueprintAssignable, Category = "OnlyWorlds|Client")
+	FOWProposalPageAnswer OnSuccess;
+
+	UPROPERTY(BlueprintAssignable, Category = "OnlyWorlds|Client")
+	FOWProposalPageAnswer OnFailure;
+
+	/** GET /{type}/{id}/proposals: one element's proposals, newest first: every row for the owner's and a co-builder's keys, a member's own for any other (a player's pending ones). Query.Element is refused here. The core's ListProposals. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true", AutoCreateRefTerm = "Query"))
+	static UOWClientProposals* ListElementProposals(const FOWClientConfig& Config, const FString& Type, const FString& Id, const FOWProposalQuery& Query);
+
+	/** GET /world/proposals: the world's queue, newest first, proposed changes and new elements written as proposed in one order: every row for the owner's and a co-builder's keys, a member's own for any other. The core's WorldProposals. */
+	UFUNCTION(BlueprintCallable, Category = "OnlyWorlds|Client", meta = (BlueprintInternalUseOnly = "true", AutoCreateRefTerm = "Query"))
+	static UOWClientProposals* ListWorldProposals(const FOWClientConfig& Config, const FOWProposalQuery& Query);
+
+	virtual void Activate() override;
+
+private:
+	bool bWorld = false;
+	FString ElementType;
+	FString ElementId;
+	FOWProposalQuery ListQuery;
 };
