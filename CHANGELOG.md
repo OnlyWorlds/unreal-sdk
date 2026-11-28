@@ -4,17 +4,24 @@ Notable changes to the OnlyWorlds SDK for Unreal. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**Where it stands.** 0.12.1 is the latest release. `onlyworlds-unreal-0.12.1.zip`, on the repository's Releases page,
+**Where it stands.** 0.13.0 is the latest release. `onlyworlds-unreal-0.13.0.zip`, on the repository's Releases page,
 holds the plugin folder to drop into a project's `Plugins/`, as source the project compiles; the [README](README.md)
 has the install and a first run. What a game can do with it: open a world on disk (a world folder or an `.owworld`
 file) and read its elements of all 22 types as Blueprint structs; read and write a world over the onlyworlds.com API
 from Blueprint nodes, which answer JSON text, and from C++; hold a world from the API and keep it current by the
-change feed; and read a world it holds without a server (as a graph, as
+change feed; propose changes the world's owner accepts or declines in the game; and read a world it holds without a
+server (as a graph, as
 map geometry, by its own calendar, as one reader may see it), each reader giving the same answers as the other
 OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine 5.8, Win64. The entries below are in
 the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
+
+## [0.13.0] - 2026-11-28
+
+Proposed changes in a game, from C++ and on Blueprints: a player's write that became a proposal, its world's queue polled
+cheaply by its tag, and the owner's accept and decline. And the wrong-kind refusal names a NaN or an infinity by its
+own name. Parity with the TypeScript SDK 4.221.0 and 4.220.2. A minor release because it adds public API (below).
 
 ### Added
 
