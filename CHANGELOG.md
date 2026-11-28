@@ -17,6 +17,17 @@ the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A refused element id now says why in the same words as the TypeScript and Python packages.** An id holding a colon
+  or a control character from U+0000 to U+001F was refused in the archive name check's words (`its file name
+  "a:b.json" names a drive`); `OWWorld::WriteRefusal` now checks those itself, in the packages' order (a path
+  separator, a colon, a control character, `.` or `..`), and says `it holds a colon.` or `it holds a control
+  character.`. The archive's wider name checks still follow in their own words, so an id holding U+007F or U+0080 to
+  U+009F, another character Windows refuses or a device name is refused as before. An empty id keeps the writer's
+  no-id refusal. The packages' shared cases (`unsafe-ids.cases.json`, TypeScript SDK 4.224.0) are held as a test of
+  the core; the one they write and this plugin refuses, `c-` followed by U+007F, is the wider check's.
+
 ## [0.16.0] - 2026-11-28
 
 A game opens the world file onlyworlds.com's Export world button downloads, as it opens a world folder, in C++ and
