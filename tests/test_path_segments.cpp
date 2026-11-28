@@ -171,9 +171,9 @@ const std::vector<std::pair<std::string, size_t>> PathTakers = {{"Request", 2}, 
 
 // A path the scan can read: a quoted literal of path characters alone, or the variable `path`.
 const std::regex PathLiteral(R"re(^"(/[a-z_]+)*/"$)re");
-// A term of a built path: a literal of path characters, or one variable checked by Seg() under its own name, which the
-// refusal names (Seg("id", id, why)).
-const std::regex Literal(R"re(^"[a-z_/]*"$)re");
+// A term of a built path: a literal of path characters (a hyphen among them, for keel's /media/remove-ticket), or one
+// variable checked by Seg() under its own name, which the refusal names (Seg("id", id, why)).
+const std::regex Literal(R"re(^"[a-z_/-]*"$)re");
 const std::regex Checked(R"re(^Seg\("([A-Za-z_][A-Za-z_0-9]*)", ([A-Za-z_][A-Za-z_0-9]*), why\)$)re");
 // What follows a built path at once: the refusal, before anything is sent.
 const std::string RefuseFirst = "if (!why.empty()) return Refuse(done, why)";
@@ -273,11 +273,13 @@ Scan ScanClient(const std::string& source) {
         }
     }
 
-    // The URL: the API root and the path, then each query name and value escaped. Nothing else.
+    // The URL: the API root and the path, then each query name and value escaped; or, for the upload host's step
+    // (HostSend), the URL a ticket names, whole, which carries no value of the caller's. Nothing else.
     static const std::regex Url(R"re(request\.url\s*(\+?=)\s*([^;]*);)re");
     const std::set<std::string> allowed = {
         "= s->base_url + path",
         "+= (i ? \"&\" : \"?\") + Escape(query[i].first) + \"=\" + Escape(query[i].second)",
+        "= host_url",
     };
     for (std::sregex_iterator m(s.begin(), s.end(), Url), e; m != e; ++m) {
         std::string line = (*m)[1].str() + " " + Trim((*m)[2].str());
@@ -307,14 +309,14 @@ OW_TEST(path_segments_source_every_value_checked) {
     // A scan that lost its shape fails rather than passing empty: the sixteen request calls (Health, GetWorld, Me,
     // Members, the read helper's own, List, Get, Changes, ChangesHead; Create, Upsert, Patch, EditLinks, the write
     // helper's own, Delete, Bulk), the seven built paths (List's, Get's and each write's but Bulk's literal), the two
-    // helpers, the three path takers defined, the URL's two lines.
+    // helpers, the three path takers defined, the URL's two lines and the upload host's one.
     t.Ok(scan.calls >= 16, "found " + std::to_string(scan.calls) + " request calls; the scan lost its shape");
     t.Ok(scan.built >= 7, "found " + std::to_string(scan.built) + " built paths; the scan lost its shape");
     t.Eq(Join(std::vector<std::string>(scan.forwarders.begin(), scan.forwarders.end())),
          Join({"ElementWrite", "ObjectRequest"}), "the functions that hand their path on");
     t.Eq(Join(std::vector<std::string>(scan.takers.begin(), scan.takers.end())),
          Join({"ElementWrite", "ObjectRequest", "Request"}), "the path takers defined");
-    t.Eq(scan.url_lines, 2, "the URL built in two lines");
+    t.Eq(scan.url_lines, 3, "the URL built in two lines, and the upload host's in one");
 }
 
 // Only the client builds a request: no other source of the core makes an OWRequest.
@@ -339,7 +341,7 @@ OW_TEST(path_segments_source_one_request_builder) {
     std::string client = Uncommented(ReadText(P().root + ClientSource));
     size_t n = 0;
     for (size_t i = client.find("OWRequest"); i != std::string::npos; i = client.find("OWRequest", i + 1)) ++n;
-    t.Eq(n, size_t{1}, "OWClient.cpp makes one OWRequest, in Request");
+    t.Eq(n, size_t{2}, "OWClient.cpp makes two OWRequests: keel's in Request, the upload host's in HostSend");
 }
 
 namespace {

@@ -26,7 +26,9 @@ public:
 
 	/**
 	 * Sends the request with FHttpModule and calls Done once, on the game thread: the status, the headers and the body's
-	 * bytes as received, or status 0 with a failure. A 3xx is handed over as the answer it is, never followed.
+	 * bytes as received, or status 0 with a failure. The engine follows a redirect before this code sees it, so an answer
+	 * from any URL but the one sent is refused as a failure. A body with no Content-Type (an upload's bytes) goes as
+	 * application/octet-stream, which the engine's HTTP requires of a body that is not URL-encoded.
 	 */
 	virtual void Send(OnlyWorlds::OWRequest Request, OnlyWorlds::OWResponseHandler Done) override;
 

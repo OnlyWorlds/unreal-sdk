@@ -1,8 +1,8 @@
 // The core client over Unreal's own HTTP (FOWHttpTransport) against a real socket on 127.0.0.1: an answer cut off while
 // its body is read (a body shorter than its Content-Length, a chunked body with no last chunk) is kind Transport, never
 // a value or kind Answer; a whole answer read to the end of the connection is the value. Mirrors the TypeScript SDK's
-// 4.223.1 test of the same name. No network: the server is the test's own listener (FOneAnswer), served a step a frame
-// from the latent command that waits for the answer, and closed when the test lets go of it.
+// 4.223.1 test of the same name. No network: the server is the test's own listener (FOneAnswer, OWOneAnswer.h), served
+// a step a frame from the latent command that waits for the answer, and closed when the test lets go of it.
 
 #include "CoreMinimal.h"
 #include "HAL/PlatformTime.h"
@@ -14,6 +14,8 @@
 #include "OWClient.h"
 #include "OWHttpTransport.h"
 #include "OWJson.h"
+
+#include "OWOneAnswer.h"
 
 #include <memory>
 #include <string>
@@ -33,82 +35,7 @@ namespace
 
 	const FString Head = TEXT("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n");
 
-	// One connection answered with the bytes given, as they are, then shut for writing (FIN). Listens on a port the
-	// system picks; non-blocking, stepped from the game thread. The destructor closes both sockets.
-	class FOneAnswer
-	{
-	public:
-		explicit FOneAnswer(const FString& InAnswer)
-		{
-			const FTCHARToUTF8 Utf8(*InAnswer);
-			Answer.Append(reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
-			Subsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-			Listener = Subsystem->CreateSocket(NAME_Stream, TEXT("OWOneAnswer"), false);
-			TSharedRef<FInternetAddr> Addr = Subsystem->CreateInternetAddr();
-			bool bValid = false;
-			Addr->SetIp(TEXT("127.0.0.1"), bValid);
-			Addr->SetPort(0);
-			if (Listener && bValid && Listener->Bind(*Addr) && Listener->Listen(1) && Listener->SetNonBlocking(true))
-			{
-				Port = Listener->GetPortNo();
-			}
-		}
-
-		~FOneAnswer()
-		{
-			Drop(Peer);
-			Drop(Listener);
-		}
-
-		int32 Port = 0;
-
-		// Accepts, reads the request's head, writes the answer and shuts the connection for writing; once a frame.
-		void Step()
-		{
-			if (bServed || Port == 0) return;
-			if (!Peer)
-			{
-				bool bPending = false;
-				if (Listener->HasPendingConnection(bPending) && bPending)
-				{
-					Peer = Listener->Accept(TEXT("OWOneAnswerPeer"));
-					if (Peer) Peer->SetNonBlocking(true);
-				}
-				return;
-			}
-			uint32 Size = 0;
-			while (Peer->HasPendingData(Size) && Size > 0)
-			{
-				TArray<uint8> Buf;
-				Buf.SetNumUninitialized(static_cast<int32>(Size));
-				int32 Read = 0;
-				if (!Peer->Recv(Buf.GetData(), Buf.Num(), Read) || Read <= 0) break;
-				Got.Append(Buf.GetData(), Read);
-			}
-			const std::string Seen(reinterpret_cast<const char*>(Got.GetData()), static_cast<size_t>(Got.Num()));
-			if (Seen.find("\r\n\r\n") == std::string::npos) return;
-			int32 Sent = 0;
-			Peer->Send(Answer.GetData(), Answer.Num(), Sent);
-			Peer->Shutdown(ESocketShutdownMode::Write);
-			bServed = true;
-		}
-
-	private:
-		void Drop(FSocket*& Socket)
-		{
-			if (!Socket) return;
-			Socket->Close();
-			Subsystem->DestroySocket(Socket);
-			Socket = nullptr;
-		}
-
-		ISocketSubsystem* Subsystem = nullptr;
-		FSocket* Listener = nullptr;
-		FSocket* Peer = nullptr;
-		TArray<uint8> Answer;
-		TArray<uint8> Got;
-		bool bServed = false;
-	};
+	using OWOneAnswerTest::FOneAnswer;
 
 	struct FAnswer
 	{

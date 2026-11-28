@@ -14,7 +14,8 @@
 //   - It calls `done` on the thread the client is used from (the game thread), never on a worker: the client is not
 //     thread-safe.
 //   - It sends the request as given: the method, the URL, every header, the body when there is one, nothing added
-//     that changes what keel reads (a credential, a query), and it follows no redirect (a credential would follow).
+//     that changes what the server reads (a credential, a query), and it follows no redirect (a credential would
+//     follow). The server is keel, or the upload host a ticket names (an image or a file's bytes, OWMedia.h).
 //
 //   struct MyTransport : OnlyWorlds::OWTransport {
 //       void Send(OnlyWorlds::OWRequest request, OnlyWorlds::OWResponseHandler done) override {
@@ -49,7 +50,8 @@ struct OWRequest {
     std::string method = "GET";  // GET, POST, PUT, PATCH or DELETE
     std::string url;             // the whole URL, its query escaped
     OWHeaders headers;           // as the client names them (API-Key, If-None-Match), in the order it sets them
-    // The serialized JSON body; absent on every read.
+    // The serialized JSON body, or an upload's raw bytes (no Content-Type: the upload host reads the type from the
+    // bytes); absent on every read.
     std::optional<std::string> body;
 
     const std::string* Header(std::string_view name) const { return OWHeader(headers, name); }

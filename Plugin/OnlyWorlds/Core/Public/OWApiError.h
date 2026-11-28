@@ -195,6 +195,19 @@ struct OW_API OWApiError {
     bool IsReviewByAnother() const;
     // A write carrying an empty review mark (422 review_mark_empty). Mirrors the TypeScript SDK's `isReviewMarkEmpty`.
     bool IsReviewMarkEmpty() const;
+    // A daily allowance is used up (429 quota_exceeded): the world's image tickets, its file tickets (200 a day), or
+    // the account's asks. RetryAfter says when. Mirrors the TypeScript SDK's `isQuotaExceeded`.
+    bool IsQuotaExceeded() const;
+    // OWClient::CreateFileTicket or UploadFile: the file is over the 25 MB a file may be (413 file_too_large, param
+    // size). Nothing was issued. Not the upload host's 413 too_large (bytes past a ticket's max_bytes). Mirrors the
+    // TypeScript SDK's `isFileTooLarge`.
+    bool IsFileTooLarge() const;
+    // OWClient::CreateFileTicket or UploadFile: the world's files have no room for this one (403 files_full, 250 MB a
+    // world). Remove a file, or ask the owner. Nothing was issued. Mirrors the TypeScript SDK's `isFilesFull`.
+    bool IsFilesFull() const;
+    // A contributor's key on an element someone else made (403 not_author), as OWClient::CreateFileTicket refuses it.
+    // Mirrors the TypeScript SDK's `isNotAuthor`.
+    bool IsNotAuthor() const;
     // On a 409 stale_proposal (IsStaleProposal): each proposed field that moved, from the `conflicts` list beside the
     // envelope, in keel's order. Empty on any other error, when keel sent none, or when the body is not JSON; an item
     // that is not an object or whose `field` is not a string is left out. Mirrors the Unity SDK's `Conflicts` and the

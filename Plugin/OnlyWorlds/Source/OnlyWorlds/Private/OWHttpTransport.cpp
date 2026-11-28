@@ -57,6 +57,14 @@ void FOWHttpTransport::Send(OnlyWorlds::OWRequest Request, OnlyWorlds::OWRespons
 	Http->SetVerb(OWConvert::Str(Request.method));
 	Http->SetURL(Url);
 	for (const auto& [Name, Value] : Request.headers) Http->SetHeader(OWConvert::Str(Name), OWConvert::Str(Value));
+	// A body with no Content-Type (an upload's raw bytes: the client sends none, and the upload host reads the type from
+	// the bytes) goes as application/octet-stream. Unreal's curl request asserts that a POST or a DELETE either names its
+	// type or holds only URL-safe bytes (CurlHttp.cpp, check(!GetHeader("Content-Type").IsEmpty() ||
+	// RequestPayload->IsURLEncoded())), which an image or a pdf never does: without this, the upload would stop the
+	// editor and any Development game. Every body keel is sent names application/json, and an empty one passes, so
+	// nothing of keel's changes.
+	if (Request.body && !Request.body->empty() && !OnlyWorlds::OWHeader(Request.headers, "Content-Type"))
+		Http->SetHeader(TEXT("Content-Type"), TEXT("application/octet-stream"));
 	if (Request.body)
 	{
 		TArray<uint8> Bytes;
