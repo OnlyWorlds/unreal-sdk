@@ -7,7 +7,8 @@ as a folder.
 
 It has two roads, and they give different things:
 
-- **A world on disk** (a world folder, or one `.owworld` file): `OpenWorldFolder` or `OpenWorldFile`, then
+- **A world on disk** (a world folder, one `.owworld` file, or the file onlyworlds.com's "Export world" downloads):
+  `OpenWorldFolder`, `OpenWorldFile` or `OpenWorldExport`, then
   `GetAll<Types>` (`GetAllCharacters`, …), gives every element as a Blueprint struct (`FOWCharacter`, …), with no
   server. This is the road for a Blueprint graph.
 - **The onlyworlds.com API**: the client's Blueprint nodes (**ReadElement**, **ListElements**, the writes) answer each
@@ -157,7 +158,9 @@ An AI agent that writes to your world takes a seat of its own instead, an
 which the world's owner can remove at any time.
 
 **A world on disk.** `UOWLibrary::OpenWorldFolder` reads a world folder, `OpenWorldFile` an `.owworld` file (one zip
-that holds a folder), and `GetAll<Types>` (`GetAllCharacters`, …) gives its elements as structs. `PackWorldFolder` and
+that holds a folder), `OpenWorldExport` the one JSON file the **Export world** button on a world's page at
+onlyworlds.com downloads (`format: onlyworlds-world-export`), and `GetAll<Types>` (`GetAllCharacters`, …) gives its
+elements as structs. A download opens as a local world with no folder; `UOWWorld::WriteFolder` writes it as one. `PackWorldFolder` and
 `UOWWorld::PackToFile` make an `.owworld` file. By default a pack is a copy: every element file travels whole, hidden
 ones included, as you would back up or move your own world. With `bAsShare` (in C++, `include_hidden` false) it is a
 share, a file to hand to someone else: an element marked `hidden` is left out, and so is every file under `elements/`

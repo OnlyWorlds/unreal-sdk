@@ -6,8 +6,8 @@ Notable changes to the OnlyWorlds SDK for Unreal. Format follows
 
 **Where it stands.** 0.15.0 is the latest release. `onlyworlds-unreal-0.15.0.zip`, on the repository's Releases page,
 holds the plugin folder to drop into a project's `Plugins/`, as source the project compiles; the [README](README.md)
-has the install and a first run. What a game can do with it: open a world on disk (a world folder or an `.owworld`
-file) and read its elements of all 22 types as Blueprint structs; read and write a world over the onlyworlds.com API
+has the install and a first run. What a game can do with it: open a world on disk (a world folder, an `.owworld`
+file, or the one-file export onlyworlds.com hands a world's owner) and read its elements of all 22 types as Blueprint structs; read and write a world over the onlyworlds.com API
 from Blueprint nodes, which answer JSON text, and from C++; hold a world from the API and keep it current by the
 change feed; let a player join a world by an invite link, on Blueprints too; propose changes the world's owner accepts or declines in the game; set an element's image and attach files to it; and read a world it holds without a
 server (as a graph, as
@@ -16,6 +16,28 @@ OnlyWorlds SDKs on a shared set of test cases. Built and tested on Unreal Engine
 the detail a maintainer needs; the history before this file is in the git log.
 
 ## [Unreleased]
+
+### Added
+
+- **Opening the world file onlyworlds.com hands an owner** (`OWWorldExport.h`, `UOWLibrary::OpenWorldExport`). The
+  "Export world" button on a world's page downloads the whole world as one JSON file (`format:
+  onlyworlds-world-export`, keel's API spec section 8c). A game now opens it as it opens a world folder: in C++
+  `OWWorldExport::ReadFile(path)` (or `Read(bytes, source)`) answers an `OWExportRead` whose `world` is an `OWWorld`,
+  with `schema_version` and `exported_at` beside it; on Blueprints **Open World Export** answers a `UOWWorld` and an
+  `FOWExportVerdict` (`bAccepted`, `Reason`, `Message`, `WorldId`, `SchemaVersion`, `ExportedAt`), so `GetAllCharacters`
+  and the other struct reads work on it unchanged. The folder reader's rules hold: an element with no id that is a
+  non-empty string is skipped and named in the world's errors, a body's own type (one of the 22 type slugs) beats the
+  group it sits under, a group whose key is not one of the 22 type slugs is not read and is named, of two bodies with
+  one id the first is served and the second named, unknown keys are ignored, and each body and the world block are
+  kept as given (key order, number texts). A file is refused, with one reason, when it is not there (`no_file`), not a
+  JSON object (`not_json`), nested past 200 counted from its top (`too_deep`: the file is one JSON text, so an element
+  inside it counts three levels deeper than in a file of its own), of another `format` (`not_an_export`; the older
+  shape with the World at the root is one) or without a world id (`no_world_id`). The world is local (the file has no
+  api block) and `WriteFolder` writes it as a world folder: `world.json` the world block, its `source` and
+  `exported_as` included, each element at its section 3.2 path. Tested on keel's own fixture as schema-dist 149
+  carries it (`example/world-export.json`, its bytes held to the dist's manifest) and inline cases, in the core's
+  suite and through the plugin. To hold a download in an `OWWorldCache` is not offered: the file carries no change-feed
+  cursor to resume a sync from; open it and read it through `UOWElements`.
 
 ## [0.15.0] - 2026-11-28
 
